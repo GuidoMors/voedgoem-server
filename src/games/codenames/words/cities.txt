@@ -1,0 +1,41 @@
+rome
+amsterdam
+berlin
+london
+san francisco
+new york
+madrid
+paris
+moscow
+dublin
+stockholm
+hannover
+washington
+vatican city
+jakarta
+buenos aires
+brussels
+tokyo
+helsinki
+oslo
+kiev
+bangkok
+seoul
+barcelona
+hong kong
+jeruzalem
+dubai
+shanghai
+capetown
+melbourne
+sidney
+santiago
+são paulo
+miami
+mexico city
+las vegas
+los angeles
+seattle
+budapest
+athens
+istanbul

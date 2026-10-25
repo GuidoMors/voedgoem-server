@@ -1,3 +1,5 @@
+import type { Avatar } from "./avatar";
+
 export interface Env {
   DB: D1Database;
   LOBBY: DurableObjectNamespace;
@@ -8,4 +10,6 @@ export interface SessionUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  isDisplay: boolean;
+  avatar: Avatar | null;
 }

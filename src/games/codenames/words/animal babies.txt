@@ -1,0 +1,14 @@
+chick
+calf
+puppy
+cub
+whelp
+foal
+kitten
+piglet
+hatchling
+infant
+maggot
+tadpole
+larvae
+baby

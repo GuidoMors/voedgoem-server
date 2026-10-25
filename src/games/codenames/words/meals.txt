@@ -1,0 +1,50 @@
+hamburger
+hotdog
+spaghetti
+taco
+nacho
+lasagna
+pizza
+fries
+stew
+hotpot
+chili con carne
+meatballs
+burritos
+fajitas
+stir fry
+fried rice
+quesadillas
+KFC
+Mc Donalds
+Burger King
+Restaurant
+nuts
+peanuts
+walnut
+almond
+rice
+potato
+pudding
+yoghurt
+ice cream
+donut
+cookie
+cake
+pie
+quiche
+pastasauce
+pasta
+sauce
+mayonnaise
+ketchup
+chips
+oatmeal
+lentils
+spices
+garlic
+tortellini
+chicken nuggets
+chicken wings
+wheat
+rice

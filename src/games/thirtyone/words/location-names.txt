@@ -1,0 +1,74 @@
+new york
+jakarta
+kaapstad
+tokyo
+den helder
+oude niedorp
+alkmaar
+hannover
+heerhugowaard
+paris
+barcelona
+madrid
+rome
+bali
+oslo
+monaco
+signapore
+california
+kentucky
+florida
+alabama
+texas
+schiphol
+Brazil
+Germany
+India
+Australia
+Canada
+Japan
+South Africa
+France
+China
+Mexico
+Italy
+Argentina
+Russia
+Egypt
+Spain
+United Kingdom
+United States
+Indonesia
+New Zealand
+Turkey
+Norway
+Sweden
+Switzerland
+Netherlands
+Greece
+South Korea
+Saudi Arabia
+Pakistan
+Bangladesh
+Kenya
+Nigeria
+Morocco
+Thailand
+Vietnam
+Malaysia
+Philippines
+Ukraine
+Poland
+Colombia
+Chile
+Venezuela
+Peru
+Cuba
+Portugal
+Denmark
+Finland
+Belgium
+Ireland
+Iraq
+Israel
+Romania

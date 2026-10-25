@@ -1,0 +1,8 @@
+knight
+dark
+dung
+soul
+humanity
+sword
+dodge
+roll

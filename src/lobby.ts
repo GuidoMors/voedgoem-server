@@ -1,18 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
+import { parseStoredAvatar, type Avatar } from "./avatar";
 import type { Env } from "./env";
-import { GAMES } from "./games";
+import { DISPLAY_VIEWER } from "./viewer";
+import { MODULES } from "./games/registry";
 
-type Phase = "lobby" | "playing" | "results";
-
-interface Player {
+interface Bot {
   id: string;
   username: string;
-  alive: boolean;
-  score: number;
-  lines: number;
-  level: number;
-  board: string;
-  order: number;
 }
 
 interface State {
@@ -20,36 +14,84 @@ interface State {
   name: string;
   hostId: string;
   hostName: string;
-  phase: Phase;
-  seed: number;
-  round: number;
-  startedAt: number;
-  nextOrder: number;
-  players: Record<string, Player>;
-  results: Player[];
+  data: unknown;
+  bots?: Bot[];
+  nextBot?: number;
+  // Avatars of people who connected, so players keep theirs while temporarily offline.
+  avatars?: Record<string, Avatar>;
 }
 
 interface Attachment {
   userId: string;
   username: string;
+  isAdmin?: boolean;
+  isDisplay?: boolean;
 }
 
-const BOARD_PATTERN = /^[0-7]{200}$/;
-const MAX_MESSAGE_LENGTH = 1000;
-const MIN_UPDATE_INTERVAL_MS = 60;
+const MAX_BOTS = 20;
 
-const clampInt = (value: unknown, max: number) =>
-  typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : 0;
+const MAX_MESSAGE_LENGTH = 1000;
+const VOLATILE_BROADCAST_MS = 100;
 
 export class Lobby extends DurableObject<Env> {
   private state: State | null = null;
-  private lastUpdate = new Map<string, number>();
+  private lastVolatileBroadcast = 0;
+  private volatileTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    ctx.blockConcurrencyWhile(async () => {
-      this.state = (await ctx.storage.get<State>("state")) ?? null;
-    });
+    ctx.blockConcurrencyWhile(() => this.load());
+  }
+
+  private tickTimer: ReturnType<typeof setTimeout> | null = null;
+  private tickDue = 0;
+
+  // Games with a real-time loop (e.g. team Tetris gravity) are ticked from here while they ask for it.
+  private scheduleTick() {
+    const state = this.state;
+    if (!state) return;
+    const wait = this.module().tickMs?.(state.data);
+    if (wait == null) return;
+    // Keep a pending timer unless the game now needs a tick sooner.
+    if (this.tickTimer) {
+      if (this.tickDue <= Date.now() + wait) return;
+      clearTimeout(this.tickTimer);
+    }
+    this.tickDue = Date.now() + wait;
+    this.tickTimer = setTimeout(() => {
+      this.tickTimer = null;
+      void this.runTick();
+    }, wait);
+  }
+
+  private async runTick() {
+    const state = this.state;
+    if (!state) return;
+    const outcome = this.module().tick?.(state.data);
+    if (outcome === "save") await this.commit();
+    else if (outcome === "volatile") this.broadcastThrottled();
+    this.scheduleTick();
+  }
+
+  private async load() {
+    const ctx = this.ctx;
+    {
+      const stored = await ctx.storage.get<any>("state");
+      if (!stored) return;
+      if ("data" in stored) {
+        this.state = stored as State;
+      } else {
+        // Lobbies created before multiple games existed stored Tetris state flat.
+        const { game, name, hostId, hostName, ...data } = stored;
+        this.state = { game, name, hostId, hostName, data };
+      }
+      if (this.state) MODULES[this.state.game]?.migrate?.(this.state.data);
+    }
+    this.scheduleTick();
+  }
+
+  private module() {
+    return MODULES[this.state?.game ?? ""] ?? MODULES.tetris;
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -71,27 +113,32 @@ export class Lobby extends DurableObject<Env> {
     if (!userId || !username) return new Response("Unauthorized", { status: 401 });
 
     if (!this.state) {
+      const game = request.headers.get("x-lobby-game") ?? "tetris";
+      if (!MODULES[game]) return new Response("Unknown game", { status: 400 });
       this.state = {
-        game: request.headers.get("x-lobby-game") ?? "tetris",
+        game,
         name: request.headers.get("x-lobby-name") ?? "Lobby",
         hostId: request.headers.get("x-host-id") ?? userId,
         hostName: request.headers.get("x-host-name") ?? username,
-        phase: "lobby",
-        seed: 0,
-        round: 0,
-        startedAt: 0,
-        nextOrder: 0,
-        players: {},
-        results: []
+        data: MODULES[game].create()
       };
       await this.save();
     }
 
+    const isDisplay = request.headers.get("x-is-display") === "1";
+    const avatar = isDisplay ? null : parseStoredAvatar(request.headers.get("x-avatar"));
+    const avatars = (this.state.avatars ??= {});
+    if (isDisplay) { /* displays only watch */ }
+    else if (avatar) avatars[userId] = avatar;
+    else delete avatars[userId];
+    await this.save();
+
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ userId, username } satisfies Attachment);
+    server.serializeAttachment({ userId, username, isAdmin: request.headers.get("x-is-admin") === "1", isDisplay } satisfies Attachment);
     this.broadcast();
+    this.broadcastAvatars();
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -99,7 +146,7 @@ export class Lobby extends DurableObject<Env> {
     const state = this.state;
     if (!state || typeof raw !== "string" || raw.length > MAX_MESSAGE_LENGTH) return;
     const who = ws.deserializeAttachment() as Attachment | null;
-    if (!who) return;
+    if (!who || who.isDisplay) return;
 
     let message: Record<string, unknown>;
     try {
@@ -110,61 +157,76 @@ export class Lobby extends DurableObject<Env> {
       return;
     }
 
-    const me = state.players[who.userId];
-    const isHost = who.userId === state.hostId;
+    const game = this.module();
+    const hostId = state.hostId;
+    const context = () => ({ connected: this.connectedUserIds() });
 
-    switch (message.type) {
-      case "join": {
-        const max = GAMES[state.game]?.maxPlayers ?? 8;
-        if (state.phase !== "lobby" || me || Object.keys(state.players).length >= max) return;
-        state.players[who.userId] = { id: who.userId, username: who.username, alive: true, score: 0, lines: 0, level: 1, board: "", order: state.nextOrder++ };
-        break;
+    // Admin-only testing tools: manage bots and act on their behalf.
+    if (message.type === "bot:add" || message.type === "bot:remove" || message.type === "bot:act") {
+      if (!who.isAdmin) return;
+      const bots = (state.bots ??= []);
+      if (message.type === "bot:add") {
+        if (bots.length >= MAX_BOTS) {
+          try { ws.send(JSON.stringify({ type: "error", message: `At most ${MAX_BOTS} bots.` })); } catch { /* socket is going away */ }
+          return;
+        }
+        const number = (state.nextBot = (state.nextBot ?? 0) + 1);
+        bots.push({ id: `bot-${number}`, username: `Bot ${number}` });
+      } else {
+        const bot = bots.find(item => item.id === message.botId);
+        if (!bot) return;
+        if (message.type === "bot:remove") {
+          state.bots = bots.filter(item => item.id !== bot.id);
+          game.disconnect(state.data, bot.id);
+        } else {
+          const inner = message.message;
+          if (typeof inner !== "object" || inner === null || Array.isArray(inner)) return;
+          const outcome = game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false }, inner as Record<string, unknown>, context());
+          if (outcome === "ignore") return;
+          if (typeof outcome === "object") {
+            try { ws.send(JSON.stringify({ type: "error", message: `${bot.username}: ${outcome.error}` })); } catch { /* socket is going away */ }
+            return;
+          }
+          if (outcome === "volatile") {
+            this.broadcastThrottled();
+            return;
+          }
+        }
       }
-      case "leave": {
-        if (!me) return;
-        if (state.phase === "lobby") delete state.players[who.userId];
-        else if (state.phase === "playing" && me.alive) me.alive = false;
-        else return;
-        break;
-      }
-      case "start": {
-        if (!isHost || state.phase !== "lobby" || Object.keys(state.players).length === 0) return;
-        state.phase = "playing";
-        state.seed = crypto.getRandomValues(new Uint32Array(1))[0];
-        state.round += 1;
-        state.startedAt = Date.now();
-        for (const player of Object.values(state.players)) Object.assign(player, { alive: true, score: 0, lines: 0, level: 1, board: "" });
-        break;
-      }
-      case "state": {
-        if (state.phase !== "playing" || !me?.alive) return;
-        const now = Date.now();
-        if (now - (this.lastUpdate.get(me.id) ?? 0) < MIN_UPDATE_INTERVAL_MS) return;
-        if (typeof message.board !== "string" || !BOARD_PATTERN.test(message.board)) return;
-        this.lastUpdate.set(me.id, now);
-        Object.assign(me, { board: message.board, score: clampInt(message.score, 99_999_999), lines: clampInt(message.lines, 99_999), level: Math.max(1, clampInt(message.level, 99)) });
-        this.broadcast();
-        return;
-      }
-      case "gameover": {
-        if (state.phase !== "playing" || !me?.alive) return;
-        Object.assign(me, { alive: false, score: clampInt(message.score, 99_999_999), lines: clampInt(message.lines, 99_999), level: Math.max(1, clampInt(message.level, 99)) });
-        break;
-      }
-      case "exit": {
-        if (!isHost || state.phase !== "results") return;
-        state.phase = "lobby";
-        state.players = {};
-        state.results = [];
-        state.nextOrder = 0;
-        break;
-      }
-      default:
-        return;
+      await this.commit();
+      return;
     }
 
-    this.finishIfOver();
+    const outcome = game.handle(state.data, { userId: who.userId, username: who.username, isHost: who.userId === hostId }, message, context());
+    if (outcome === "ignore") return;
+    if (typeof outcome === "object") {
+      try { ws.send(JSON.stringify({ type: "error", message: outcome.error })); } catch { /* socket is going away */ }
+      return;
+    }
+    if (outcome === "volatile") {
+      this.broadcastThrottled();
+      return;
+    }
+    await this.commit();
+  }
+
+  // Saves, stores a just-finished game's results for statistics (humans only), then broadcasts.
+  private async commit() {
+    const state = this.state;
+    const result = state ? this.module().takeResult?.(state.data) : null;
     await this.save();
+    if (state && result) {
+      const humans = result.players.filter(player => !player.userId.startsWith("bot-"));
+      try {
+        if (humans.length) {
+          await this.env.DB.batch(humans.map(player =>
+            this.env.DB.prepare(`INSERT INTO "gameResults" ("game", "userId", "role", "won", "flag", "score", "extra") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`)
+              .bind(state.game, player.userId, player.role, player.won ? 1 : 0, player.flag ? 1 : 0, player.score ?? 0, player.extra ?? 0)));
+        }
+      } catch (error) {
+        console.error("Could not store game results", error);
+      }
+    }
     this.broadcast();
   }
 
@@ -181,23 +243,9 @@ export class Lobby extends DurableObject<Env> {
     const state = this.state;
     const who = closing.deserializeAttachment() as Attachment | null;
     if (state && who && !this.connectedUserIds(closing).has(who.userId)) {
-      const player = state.players[who.userId];
-      if (player) {
-        if (state.phase === "lobby") delete state.players[who.userId];
-        else if (state.phase === "playing" && player.alive) player.alive = false;
-        this.finishIfOver();
-        await this.save();
-      }
+      if (this.module().disconnect(state.data, who.userId)) await this.save();
     }
     this.broadcast(closing);
-  }
-
-  private finishIfOver() {
-    const state = this.state;
-    if (!state || state.phase !== "playing") return;
-    if (Object.values(state.players).some(player => player.alive)) return;
-    state.phase = "results";
-    state.results = Object.values(state.players).sort((a, b) => b.score - a.score || b.lines - a.lines || a.order - b.order);
   }
 
   private connectedUserIds(exclude?: WebSocket) {
@@ -205,38 +253,77 @@ export class Lobby extends DurableObject<Env> {
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === exclude || ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
       const who = ws.deserializeAttachment() as Attachment | null;
-      if (who) ids.set(who.userId, who.username);
+      if (who && !who.isDisplay) ids.set(who.userId, who.username);
     }
+    for (const bot of this.state?.bots ?? []) ids.set(bot.id, bot.username);
     return ids;
   }
 
-  private snapshot(exclude?: WebSocket) {
-    const state = this.state!;
+  private broadcastThrottled() {
+    const gap = this.module().volatileMs ?? VOLATILE_BROADCAST_MS;
+    const wait = gap - (Date.now() - this.lastVolatileBroadcast);
+    if (wait <= 0) {
+      this.broadcast();
+    } else if (!this.volatileTimer) {
+      this.volatileTimer = setTimeout(() => {
+        this.volatileTimer = null;
+        this.broadcast();
+      }, wait);
+    }
+  }
+
+  private broadcast(exclude?: WebSocket) {
+    const state = this.state;
+    if (!state) return;
+    this.scheduleTick();
+    this.lastVolatileBroadcast = Date.now();
+    const game = this.module();
     const connected = this.connectedUserIds(exclude);
-    const showBoards = state.phase !== "lobby";
-    const players = Object.values(state.players).sort((a, b) => a.order - b.order);
-    return {
+    const participants = game.participants(state.data);
+    const spectators = [...connected].filter(([id]) => !participants.has(id)).map(([id, username]) => ({ id, username }));
+    const connectedIds = new Set(connected.keys());
+    const shared = {
       type: "snapshot",
       game: state.game,
       name: state.name,
       host: { id: state.hostId, name: state.hostName },
-      phase: state.phase,
-      seed: state.seed,
-      round: state.round,
-      maxPlayers: GAMES[state.game]?.maxPlayers ?? 8,
-      players: players.map(({ id, username, alive, score, lines, level, board }) => ({
-        id, username, alive, score, lines, level, connected: connected.has(id), board: showBoards ? board : ""
-      })),
-      spectators: [...connected].filter(([id]) => !state.players[id]).map(([id, username]) => ({ id, username })),
-      results: state.phase === "results" ? state.results.map(({ id, username, score, lines, level }) => ({ id, username, score, lines, level })) : []
+      maxPlayers: game.info.maxPlayers,
+      spectators,
+      bots: state.bots ?? []
     };
-  }
 
-  private broadcast(exclude?: WebSocket) {
-    if (!this.state) return;
-    const data = JSON.stringify(this.snapshot(exclude));
+    let cached: string | null = null;
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === exclude || ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
+      const who = ws.deserializeAttachment() as Attachment | null;
+      let data: string | null = null;
+      if (who?.isDisplay) {
+        // Displays get the spectator view and never count as connected players.
+        data = JSON.stringify({ ...shared, ...game.snapshot(state.data, DISPLAY_VIEWER, connectedIds) });
+      } else if (who?.isAdmin && state.bots?.length) {
+        // Admins also receive each bot's own view so they can play as them.
+        const botViews = Object.fromEntries(state.bots.map(bot => [bot.id, game.snapshot(state.data, bot.id, connectedIds)]));
+        data = JSON.stringify({ ...shared, ...game.snapshot(state.data, who.userId, connectedIds), botViews });
+      } else {
+        data = cached;
+        if (!data) {
+          data = JSON.stringify({ ...shared, ...game.snapshot(state.data, who?.userId ?? "", connectedIds) });
+          if (!game.perViewer) cached = data;
+        }
+      }
+      try { ws.send(data); } catch { /* socket is going away */ }
+    }
+  }
+
+  // Sent separately from snapshots, which are broadcast often and would otherwise carry every avatar each time.
+  private broadcastAvatars() {
+    const state = this.state;
+    if (!state?.avatars) return;
+    const relevant = new Set([...this.connectedUserIds().keys(), ...this.module().participants(state.data)]);
+    for (const id of Object.keys(state.avatars)) if (!relevant.has(id)) delete state.avatars[id];
+    const data = JSON.stringify({ type: "avatars", avatars: state.avatars });
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
       try { ws.send(data); } catch { /* socket is going away */ }
     }
   }

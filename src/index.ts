@@ -1,5 +1,7 @@
+import { parseAvatar, parseStoredAvatar } from "./avatar";
 import type { Env, SessionUser } from "./env";
-import { GAMES } from "./games";
+import { GAMES } from "./games/registry";
+import { GAME_STATS } from "./stats";
 import {
   authenticate, createSession, generateRecoveryKey, hashPassword, hashRecoveryKey, randomId, sha256Hex, verifyPassword
 } from "./auth";
@@ -22,7 +24,7 @@ function corsHeaders(request: Request, env: Env): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers": "Authorization, Content-Type",
-    "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin"
   };
@@ -39,7 +41,7 @@ async function readBody(request: Request): Promise<Record<string, unknown>> {
 const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 function validateCredentials(username: string, password: string) {
-  if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) throw new HttpError(400, "Username must be 3-20 letters, numbers or underscores.");
+  if (!/^[A-Za-z0-9_]{2,20}$/.test(username)) throw new HttpError(400, "Username must be 2-20 letters, numbers or underscores.");
   if (password.length < 8 || password.length > 128) throw new HttpError(400, "Password must be 8-128 characters.");
 }
 
@@ -55,15 +57,15 @@ async function register(request: Request, env: Env) {
   } catch {
     throw new HttpError(409, "That username is already taken.");
   }
-  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false } }, 201);
+  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false, isDisplay: false, avatar: null } }, 201);
 }
 
 async function login(request: Request, env: Env) {
   const body = await readBody(request);
-  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin" FROM "users" WHERE "username" = ?1`)
-    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number }>();
+  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin", "isDisplay", "avatar" FROM "users" WHERE "username" = ?1`)
+    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number; isDisplay: number; avatar: string | null }>();
   if (!row || !(await verifyPassword(text(body.password), row.passwordHash))) throw new HttpError(401, "Username or password is incorrect.");
-  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1 } });
+  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } });
 }
 
 async function resetPassword(request: Request, env: Env) {
@@ -102,6 +104,10 @@ async function connectToLobby(request: Request, env: Env, user: SessionUser, id:
   const headers = new Headers(request.headers);
   headers.set("x-user-id", user.id);
   headers.set("x-username", user.username);
+  headers.set("x-is-admin", user.isAdmin ? "1" : "0");
+  headers.set("x-is-display", user.isDisplay ? "1" : "0");
+  if (user.avatar && !user.isDisplay) headers.set("x-avatar", JSON.stringify(user.avatar));
+  else headers.delete("x-avatar");
   headers.set("x-host-id", lobby.hostId);
   headers.set("x-host-name", lobby.hostName);
   headers.set("x-lobby-game", lobby.game);
@@ -123,6 +129,14 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (!user) throw new HttpError(401, "Not signed in.");
 
   if (method === "GET" && path === "/api/auth/me") return json({ user });
+  if (method === "PUT" && path === "/api/profile/avatar") {
+    if (user.isDisplay) throw new HttpError(403, "Display accounts have no profile.");
+    const body = await readBody(request);
+    const avatar = parseAvatar(body.avatar);
+    if (!avatar) throw new HttpError(400, "That avatar is not valid.");
+    await env.DB.prepare(`UPDATE "users" SET "avatar" = ?1 WHERE "id" = ?2`).bind(JSON.stringify(avatar), user.id).run();
+    return json({ user: { ...user, avatar } });
+  }
   if (method === "POST" && path === "/api/auth/logout") {
     const token = request.headers.get("Authorization")?.slice(7).trim();
     if (token) await env.DB.prepare(`DELETE FROM "sessions" WHERE "tokenHash" = ?1`).bind(await sha256Hex(token)).run();
@@ -130,6 +144,24 @@ async function route(request: Request, env: Env): Promise<Response> {
   }
 
   if (method === "GET" && path === "/api/games") return json({ games: Object.values(GAMES) });
+
+  const statsMatch = path.match(/^\/api\/stats\/([a-z0-9]+)$/);
+  if (method === "GET" && statsMatch) {
+    const defs = GAME_STATS[statsMatch[1]];
+    if (!defs) throw new HttpError(404, "Unknown game.");
+    const columns = defs.map(def => `${def.sql} AS "${def.key}"`).join(", ");
+    const { results } = await env.DB.prepare(`
+      SELECT "userId" AS "id", "username", ${columns}
+      FROM "gameResults" JOIN "users" ON "users"."id" = "gameResults"."userId"
+      WHERE "game" = ?1 GROUP BY "userId" ORDER BY COUNT(*) DESC, "username" COLLATE NOCASE
+    `).bind(statsMatch[1]).all<Record<string, string | number | null>>();
+    const players = results.map(({ id, username, ...values }) => ({ id, username, values }));
+    return json({
+      stats: defs.map(({ key, label, format }) => ({ key, label, format })),
+      me: players.find(player => player.id === user.id) ?? null,
+      players
+    });
+  }
 
   if (method === "GET" && path === "/api/lobbies") {
     const { results } = await env.DB.prepare(`${LOBBY_SELECT} ORDER BY l."createdAt" DESC`).all<LobbyRow>();
@@ -165,10 +197,23 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (!user.isAdmin) throw new HttpError(403, "Admins only.");
     if (method === "GET" && path === "/api/admin/users") {
       const { results } = await env.DB.prepare(`
-        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
+        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
         FROM "users" ORDER BY "username" COLLATE NOCASE
-      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; hasRecoveryKey: number }>();
-      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, hasRecoveryKey: !!row.hasRecoveryKey })) });
+      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isDisplay: number; hasRecoveryKey: number }>();
+      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
+    }
+    if (method === "POST" && path === "/api/admin/displays") {
+      const body = await readBody(request);
+      const username = text(body.username).trim();
+      const password = text(body.password);
+      validateCredentials(username, password);
+      try {
+        await env.DB.prepare(`INSERT INTO "users" ("id", "username", "passwordHash", "isDisplay") VALUES (?1, ?2, ?3, 1)`)
+          .bind(crypto.randomUUID(), username, await hashPassword(password)).run();
+      } catch {
+        throw new HttpError(409, "That username is already taken.");
+      }
+      return json({ username }, 201);
     }
     const keyMatch = path.match(/^\/api\/admin\/users\/([A-Za-z0-9-]{1,64})\/recovery-key$/);
     if (method === "POST" && keyMatch) {
@@ -183,6 +228,14 @@ async function route(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
+  async scheduled(_event, env): Promise<void> {
+    // Throwaway accounts used for testing (usernames starting "dbg_") are removed an hour after creation.
+    // Sessions and game results go with them through ON DELETE CASCADE.
+    await env.DB.prepare(`
+      DELETE FROM "users" WHERE "username" LIKE 'dbg\\_%' ESCAPE '\\' AND "isAdmin" = 0 AND "isDisplay" = 0 AND "createdAt" < ?1
+    `).bind(new Date(Date.now() - 3_600_000).toISOString()).run();
+  },
+
   async fetch(request: Request, env: Env): Promise<Response> {
     const cors = corsHeaders(request, env);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });

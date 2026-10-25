@@ -1,0 +1,28 @@
+armchair
+bookcase
+bunk bed
+bureau
+carpet
+chair
+cabinet
+cushion
+desk
+footrest
+futon
+hammock
+bed
+couch
+lounge chair
+mantle
+mattress
+mirror
+nightstand
+pillow
+rack
+rug
+seat
+shelf
+throne
+wardrobe
+waterbed
+pan

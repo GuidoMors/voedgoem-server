@@ -1,0 +1,10 @@
+nasa
+nebula
+pluto
+mars
+venus
+comet
+meteor
+black hole
+supernova
+wormhole

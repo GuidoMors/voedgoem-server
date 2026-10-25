@@ -1,0 +1,13 @@
+dinosaur
+jurassic
+triassic
+pterodactyl
+brontosaurus
+diplodocus
+tyrannosaurus
+triceratops
+raptor
+stegosaurus
+allosaurus
+spinosaurus
+brachiosaurus

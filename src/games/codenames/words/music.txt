@@ -1,0 +1,14 @@
+classical
+country
+electronic
+hip-hop
+indie
+jazz
+k-pop
+metal
+oldies
+rap
+rock
+roll
+techno
+lyrics

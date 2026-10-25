@@ -1,0 +1,23 @@
+termite
+bug
+ant
+worm
+mantis
+locust
+grasshopper
+bee
+fly
+spider
+insect
+lice
+beetle
+butterfly
+cockroach
+cricket
+stick insect
+termite
+wasp
+scorpion
+snake
+mantid
+moth

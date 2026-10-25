@@ -1,0 +1,15 @@
+control
+alt
+delete
+up
+down
+left
+right
+cross
+square
+triangle
+circle
+joystick
+home
+play
+spacebar

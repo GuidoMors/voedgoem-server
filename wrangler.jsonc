@@ -8,7 +8,7 @@
     {
       "binding": "DB",
       "database_name": "voedgoem",
-      "database_id": "aab526ed-536b-42cf-9081-defeef61cade",
+      "database_id": "3cb5624f-9d48-4a02-942a-f97ae2bf9627",
       "migrations_dir": "migrations"
     }
   ],
@@ -17,7 +17,8 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
   "vars": {
-    "CORS_ORIGINS": "http://localhost:5173"
+    "CORS_ORIGINS": "https://voedgoem.guidomors.workers.dev"
   },
+  "triggers": { "crons": ["0 * * * *"] },
   "observability": { "enabled": true }
 }

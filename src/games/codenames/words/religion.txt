@@ -1,0 +1,12 @@
+religion
+christianity
+islam
+hindu
+sikh
+spirit
+judaism
+atheist
+bible
+quran
+torah
+darwin

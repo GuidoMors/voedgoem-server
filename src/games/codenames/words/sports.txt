@@ -1,0 +1,38 @@
+Soccer
+football
+baseball
+bowling
+golf
+horseback riding
+rugby
+ice hockey
+field hockey
+cricket
+tennis
+running
+volleyball
+badminton
+swimming
+curling
+boxing
+table tennis
+skiing
+ice skating
+pool
+darts
+surfing
+skateboarding
+snowboarding
+cycling
+archery
+fishing
+figure skating
+rock climbing
+fencing
+judo
+wind surfing
+sky diving
+bungee jumping
+parkour
+dodgeball
+quidditch

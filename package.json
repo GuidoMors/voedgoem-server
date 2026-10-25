@@ -5,8 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "words": "node scripts/build-words.mjs",
+    "pretypecheck": "node scripts/build-words.mjs",
     "typecheck": "tsc --noEmit",
+    "prebuild": "node scripts/build-words.mjs",
     "build": "wrangler deploy --dry-run",
+    "predeploy": "node scripts/build-words.mjs",
     "deploy": "wrangler deploy",
     "db:migrate:local": "wrangler d1 migrations apply voedgoem --local",
     "db:migrate:remote": "wrangler d1 migrations apply voedgoem --remote",

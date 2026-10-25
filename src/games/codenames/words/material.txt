@@ -1,0 +1,13 @@
+wood
+gum
+blob
+gold
+smear
+liquid
+gas
+solid
+plasma
+stone
+material
+orb
+mold
