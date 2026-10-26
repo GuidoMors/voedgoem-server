@@ -29,14 +29,23 @@ This document records agreed behavior for the Voedgoem backend and important cro
 
 - Supports solo and team play.
 - Scoring and piece/game rules are enforced by the server; team mode uses the lobby's real-time game tick mechanism.
+- Solo play gives each player an individual board with a shared seeded piece sequence and visible opponents.
+- Team mode supports host configuration of 0-8 teams. Players can join/switch teams and the host can shuffle them.
+- Each teammate's spawn lane occupies a ten-column segment of a shared team board. Team members' pieces can block one another; full-width rows clear together and the team shares score, lines, and level.
+- A team tops out if a new piece cannot enter its assigned lane. When the last active player/team tops out, show results to everyone; the host can return to the lobby.
 
 ### Codenames
 
 - Game roles are spymaster and operative, assigned to the red or blue team.
+- Lobby seating lets players choose a team and role. The host can scramble spymasters and configure word count/hint allowance; the game uses a draft phase before play.
+- Red starts first. The key contains one more starting-team agent than the other team's count, plus one assassin and neutral words. The server shuffles the key and words.
 - Spymasters can see the key; operatives do not see unrevealed card colours.
 - A spymaster hint can target only an unrevealed word belonging to the *opposing* team. It is sent to one random connected operative on the spymaster's team and is private to that operative and the giving spymaster.
+- The operative's hint tint marks a word to avoid. It must not reveal that word's colour to other viewers.
 - A turn has a two-minute base timer. Red receives a one-minute bonus on its first turn. Unused time when a turn ends early is halved and banked for that team's next turn; a timed-out turn banks no time.
 - The active operative team can end its turn early once a clue has been given.
+- A clue is a single word plus a number or unlimited. The server rejects clues that occur on the board, including components of multi-word board entries. A numbered clue allows up to number + 1 guesses.
+- Correct-team agents allow continued guesses until the guess limit; an opposing agent or neutral ends the turn; the assassin loses the game immediately. Revealing all agents for a team wins the game. The results view shows the key and the host can return the game to the lobby.
 - Operatives can tag unrevealed words they want to guess. A player's tag can be toggled off by tagging the same card again. Tags are visible to all players and spectators, show each tagger's username, and clear when the turn ends or the card is revealed.
 - Tags are a coordination signal, not a guess; they do not reveal card colours or change scoring.
 - The frontend uses right-click to tag on desktop and a press-and-hold to tag on touch devices.
@@ -44,15 +53,46 @@ This document records agreed behavior for the Voedgoem backend and important cro
 ### 31 Seconds
 
 - The game uses seven-word cards and 31-second describing turns, with a configurable grace period and target score.
+- Red takes the first turn; the captain/player draft may be randomized. A describer opens the card to start the clock, may end the clock early, or can pass an unopened card to a teammate.
 - A captain from the opposing team scores the words after the timer and grace period. A connected teammate can substitute if that captain is unavailable.
 - Display accounts may see the words only once the opposing captain has entered the scoring period. They must not see them during lobby/draft, while describing, or during the clock/grace period. The words disappear again when the card is no longer being scored.
-- The game records per-player results and supports overtime/sudden-death scoring.
+- The first team to the configured target normally wins. If the first team to reach target does not have a lead greater than the other team's remaining potential (seven points), allow the opposing team its last card. A tie at or above target continues through sudden death until a full round ends with different scores.
+- The host can abort with confirmation; the finished score/history and per-player results are recorded.
 
 ### Saboteur
 
-- The game supports tunnel placement, role-specific win conditions, and ability cards.
+- Supports 4-14 players with a 7x13 board, ladder start, three goal positions, and role-specific win conditions.
+- Tunnel placement must connect to the reachable path and match each adjacent tunnel/ladder edge. A placement can reveal a goal. Gold gives explorers an immediate win; monsters move toward the ladder at turn end and reaching it gives saboteurs the win.
+- Includes gems and a face-up ability-card shop; gem placements can let the player gift a shop card to another player.
+- Includes pickaxe/lantern break and repair, tunnel destruction, private goal/role peeks, and host force-skip when the active player is offline.
 - Tunnel rotation is 180 degrees only. Symmetric tunnels (cross, vertical, and horizontal) do not need rotation.
+- When the tunnel deck is empty and no player holds a tunnel, the game ends under the current "all tunnels played" rule. Treat this interpretation as an established implementation decision unless the user changes it.
 - Turn state and legal actions are validated by the game module.
+
+## Cross-game UI and interaction requirements
+
+- The hub lists active lobbies with game/name/host and join action. Admins create lobbies and may close them; hosts may close their own lobby.
+- Everyone can spectate; seated users join the relevant game's roles/team.
+- A host-only kick control is available next to seated positions in the lobby/draft phases allowed by each game's server rules. Kicking returns the user to spectator; there is no ban and they can re-seat.
+- Admins can add/remove/control up to 20 test bots in a lobby. Bot snapshots must not be substituted for a real user's view.
+- Display accounts are read-only, cannot claim a seat, and exclude themselves from connected-player/game logic. Their QR code supports showing/joining a display URL.
+- User profiles support an avatar composed of a body, face, and hat, with a separate colour per part. Avatar data is persisted; processed mask/outline assets are bundled with the frontend.
+- Statistics are a modal tab while in the game shell. Each game has 3-6 stats including games played and win percentage; the player's row/stats appear first/highlighted, followed by a compact all-player table.
+- History is opened in a modal and uses game-specific entries; Saboteur's tab is labelled "Log". Tetris has no History tab.
+- On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports. In Saboteur the active player's tab appears above the map only on mobile.
+- Per-game visual themes are scoped to the current game's body state. Shared disabled styling must not mute interactive game tiles/cards or hide a disabled state that needs strong contrast.
+- Modals must preserve the active game rather than navigate away; the Hub/Game tab and brand are inert while a lobby is active where previously requested.
+
+## Non-functional and operational requirements
+
+- Use Cloudflare Worker-compatible TypeScript and supported APIs. Keep D1 and Durable Object bindings/config synchronized with source.
+- Live lobby actions must be serialized through the Durable Object. Avoid uncontrolled polling; use game ticks where realtime progression is required.
+- Do not leak hidden game state through shared/cached snapshots. Explicitly test identity-based views after snapshot changes.
+- Keep messages bounded and validate action types, IDs, indices, and game phase/role on the server.
+- Preserve existing lobbies across code deployments through migration/defaulting of new state fields.
+- Make frontend changes work at desktop and narrow mobile widths; actual device validation is still outstanding.
+- Keep dependency/tooling changes minimal. Use existing npm scripts, TypeScript checks, Vite build, and Wrangler deployment workflow.
+- Deployment and remote D1 mutation require explicit user approval. Never place credentials or plaintext recovery secrets in documentation or source.
 
 ## Statistics
 

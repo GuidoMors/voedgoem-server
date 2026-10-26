@@ -1,6 +1,6 @@
 # Voedgoem Server: Project Context
 
-This is the primary orientation document for new work in this repository. Read it first, then consult [ARCHITECTURE.md](./ARCHITECTURE.md), [REQUIREMENTS.md](./REQUIREMENTS.md), [DECISIONS.md](./DECISIONS.md), [CURRENT_STATUS.md](./CURRENT_STATUS.md), and [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md) as needed.
+For a complete transfer to a new AI session, start with [PROJECT_HANDOFF.md](./PROJECT_HANDOFF.md). Then use this file as the short repository orientation and consult [ARCHITECTURE.md](./ARCHITECTURE.md), [REQUIREMENTS.md](./REQUIREMENTS.md), [DECISIONS.md](./DECISIONS.md), [CURRENT_STATUS.md](./CURRENT_STATUS.md), [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md), [DEVELOPMENT_TIMELINE.md](./DEVELOPMENT_TIMELINE.md), and [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md) as needed.
 
 ## Purpose
 

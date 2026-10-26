@@ -5,10 +5,10 @@ Last reviewed: 2026-10-26.
 ## Overall
 
 - The server repository is the backend for the live Voedgoem game hub.
-- At the start of the documentation task, the server worktree was clean. The only tracked changes made for this task are documentation.
-- The most recent feature deployments recorded in the available conversation history were on 2026-10-24. The Codenames time-bank change, Codenames hint/tag changes, and 31 Seconds display scoring-card change were deployed then.
+- At handoff inspection, the server worktree had a modified `CURRENT_STATUS.md`; the frontend worktree had no reported source changes. This handoff adds further uncommitted documentation. No application source code was changed for this handoff.
+- The most recent feature deployments recorded in the available conversation history were on 2026-10-24. The Codenames time-bank change, Codenames hint/tag changes, and 31 Seconds display scoring-card change were deployed then. Current production Worker versions were not checked during handoff creation.
 - There is no browser/gameplay validation record for those recent changes. A successful typecheck or deployment does not establish that the game has been exercised end-to-end.
-- The production account named `Admin` was made an admin directly in the production D1 database on 2026-10-24; that change is not represented in source control.
+- Historical account-state notes conflict: one production action made username `Admin` an admin; another checkpoint said only `Groomp` (admin) and `TV` (display) remained after cleanup. Verify before relying on any account's current role.
 
 ## Implemented capabilities
 
@@ -24,8 +24,9 @@ Last reviewed: 2026-10-26.
 ## Known limitations / validation gaps
 
 - There is no recorded live-game test for Codenames tags, hints, or timer behavior, or for the 31 Seconds display visibility transition.
-- There is no recorded physical mobile-device test of Codenames press-and-hold tagging.
+- The Codenames mobile press-and-hold behavior and the responsive layouts have no recorded physical-device verification.
 - The frontend is a separate repository (`../voedgoem`); changes to frontend behavior and visual presentation must be made and verified there.
+- The frontend README is known to be stale in places (Cloudflare Pages wording, old game list, and malformed avatar instructions); source and deployment configuration are authoritative until the README is repaired.
 - Check deployment state directly before a release. The historical deployment record is not a guarantee that production still matches the current local source.
 
 ## Next sensible checks
