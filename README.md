@@ -30,9 +30,18 @@ npm run admin:grant -- <username> --remote   # production database
 npm run admin:grant -- <username> --revoke
 ```
 
-## Not yet configured
+## Deployment
 
-The Cloudflare resources are not created yet. Before deploying, create the D1 database, put its id in `wrangler.jsonc` (`database_id`), and set `CORS_ORIGINS` to the Pages origin.
+Cloudflare Worker, D1, and Durable Object bindings are configured in `wrangler.jsonc`. Confirm the target account, database, CORS origin, and migration state before deploying:
+
+```
+npm run typecheck
+npm run build
+npm run db:migrate:remote
+npm run deploy
+```
+
+Do not apply remote migrations or deploy unless the change has been reviewed and deployment is intended. See [CURRENT_STATUS.md](./CURRENT_STATUS.md) for the last known production and validation status.
 
 ## 31 Seconds
 
@@ -45,4 +54,3 @@ The rules of 30 Seconds with 7 words per card and 31 seconds per turn. Teams hav
 - Display accounts (users.isDisplay) can't join games and only receive the spectator view.
 - An hourly cron deletes non-admin, non-display users named dbg_* that are over an hour old.
 - Games: Tetris (solo and team mode), Codenames, 31 Seconds, Saboteur.
-
