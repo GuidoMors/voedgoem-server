@@ -1,0 +1,16 @@
+{
+"plate":{"name":"plate",
+			"img":"static/Cookaloor/images/tools/plate.png"
+			},
+"dirty_plate":{"name":"dirty_plate",
+			"img":"static/Cookaloor/images/tools/dirty_plate.png"
+			},
+"pan":{"name":"pan",
+			"img":"static/Cookaloor/images/tools/pan.png"
+			},
+			
+"pot":{"name":"pot",
+			"img":"static/Cookaloor/images/tools/pot.png"
+			}
+}
+

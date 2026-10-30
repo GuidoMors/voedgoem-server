@@ -1,0 +1,574 @@
+[
+	{
+		"userId": 4,
+		"selectedCharacter": {
+			"hat": "nohat",
+			"face": "monkey",
+			"body": "lumberjack",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				212,
+				209,
+				201
+			],
+			"bodyColor": [
+				197,
+				57,
+				32
+			],
+			"hasHatMask": false,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 11,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 2,
+		"selectedCharacter": {
+			"hat": "fez",
+			"face": "monkey",
+			"body": "Backpack",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 6,
+		"selectedCharacter": {
+			"hat": "Blanket",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 8,
+		"selectedCharacter": {
+			"hat": "Glasses",
+			"face": "Duck",
+			"body": "fancychef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 9,
+		"selectedCharacter": {
+			"hat": "Beret",
+			"face": "Duck",
+			"body": "Dress",
+			"hatColor": [
+				163,
+				0,
+				65
+			],
+			"faceColor": [
+				255,
+				255,
+				255
+			],
+			"bodyColor": [
+				179,
+				0,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 15,
+		"selectedCharacter": {
+			"hat": "fishbowl",
+			"face": "Bunny",
+			"body": "assistant",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 10,
+		"selectedCharacter": {
+			"hat": "Glasses",
+			"face": "Turtle",
+			"body": "Bob",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 18,
+		"selectedCharacter": {
+			"hat": "partyhat",
+			"face": "Sloth",
+			"body": "handkerchef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 13,
+		"selectedCharacter": {
+			"hat": "egg",
+			"face": "Boar",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 12,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "cat",
+			"body": "lumberjack",
+			"hatColor": [
+				129,
+				10,
+				255
+			],
+			"faceColor": [
+				255,
+				255,
+				255
+			],
+			"bodyColor": [
+				136,
+				0,
+				255
+			],
+			"hasHatMask": true,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 17,
+		"selectedCharacter": {
+			"hat": "Blanket",
+			"face": "Duck",
+			"body": "Backpack",
+			"hatColor": [
+				50,
+				64,
+				88
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 29,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 45,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 46,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 50,
+		"selectedCharacter": {
+			"hat": "Beret",
+			"face": "Boar",
+			"body": "assistant",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 36,
+		"selectedCharacter": {
+			"hat": "Beret",
+			"face": "Crocodile",
+			"body": "Backpack",
+			"hatColor": [
+				0,
+				0,
+				0
+			],
+			"faceColor": [
+				0,
+				0,
+				0
+			],
+			"bodyColor": [
+				0,
+				0,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 48,
+		"selectedCharacter": {
+			"hat": "1chef",
+			"face": "1chef",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 7,
+		"selectedCharacter": {
+			"hat": "tophat",
+			"face": "Bear",
+			"body": "BusinessCasual",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	},
+	{
+		"userId": 22,
+		"selectedCharacter": {
+			"hat": "Mustache",
+			"face": "1chef",
+			"body": "Dress",
+			"hatColor": [
+				255,
+				0,
+				255
+			],
+			"faceColor": [
+				0,
+				0,
+				0
+			],
+			"bodyColor": [
+				0,
+				0,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 41,
+		"selectedCharacter": {
+			"hat": "tophat",
+			"face": "Turtle",
+			"body": "Suit",
+			"hatColor": [
+				255,
+				0,
+				0
+			],
+			"faceColor": [
+				0,
+				0,
+				255
+			],
+			"bodyColor": [
+				255,
+				0,
+				0
+			],
+			"hasHatMask": true,
+			"hasFaceMask": true,
+			"hasBodyMask": true
+		}
+	},
+	{
+		"userId": 35,
+		"selectedCharacter": {
+			"hat": "Blanket",
+			"face": "Pig",
+			"body": "1chef",
+			"hatColor": [
+				10,
+				100,
+				255
+			],
+			"faceColor": [
+				150,
+				75,
+				10
+			],
+			"bodyColor": [
+				15,
+				200,
+				0
+			],
+			"hasHatMask": false,
+			"hasFaceMask": false,
+			"hasBodyMask": false
+		}
+	}
+]

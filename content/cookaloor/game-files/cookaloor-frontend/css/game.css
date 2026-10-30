@@ -1,0 +1,342 @@
+/* styling for mobile */
+@media (max-width: 1100px) {
+  #canvaswrapper{
+    width: 100%;
+    overflow:hidden;
+    position: absolute;
+  }
+
+  body::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rightrunning .chevroncontainer {
+    display: block;
+  }
+}
+
+
+@media (min-width: 1100px) {
+  #canvasWrapper {
+    top: 0;
+    left: 0;
+    position: absolute;
+    z-index: 1;
+    height: 100%;
+    width: 80%;
+    float:left;
+    display: none;
+  }
+
+  .rightrunning {
+    right: 0 !important;
+    width: 20% !important;
+  }
+
+  .rightrunning.chevroncontainer {
+    display: none;
+  }
+}
+
+#right.controllermodeRight {
+  display: none !important;
+}
+
+.gameCanvas {
+  position:absolute; 
+  top:0px; 
+  left:0px;
+  float:left;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.floorCanvas {
+  position:absolute; 
+  top:0px; 
+  left:0px;
+  float:left;
+  right: -80%;
+  width: 100%;
+  height: 100%;
+  background-color: black;
+  z-index: 1;
+}
+
+.overlayCanvas {
+  position:absolute; 
+  top:0px; 
+  left:0px;
+  float:left;
+  right: -80%;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.scoreBar{
+	height: 4.2%;
+	width: 90%;
+  border-radius: 10px;
+  margin-top: 4%;
+  margin-bottom: 4%;
+  margin-left: 5%;
+  border: 5px solid transparent;
+  font-family: 'Tahoma';
+  font-size: 2em;
+  text-align: center;
+  -webkit-text-stroke: 2px black;
+  margin-bottom: 3%;
+  color: green !important;
+}
+
+.livesBar{
+	height: 4.2%;
+	width: 90%;
+  border-radius: 10px;
+  margin-top: 4%;
+  margin-bottom: 4%;
+  margin-left: 5%;
+  border: 5px solid transparent;
+  font-family: 'Tahoma';
+  font-size: 2em;
+  text-align: center;
+  -webkit-text-stroke: 2px black;
+  margin-bottom: 3%;
+  color: green !important;
+}
+
+.livesBar img {
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.myTeamBorder {
+  border-color: rgba(173, 4, 196, 0.308);
+}
+
+.recipeBar {
+  height: fit-content;
+  width: 70%;
+  margin-left: 15%;
+  margin-bottom: 3%;
+  border: 5px var(--themecookwhite) solid;
+  border-radius: 10px;
+	text-align: center;
+  -webkit-box-shadow: 0 6px 4px -4px black;
+  -moz-box-shadow: 0 6px 4px -4px black;
+  box-shadow: 0 6px 4px -4px black;
+  z-index: 1300;
+  pointer-events: none;
+}
+
+.recipeCanvas {
+  width: 66%;
+  z-index: 1300;
+}
+
+.timeBar {
+  width: 100%;
+  font-family: 'Tahoma';
+  font-size: 3em;
+  text-align: center;
+  color: var(--themered);
+  -webkit-text-stroke: 2px black;
+  margin-bottom: 3%;
+}
+
+.postGameScreen{
+  height:500px;
+  z-index: 999;
+  float:left;
+  position: absolute;
+  left:40%;
+  top:50%;
+  margin-left:-250px;
+  margin-top: -250px;
+  width: 500px;
+  border-radius: 25px;
+  -webkit-box-shadow: 0 8px 4px -4px black;
+  -moz-box-shadow: 0 8px 4px -4px black;
+  box-shadow: 0 8px 4px -4px black;
+}
+
+@media (max-width: 1100px) {
+  .postGameScreen{
+    left:50%!important;
+    margin-left:-150px;
+    margin-top: -150px;
+    height:250px;
+    width: 300px;
+  }
+}
+
+
+.finishGameButton {
+  height: 50px;
+  width: 120px;
+  font-size: 15px;
+  float: left;
+  margin-left: -60px;
+  position: absolute;
+  bottom: 5%;
+  left: 50%;
+}
+
+.victoryBar{
+	height: 10%;
+	width: 90%;
+  border-radius: 10px;
+  margin-top: 4%;
+  margin-bottom: 4%;
+  margin-left: 5%;
+  border: 5px solid transparent;
+  font-family: 'Tahoma';
+  font-size: 2rem;
+  text-align: center;
+  -webkit-text-stroke: 1px black;
+  margin-bottom: 3%;
+}
+
+.scoreContainer{
+  position: absolute;
+  top:50%;
+  margin-top: -25%;
+  width: 100%;
+}
+
+#deviceController {
+  display: none;
+  width: 100%;
+  height: 100%;
+  background-color: var(--themedisabled);
+  z-index: 2000;
+}
+
+.controllerSwitcherDiv.InDeviceController {
+  display: block;
+}
+
+.radial-controller {
+  position: absolute;
+  top: 50%;
+  left: 33%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 60%;
+  clip-path: polygon(
+    30% 0%, 
+    70% 0%, 
+    100% 30%, 
+    100% 70%, 
+    70% 100%, 
+    30% 100%, 
+    0% 70%, 
+    0% 30%
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 20%, black 20%);
+  background: 
+  radial-gradient(circle at 90% 90%, rgb(255, 180, 93), transparent 30%),
+  radial-gradient(circle at 10% 90%, rgb(255, 180, 93), transparent 30%),
+  radial-gradient(circle at 90% 10%, rgb(255, 180, 93), transparent 30%),
+  radial-gradient(circle at 10% 10%, rgb(255, 180, 93), transparent 30%),
+  conic-gradient(
+      from 45deg, 
+      rgb(184, 23, 11) 0deg, 
+      #f00 120deg, 
+      #800 240deg, 
+      rgb(184, 23, 11) 360deg
+  );
+  cursor: pointer;
+  max-height: 60vw;
+  max-width: 60vh;
+  z-index: 2;
+}
+
+.radial-controller-border {
+  position: absolute;
+  top: 50%;
+  left: 33%;
+  transform: translate(-50%, -50%);
+  width: 62%;
+  height: 62%;
+  clip-path: polygon(
+    30% 0%, 
+    70% 0%, 
+    100% 30%, 
+    100% 70%, 
+    70% 100%, 
+    30% 100%, 
+    0% 70%, 
+    0% 30%
+  );
+  -webkit-mask-image: radial-gradient(circle, transparent 18%, black 18%);
+  background-color: black;
+  max-height: 62vw;
+  max-width: 62vh;
+  z-index: 1;
+}
+
+.sendActionButton {
+  position: absolute;
+  top: 45%;
+  left: 75%;
+  transform: translate(-25%, -35%);
+  width: 30%;
+  height: 30%;
+  max-height: 30vw;
+  max-width: 30vh;
+  border-radius: 25px;
+  border-color: black;
+  background-color: var(--themeyellow);
+  border: solid black 3%;
+  box-sizing: border-box;
+}
+
+.sendActionButton:active {
+  background-color: var(--themesubyellow);
+}
+
+@media (max-height: 500px) {
+  .radial-controller {
+    top: 40%;
+  }
+
+  .radial-controller-border {
+    top: 40%;
+  }
+
+  .sendActionButton {
+    top: 35%;
+  }
+}
+
+
+@media (max-width: 700px) {
+
+  .radial-controller {
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 42%;
+    height: 90%;
+    width: 90%;
+    max-width: 100vh;
+    max-height: 100vw;
+  }
+
+  .radial-controller-border {
+    transform: translate(-50%, -50%);
+    left: 50%;
+    top: 42%;
+    height: 92%;
+    width: 92%;
+    max-width: 102vh;
+    max-height: 102vw;
+  }
+
+  .sendActionButton {
+    display: none;
+  }
+
+}

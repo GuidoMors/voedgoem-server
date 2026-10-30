@@ -1,0 +1,21 @@
+[
+{"input": ["tomato"], "tool":"none","action": "chop", "ordered":false,"output": ["tomato_chopped"],"tool_output":"none"},
+{"input": ["cheese"], "tool":"none","action": "chop", "ordered":false,"output": ["cheese_chopped"],"tool_output":"none"},
+{"input": ["cucumber"], "tool":"none","action": "chop", "ordered":false,"output": ["cucumber_chopped"],"tool_output":"none"},
+{"input": ["meat"], "tool":"pan","action": "cook", "ordered":false,"output": ["meat_cooked"],"tool_output":"pan"},
+{"input": ["sausage"], "tool":"pan","action": "cook", "ordered":false,"output": ["sausage_cooked"],"tool_output":"pan"},
+{"input": ["meat_cooked"], "tool":"pan","action": "cook", "ordered":false,"output": ["meat_burned"],"tool_output":"pan"},
+{"input": ["cabbage"], "tool":"none","action": "chop", "ordered":false,"output": ["cabbage_chopped"],"tool_output":"none"},
+{"input": ["potato"], "tool":"none","action": "chop", "ordered":false,"output": ["potato_chopped"],"tool_output":"none"},
+{"input": ["potato_chopped"], "tool":"pan","action": "cook", "ordered":false,"output": ["fries"],"tool_output":"pan"},
+{"input": ["rice"], "tool":"pot","action": "cook", "ordered":false,"output": ["rice_cooked"],"tool_output":"pot"},
+{"input": ["tomato_chopped"], "tool":"none","action": "chop", "ordered":false,"output": ["ketchup"],"tool_output":"none"},
+{"input": "*", "tool":"*","action": "delete", "ordered":false,"output": [],"tool_output":"none"},
+{"input": "*", "tool":"plate","action": "submit", "ordered":false,"output": [],"tool_output":"none"},
+{"input": "*", "tool":"*","action": "submit", "ordered":false,"output": "*","tool_output":"*"},
+{"input": [], "tool":"dirty_plate","action": "clean", "ordered":false,"output": [],"tool_output":"plate"},
+{"input": [], "tool":"plate","action": "clean", "ordered":false,"output": [],"tool_output":"plate"},
+{"input": [], "tool":"pan","action": "clean", "ordered":false,"output": [],"tool_output":"pan"},
+{"input": ["poop","*"], "tool":"plate","action": "combine", "ordered":true,"output": ["poop","*"],"tool_output":"dirty_plate"},
+{"input": [ "cabbage_chopped", "tomato_chopped","*"], "tool":"*","action": "combine", "ordered":true,"output": ["salad","*"],"tool_output":"*"}
+]

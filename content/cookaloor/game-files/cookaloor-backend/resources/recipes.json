@@ -1,0 +1,34 @@
+[
+{"name":"cookaloor special","ingredients": ["bun","salad","meat_cooked","cheese_chopped","bun","sausage_cooked","cucumber_chopped","bun","fries","ketchup","bun"],"points":400, "difficulty":6},
+{"name":"tomadog","ingredients": ["bun","ketchup","sausage_cooked","ketchup","tomato_chopped","ketchup","tomato","ketchup","bun"],"points":350, "difficulty":6},
+{"name":"you want fries with that?","ingredients": ["fries","fries","ketchup","fries","fries","ketchup"],"points":330, "difficulty":6},
+{"name":"Salad a la carte","ingredients": ["salad","cucumber_chopped","salad","cheese_chopped","salad","ketchup"],"points":300, "difficulty":6},
+{"name":"a mouse walked into a restaurant","ingredients": ["bun","cheese","cheese_chopped","cheese","cheese_chopped","cheese","cheese_chopped","cheese","cheese_chopped","cheese","cheese_chopped","bun"],"points":280, "difficulty":6},
+
+{"name":"salad maestro","ingredients": ["bun","meat_cooked","salad","bun","meat_cooked","salad","bun"],"points":260, "difficulty":5},
+{"name":"the dog kennel","ingredients": ["bun","ketchup","sausage_cooked","ketchup","sausage_cooked","ketchup","bun"],"points":250, "difficulty":5},
+{"name":"big maestro","ingredients": ["bun","meat_cooked","bun","meat_cooked","cheese_chopped","cucumber_chopped","ketchup","bun"],"points":240, "difficulty":5},
+{"name":"fries in a burger","ingredients": ["bun","salad","meat_cooked","fries","ketchup","bun"],"points":230, "difficulty":5},
+    
+{"name":"subway","ingredients": ["bun","sausage_cooked","cheese_chopped","salad","ketchup","bun"],"points":210, "difficulty":4},
+{"name":"cheese master","ingredients": ["bun","cheese_chopped","meat_cooked","cheese_chopped","meat_cooked","cheese_chopped","bun"],"points":210, "difficulty":4},  
+{"name":"big burger","ingredients": ["bun","meat_cooked","cheese_chopped","cucumber_chopped","salad","bun"],"points":200, "difficulty":4},
+{"name":"double burger","ingredients": ["bun","meat_cooked","bun","meat_cooked","salad","bun"],"points":180, "difficulty":4},
+
+{"name":"cheesy fries","ingredients": ["fries","cheese_chopped","ketchup","fries"],"points":150, "difficulty":3},
+{"name":"hotdog special","ingredients": ["bun","sausage_cooked","ketchup","cucumber_chopped","bun"],"points":140, "difficulty":3},
+{"name":"hamburger veggie","ingredients": ["bun","meat_cooked","salad","bun"],"points":130, "difficulty":3},
+{"name":"super salad",	"ingredients": ["salad","cheese_chopped","cucumber_chopped"],"points":120, "difficulty":3},
+
+{"name":"hotdog with ketchup","ingredients": ["bun","sausage_cooked","ketchup","bun"],"points":110, "difficulty":2},
+{"name":"cheeseburger","ingredients": ["bun","meat_cooked","cheese_chopped","bun"],"points":100, "difficulty":2},
+{"name":"hamburger pickle","ingredients": ["bun","meat_cooked","cucumber_chopped","bun"],"points":100, "difficulty":2},
+{"name":"caesar salad",	"ingredients": ["salad","cheese_chopped"],"points":90, "difficulty":2},
+{"name":"fries with ketchup","ingredients": ["fries","ketchup"],"points":80, "difficulty":2},
+
+{"name":"dry hotdog","ingredients": ["bun","sausage_cooked","bun"],"points":70, "difficulty":1},
+{"name":"fries","ingredients": ["fries"],"points":60, "difficulty":1},
+{"name":"salad","ingredients": ["salad"],"points":50, "difficulty":1},
+{"name":"veggie hotdog","ingredients": ["bun","cucumber","bun"],"points":40, "difficulty":1}
+]
+

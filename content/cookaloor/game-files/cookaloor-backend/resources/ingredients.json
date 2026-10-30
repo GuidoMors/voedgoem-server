@@ -1,0 +1,65 @@
+{
+"poop":{ "name":"poop",
+			"img":"static/Cookaloor/images/ingredients/poop.png"
+			},
+"tomato":{ "name":"tomato",
+			"img":"static/Cookaloor/images/ingredients/tomato.png"
+			},
+"tomato_chopped":{ "name":"tomato_chopped",
+			"img":"static/Cookaloor/images/ingredients/tomato_chopped.png"
+			},
+"cheese":{"name":"cheese",
+			"img":"static/Cookaloor/images/ingredients/cheese.png"
+			},
+"cheese_chopped":{ "name":"cheese_chopped",
+			"img":"static/Cookaloor/images/ingredients/cheese_chopped.png"
+			},	
+"cabbage":{ "name":"cabbage",
+			"img":"static/Cookaloor/images/ingredients/cabbage.png"
+			},
+"cabbage_chopped":{ "name":"cabbage_chopped",
+			"img":"static/Cookaloor/images/ingredients/cabbage_chopped.png"
+			},
+"meat":{ "name":"meat",
+			"img":"static/Cookaloor/images/ingredients/meat.png"
+			},
+"meat_cooked":{ "name":"meat_cooked",
+			"img":"static/Cookaloor/images/ingredients/meat_cooked.png"
+			},
+"meat_burned":{"name":"meat_burned",
+			"img":"static/Cookaloor/images/ingredients/meat_burned.png"
+			},
+"potato":{ "name":"potato",
+			"img":"static/Cookaloor/images/ingredients/potato.png"
+			},
+"potato_chopped":{ "name":"potato_chopped",
+			"img":"static/Cookaloor/images/ingredients/potato_chopped.png"
+			},
+"fries":{ "name":"fries",
+			"img":"static/Cookaloor/images/ingredients/fries.png"
+			},
+"ketchup":{ "name":"ketchup",
+			"img":"static/Cookaloor/images/ingredients/ketchup.png"
+			},
+"cucumber":{ "name":"cucumber",
+			"img":"static/Cookaloor/images/ingredients/cucumber.png"
+			},
+"cucumber_chopped":{ "name":"cucumber_chopped",
+			"img":"static/Cookaloor/images/ingredients/cucumber_chopped.png"
+			},
+"salad":{ "name":"salad",
+			"img":"static/Cookaloor/images/ingredients/salad.png"		
+			},
+"bun":{ "name":"bun",
+			"img":"static/Cookaloor/images/ingredients/bun.png"
+			},
+"sausage":{"name":"sausage",
+			"img":"static/Cookaloor/images/ingredients/sausage.png"
+			},
+"sausage_cooked":{"name":"sausage_cooked",
+			"img":"static/Cookaloor/images/ingredients/sausage_cooked.png"
+			}
+		
+			
+}
+
