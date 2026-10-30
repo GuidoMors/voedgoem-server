@@ -331,7 +331,7 @@ export const codenames: GameModule<CodenamesState> = {
         return "save";
       }
       case "tag": {
-        if (state.phase !== "playing" || !state.clue || !seat || seat.role !== "operative" || seat.team !== state.turn) return "ignore";
+        if (state.phase !== "playing" || !seat || seat.role !== "operative" || seat.team !== state.turn) return "ignore";
         const { index } = message;
         if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= state.board.length || state.board[index].revealed) return "ignore";
         const tags = state.tags ?? (state.tags = []);
