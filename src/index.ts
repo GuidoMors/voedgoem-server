@@ -156,11 +156,11 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (!defs) throw new HttpError(404, "Unknown game.");
     const columns = defs.map(def => `${def.sql} AS "${def.key}"`).join(", ");
     const { results } = await env.DB.prepare(`
-      SELECT "userId" AS "id", "username", ${columns}
+      SELECT "userId" AS "id", "username", "avatar", ${columns}
       FROM "gameResults" JOIN "users" ON "users"."id" = "gameResults"."userId"
       WHERE "game" = ?1 GROUP BY "userId" ORDER BY COUNT(*) DESC, "username" COLLATE NOCASE
-    `).bind(statsMatch[1]).all<Record<string, string | number | null>>();
-    const players = results.map(({ id, username, ...values }) => ({ id, username, values }));
+    `).bind(statsMatch[1]).all<Record<string, string | number | null> & { id: string; username: string; avatar: string | null }>();
+    const players = results.map(({ id, username, avatar, ...values }) => ({ id, username, avatar: parseStoredAvatar(avatar), values }));
     return json({
       stats: defs.map(({ key, label, format }) => ({ key, label, format })),
       me: players.find(player => player.id === user.id) ?? null,
