@@ -37,7 +37,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Each teammate's spawn lane occupies a ten-column segment of a shared team board. Team members' pieces can block one another; full-width rows clear together and the team shares score, lines, and level.
 - A team tops out if a new piece cannot enter its assigned lane. When the last active player/team tops out, show results to everyone; the host can return to the lobby.
 
-### Codenames
+### Woerdgoem
 
 - Game roles are spymaster and operative, assigned to the red or blue team.
 - Lobby seating lets players choose a team and role. The host can scramble spymasters and configure word count/hint allowance; the game uses a draft phase before play.

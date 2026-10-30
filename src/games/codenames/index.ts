@@ -187,7 +187,7 @@ function clueConflicts(state: CodenamesState, clue: string) {
 export const codenames: GameModule<CodenamesState> = {
   info: {
     id: "codenames",
-    name: "Codenames",
+    name: "Woerdgoem",
     description: "Two teams race to find their agents. Spymasters give one-word clues; operatives guess the words. Avoid the assassin.",
     maxPlayers: 20
   },
