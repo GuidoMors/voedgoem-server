@@ -351,6 +351,7 @@ export const codenames: GameModule<CodenamesState> = {
         return "save";
       case "exit":
         if (!actor.isHost || state.phase !== "results") return "ignore";
+        state.seats = {};
         resetToLobby(state);
         return "save";
       case "abort":
