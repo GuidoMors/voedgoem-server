@@ -1,5 +1,5 @@
 import type { GameModule } from "../types";
-import { WORDS } from "./words.generated";
+import { WORD_CATEGORIES, WORDS } from "./words.generated";
 
 type Team = "red" | "blue";
 type Color = Team | "neutral" | "assassin";
@@ -90,6 +90,30 @@ function shuffle<T>(items: T[]): T[] {
   return items;
 }
 
+function pickWordsByCategory(count: number): string[] {
+  const categories = shuffle(Object.values(WORD_CATEGORIES)
+    .filter(words => words.length > 0)
+    .map(words => shuffle([...words])));
+  const selected: string[] = [];
+
+  while (selected.length < count) {
+    let progressed = false;
+    for (const words of categories) {
+      if (selected.length >= count) break;
+      if (words.length === 0) continue;
+
+      const remaining = count - selected.length;
+      const available = Math.min(words.length, remaining, 6);
+      const amount = available < 3 ? available : 3 + randomInt(available - 2);
+      selected.push(...words.splice(0, amount));
+      progressed = true;
+    }
+    if (!progressed) break;
+  }
+
+  return shuffle(selected);
+}
+
 // 25 words: 9 + 8 agents, 7 bystanders, 1 assassin. Other sizes keep the same proportions.
 function distribution(count: number) {
   const second = Math.round(count * 0.32);
@@ -110,7 +134,7 @@ function resetToLobby(state: CodenamesState) {
 
 function startGame(state: CodenamesState) {
   const wordCount = state.wordCount;
-  const words = shuffle([...WORDS]).slice(0, wordCount);
+  const words = pickWordsByCategory(wordCount);
   const startTeam: Team = "red";
   const { first, second, assassin, neutral } = distribution(wordCount);
   const colors: Color[] = shuffle([

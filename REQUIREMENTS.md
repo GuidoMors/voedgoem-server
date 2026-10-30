@@ -42,6 +42,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Game roles are spymaster and operative, assigned to the red or blue team.
 - Lobby seating lets players choose a team and role. The host can configure word count/hint allowance; the game uses a draft phase before play.
 - The host can scramble all connected players into one spymaster per team and balanced operative teams, or scramble only the two spymasters while preserving other team assignments.
+- Board words are selected by category: shuffle categories, take a random 3–6 words from each, and continue through different categories until the configured board word count is reached.
 - Red starts first. The key contains one more starting-team agent than the other team's count, plus one assassin and neutral words. The server shuffles the key and words.
 - Spymasters can see the key; operatives do not see unrevealed card colours.
 - A spymaster hint can target only an unrevealed word belonging to the *opposing* team. It is sent to one random connected operative on the spymaster's team and is private to that operative and the giving spymaster.
