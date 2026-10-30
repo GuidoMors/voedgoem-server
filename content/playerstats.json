@@ -1,0 +1,192 @@
+[
+	{
+		"username": "Groomp",
+		"userId": 4,
+		"playerStats": {
+			"myTotalGames": 125,
+			"myTotalWins": 64,
+			"myTotalLoses": 61,
+			"myGamesAsSpymaster": 37,
+			"myGamesAsTeammember": 88,
+			"myWinsAsTeammember": 46,
+			"myWinsAsSpymaster": 18,
+			"myLosesAsSpymaster": 19,
+			"myLosesAsTeammember": 42,
+			"myGamesAsTeam1": 60,
+			"myGamesAsTeam2": 60,
+			"myGamesAsTeam3": 5,
+			"blackCardsTapped": 5
+		}
+	},
+	{
+		"username": "max",
+		"userId": 7,
+		"playerStats": {
+			"myTotalGames": 179,
+			"myTotalWins": 92,
+			"myTotalLoses": 87,
+			"myGamesAsSpymaster": 57,
+			"myGamesAsTeammember": 122,
+			"myWinsAsTeammember": 66,
+			"myWinsAsSpymaster": 26,
+			"myLosesAsSpymaster": 31,
+			"myLosesAsTeammember": 56,
+			"myGamesAsTeam1": 101,
+			"myGamesAsTeam2": 74,
+			"myGamesAsTeam3": 4,
+			"blackCardsTapped": 7
+		}
+	},
+	{
+		"username": "marinblank",
+		"userId": 13,
+		"playerStats": {
+			"myTotalGames": 76,
+			"myTotalWins": 40,
+			"myTotalLoses": 36,
+			"myGamesAsSpymaster": 14,
+			"myGamesAsTeammember": 62,
+			"myWinsAsTeammember": 28,
+			"myWinsAsSpymaster": 12,
+			"myLosesAsSpymaster": 2,
+			"myLosesAsTeammember": 34,
+			"myGamesAsTeam1": 31,
+			"myGamesAsTeam2": 42,
+			"myGamesAsTeam3": 3,
+			"blackCardsTapped": 0
+		}
+	},
+	{
+		"username": "OwensMomma",
+		"userId": 12,
+		"playerStats": {
+			"myTotalGames": 173,
+			"myTotalWins": 86,
+			"myTotalLoses": 87,
+			"myGamesAsSpymaster": 10,
+			"myGamesAsTeammember": 163,
+			"myWinsAsTeammember": 82,
+			"myWinsAsSpymaster": 4,
+			"myLosesAsSpymaster": 6,
+			"myLosesAsTeammember": 81,
+			"myGamesAsTeam1": 88,
+			"myGamesAsTeam2": 83,
+			"myGamesAsTeam3": 2,
+			"blackCardsTapped": 6
+		}
+	},
+	{
+		"username": "Pizzadad",
+		"userId": 15,
+		"playerStats": {
+			"myTotalGames": 111,
+			"myTotalWins": 72,
+			"myTotalLoses": 39,
+			"myGamesAsSpymaster": 4,
+			"myGamesAsTeammember": 107,
+			"myWinsAsTeammember": 69,
+			"myWinsAsSpymaster": 3,
+			"myLosesAsSpymaster": 1,
+			"myLosesAsTeammember": 38,
+			"myGamesAsTeam1": 54,
+			"myGamesAsTeam2": 57,
+			"myGamesAsTeam3": 0,
+			"blackCardsTapped": 8
+		}
+	},
+	{
+		"username": "scootman",
+		"userId": 16,
+		"playerStats": {
+			"myTotalGames": 33,
+			"myTotalWins": 16,
+			"myTotalLoses": 17,
+			"myGamesAsSpymaster": 2,
+			"myGamesAsTeammember": 31,
+			"myWinsAsTeammember": 16,
+			"myWinsAsSpymaster": 0,
+			"myLosesAsSpymaster": 2,
+			"myLosesAsTeammember": 15,
+			"myGamesAsTeam1": 17,
+			"myGamesAsTeam2": 14,
+			"myGamesAsTeam3": 2,
+			"blackCardsTapped": 1
+		}
+	},
+	{
+		"username": "Lsi",
+		"userId": 10,
+		"playerStats": {
+			"myTotalGames": 206,
+			"myTotalWins": 104,
+			"myTotalLoses": 102,
+			"myGamesAsSpymaster": 37,
+			"myGamesAsTeammember": 169,
+			"myWinsAsTeammember": 81,
+			"myWinsAsSpymaster": 23,
+			"myLosesAsSpymaster": 14,
+			"myLosesAsTeammember": 88,
+			"myGamesAsTeam1": 121,
+			"myGamesAsTeam2": 83,
+			"myGamesAsTeam3": 2,
+			"blackCardsTapped": 13
+		}
+	},
+	{
+		"username": "Groomp",
+		"userId": 2,
+		"playerStats": {
+			"myTotalGames": 82,
+			"myTotalWins": 49,
+			"myTotalLoses": 33,
+			"myGamesAsSpymaster": 37,
+			"myGamesAsTeammember": 45,
+			"myWinsAsTeammember": 25,
+			"myWinsAsSpymaster": 24,
+			"myLosesAsSpymaster": 13,
+			"myLosesAsTeammember": 20,
+			"myGamesAsTeam1": 41,
+			"myGamesAsTeam2": 41,
+			"myGamesAsTeam3": 0,
+			"blackCardsTapped": 4
+		}
+	},
+	{
+		"username": "scootman",
+		"userId": 18,
+		"playerStats": {
+			"myTotalGames": 63,
+			"myTotalWins": 29,
+			"myTotalLoses": 34,
+			"myGamesAsSpymaster": 2,
+			"myGamesAsTeammember": 61,
+			"myWinsAsTeammember": 29,
+			"myWinsAsSpymaster": 0,
+			"myLosesAsSpymaster": 2,
+			"myLosesAsTeammember": 32,
+			"myGamesAsTeam1": 35,
+			"myGamesAsTeam2": 26,
+			"myGamesAsTeam3": 2,
+			"blackCardsTapped": 2
+		}
+	},
+	{
+		"username": "Cheeto",
+		"userId": 22,
+		"playerStats": {
+			"myTotalGames": 62,
+			"myTotalWins": 28,
+			"myTotalLoses": 34,
+			"myGamesAsSpymaster": 19,
+			"myGamesAsTeammember": 43,
+			"myWinsAsTeammember": 18,
+			"myWinsAsSpymaster": 10,
+			"myLosesAsSpymaster": 9,
+			"myLosesAsTeammember": 25,
+			"myGamesAsTeam1": 28,
+			"myGamesAsTeam2": 27,
+			"myGamesAsTeam3": 7,
+			"blackCardsTapped": 1
+		}
+	}
+]
