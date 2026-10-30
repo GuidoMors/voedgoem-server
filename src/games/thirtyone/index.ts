@@ -109,6 +109,7 @@ function nextDescriber(state: ThirtyOneState, connected: Map<string, string>) {
 
 function resetToLobby(state: ThirtyOneState) {
   state.phase = "lobby";
+  state.seats = {};
   state.scores = { red: 0, blue: 0 };
   state.describerId = null;
   state.card = [];
@@ -192,6 +193,16 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         state.seats[actor.userId] = { id: actor.userId, username: actor.username, team, role, order: seat?.order ?? state.nextOrder++ };
         return "save";
       }
+      case "assign": {
+        if (!actor.isHost || state.phase !== "playing") return "ignore";
+        const { team, userId } = message;
+        if ((team !== "red" && team !== "blue") || typeof userId !== "string") return "ignore";
+        const username = context.connected.get(userId);
+        if (!username || state.seats[userId]) return { error: "That spectator is no longer available." };
+        if (Object.keys(state.seats).length >= thirtyone.info.maxPlayers) return { error: "The game is full." };
+        state.seats[userId] = { id: userId, username, team, role: "player", order: state.nextOrder++ };
+        return "save";
+      }
       case "unseat":
         if (state.phase !== "lobby" || !seat) return "ignore";
         delete state.seats[actor.userId];
@@ -205,14 +216,31 @@ export const thirtyone: GameModule<ThirtyOneState> = {
       }
       case "scramble": {
         if (!actor.isHost || state.phase !== "lobby") return "ignore";
-        // Everyone connected except seated players is a candidate; current captains are re-rolled.
-        const candidates = [...context.connected].filter(([id]) => (state.seats[id]?.role === "captain" ? true : !state.seats[id]));
-        if (candidates.length < 2) return { error: "At least two people must be connected to scramble captains." };
+        const candidates = [...context.connected].filter(([id]) => !state.seats[id] || state.seats[id].role === "captain");
+        if (candidates.length < 2) return { error: "At least two connected people must be available to scramble captains." };
         for (const old of Object.values(state.seats)) if (old.role === "captain") delete state.seats[old.id];
         const picked = shuffle(candidates).slice(0, 2);
         const teams = shuffle<Team>(["red", "blue"]);
         picked.forEach(([id, username], index) => {
           state.seats[id] = { id, username, team: teams[index], role: "captain", order: state.nextOrder++ };
+        });
+        return "save";
+      }
+      case "scramble_teams": {
+        if (!actor.isHost || state.phase !== "lobby") return "ignore";
+        const players = shuffle([...context.connected]);
+        if (players.length < 4) return { error: "At least four people must be connected to scramble teams." };
+        if (players.length > thirtyone.info.maxPlayers) return { error: `At most ${thirtyone.info.maxPlayers} people can be assigned to teams.` };
+        const teams = shuffle<Team>(["red", "blue"]);
+        state.seats = {};
+        const counts: Record<Team, number> = { red: 1, blue: 1 };
+        players.forEach(([id, username], index) => {
+          const team = index < 2 ? teams[index] : counts[teams[0]] === counts[teams[1]]
+            ? teams[randomInt(2)]
+            : counts.red < counts.blue ? "red" : "blue";
+          const role = index < 2 ? "captain" : "player";
+          state.seats[id] = { id, username, team, role, order: state.nextOrder++ };
+          counts[team]++;
         });
         return "save";
       }

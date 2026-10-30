@@ -100,6 +100,7 @@ const remaining = (state: CodenamesState, team: Team) => state.board.filter(card
 
 function resetToLobby(state: CodenamesState) {
   state.phase = "lobby";
+  state.seats = {};
   state.board = [];
   state.clue = null;
   state.history = [];
@@ -231,6 +232,16 @@ export const codenames: GameModule<CodenamesState> = {
         state.seats[actor.userId] = { id: actor.userId, username: actor.username, team, role, order: seat?.order ?? state.nextOrder++ };
         return "save";
       }
+      case "assign": {
+        if (!actor.isHost || state.phase !== "playing") return "ignore";
+        const { team, userId } = message;
+        if ((team !== "red" && team !== "blue") || typeof userId !== "string") return "ignore";
+        const username = context.connected.get(userId);
+        if (!username || state.seats[userId]) return { error: "That spectator is no longer available." };
+        if (Object.keys(state.seats).length >= codenames.info.maxPlayers) return { error: "The game is full." };
+        state.seats[userId] = { id: userId, username, team, role: "operative", order: state.nextOrder++ };
+        return "save";
+      }
       case "unseat":
         if (state.phase !== "lobby" || !seat) return "ignore";
         delete state.seats[actor.userId];
@@ -244,14 +255,31 @@ export const codenames: GameModule<CodenamesState> = {
       }
       case "scramble": {
         if (!actor.isHost || state.phase !== "lobby") return "ignore";
-        // Everyone connected except seated operatives is a candidate; current spymasters are re-rolled.
-        const candidates = [...context.connected].filter(([id]) => state.seats[id]?.role !== "spymaster" ? !state.seats[id] : true);
-        if (candidates.length < 2) return { error: "At least two people must be connected to scramble spymasters." };
-        for (const seatToDrop of Object.values(state.seats)) if (seatToDrop.role === "spymaster") delete state.seats[seatToDrop.id];
+        const candidates = [...context.connected].filter(([id]) => !state.seats[id] || state.seats[id].role === "spymaster");
+        if (candidates.length < 2) return { error: "At least two connected people must be available to scramble spymasters." };
+        for (const old of Object.values(state.seats)) if (old.role === "spymaster") delete state.seats[old.id];
         const picked = shuffle(candidates).slice(0, 2);
         const teams = shuffle<Team>(["red", "blue"]);
         picked.forEach(([id, username], index) => {
           state.seats[id] = { id, username, team: teams[index], role: "spymaster", order: state.nextOrder++ };
+        });
+        return "save";
+      }
+      case "scramble_teams": {
+        if (!actor.isHost || state.phase !== "lobby") return "ignore";
+        const players = shuffle([...context.connected]);
+        if (players.length < 4) return { error: "At least four people must be connected to scramble teams." };
+        if (players.length > codenames.info.maxPlayers) return { error: `At most ${codenames.info.maxPlayers} people can be assigned to teams.` };
+        const teams = shuffle<Team>(["red", "blue"]);
+        state.seats = {};
+        const counts: Record<Team, number> = { red: 1, blue: 1 };
+        players.forEach(([id, username], index) => {
+          const team = index < 2 ? teams[index] : counts[teams[0]] === counts[teams[1]]
+            ? teams[randomInt(2)]
+            : counts.red < counts.blue ? "red" : "blue";
+          const role = index < 2 ? "spymaster" : "operative";
+          state.seats[id] = { id, username, team, role, order: state.nextOrder++ };
+          counts[team]++;
         });
         return "save";
       }
@@ -351,7 +379,6 @@ export const codenames: GameModule<CodenamesState> = {
         return "save";
       case "exit":
         if (!actor.isHost || state.phase !== "results") return "ignore";
-        state.seats = {};
         resetToLobby(state);
         return "save";
       case "abort":
