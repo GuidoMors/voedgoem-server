@@ -17,7 +17,7 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Lobby"] }],
   "vars": {
-    "CORS_ORIGINS": "https://voedgoem.guidomors.workers.dev"
+    "CORS_ORIGINS": "https://voedgoem.guidomors.workers.dev,https://voedgoem.app"
   },
   "triggers": { "crons": ["0 * * * *"] },
   "observability": { "enabled": true }
