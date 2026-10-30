@@ -50,6 +50,8 @@ This is a living record of decisions that shape the server. It describes the cur
 
 **Rationale:** Escalation of account privilege must remain an explicit database operator action. Admin APIs are then guarded by the authenticated `isAdmin` property.
 
+**Hoster role:** Lobby creation can also be granted from the admin dashboard through a separate `isHoster` flag. This allows trusted users to create and host games without granting access to admin APIs, user management, recovery-key generation, or test-bot controls.
+
 ## Word lists are generated during lifecycle scripts
 
 **Decision:** Text word lists are bundled into generated TypeScript by `scripts/build-words.mjs`, which runs before typecheck, build, and deploy.

@@ -25,6 +25,10 @@ Chronological summary of important changes and requirements. This log is based o
 - **Repository documentation:** Added this project context, requirements, decisions, development log, current status, and architecture reference set.
 - **Session handoff package:** Added a master handoff, detailed development timeline, and implementation notes. Flagged that historical production admin-account notes conflict, that the frontend README is stale, and that raw design/avatar inputs were not present in the inspected workspace.
 
+## 2026-10-30
+
+- **Hoster role:** Added a separate, admin-managed Hoster role. Hosters retain ordinary player access and can create and host lobbies, but do not receive admin dashboard/API or test-bot permissions. Admins can grant or revoke the role for non-admin, non-display accounts. Migrations `0006_hoster.sql` and `0007_clear_admin_hoster.sql` add the role and ensure admins aren't marked as hosters.
+
 ## Deployment notes
 
 Several feature changes above were deployed to the production Worker(s) according to the conversation history. No git commits were created for those deployments. For the latest confirmed deployment and verification details, see [CURRENT_STATUS.md](./CURRENT_STATUS.md).

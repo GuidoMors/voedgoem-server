@@ -33,6 +33,7 @@ The value proposition is a shared hub for several games with persistent accounts
 **Current audiences and roles (confirmed in code/history):**
 
 - Regular registered players.
+- Hoster accounts, which retain player access and can create and host lobbies without admin features.
 - Lobby hosts and administrators.
 - Display-only accounts for shared screens.
 - Spectators.
@@ -47,7 +48,7 @@ The earlier CommonTime schedule planner is a separate project from the same broa
 - Backend registry has four games: Tetris, Codenames, 31 Seconds (`thirtyone`), and Saboteur.
 - Frontend has corresponding game lobby components and a union of lobby snapshot types.
 - Account/auth/profile/avatar, admin, display account, QR, game stats, history modal, and kick-button components are present.
-- Server migrations `0001_init.sql` through `0005_result_details.sql` are present.
+- Server migrations `0001_init.sql` through `0007_clear_admin_hoster.sql` are present. Hoster is a separate role that admins can grant to non-admin, non-display accounts; hosters can create and host lobbies but do not gain admin dashboard/API access.
 - Server configuration names the Worker `voedgoem-api`; frontend configuration names the assets Worker `voedgoem`.
 - Frontend has a production API base URL in `.env.production`.
 - At handoff inspection, the backend worktree had a modified `CURRENT_STATUS.md`; the frontend worktree showed no tracked/untracked changes. No source-code changes for this handoff were made. The new handoff files themselves are uncommitted.

@@ -57,15 +57,15 @@ async function register(request: Request, env: Env) {
   } catch {
     throw new HttpError(409, "That username is already taken.");
   }
-  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false, isDisplay: false, avatar: null } }, 201);
+  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false, isHoster: false, isDisplay: false, avatar: null } }, 201);
 }
 
 async function login(request: Request, env: Env) {
   const body = await readBody(request);
-  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin", "isDisplay", "avatar" FROM "users" WHERE "username" = ?1`)
-    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number; isDisplay: number; avatar: string | null }>();
+  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin", "isHoster", "isDisplay", "avatar" FROM "users" WHERE "username" = ?1`)
+    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number; isHoster: number; isDisplay: number; avatar: string | null }>();
   if (!row || !(await verifyPassword(text(body.password), row.passwordHash))) throw new HttpError(401, "Username or password is incorrect.");
-  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } });
+  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isHoster: row.isHoster === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } });
 }
 
 async function resetPassword(request: Request, env: Env) {
@@ -168,7 +168,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     return json({ lobbies: results });
   }
   if (method === "POST" && path === "/api/lobbies") {
-    if (!user.isAdmin) throw new HttpError(403, "Only admins can create lobbies.");
+    if (!user.isAdmin && !user.isHoster) throw new HttpError(403, "Only admins and hosters can create lobbies.");
     const body = await readBody(request);
     const game = text(body.game);
     const name = text(body.name).trim();
@@ -197,10 +197,10 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (!user.isAdmin) throw new HttpError(403, "Admins only.");
     if (method === "GET" && path === "/api/admin/users") {
       const { results } = await env.DB.prepare(`
-        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
+        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isHoster" = 1 AS "isHoster", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
         FROM "users" ORDER BY "username" COLLATE NOCASE
-      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isDisplay: number; hasRecoveryKey: number }>();
-      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
+      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isHoster: number; isDisplay: number; hasRecoveryKey: number }>();
+      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isHoster: !!row.isHoster, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
     }
     if (method === "POST" && path === "/api/admin/displays") {
       const body = await readBody(request);
@@ -221,6 +221,19 @@ async function route(request: Request, env: Env): Promise<Response> {
       const result = await env.DB.prepare(`UPDATE "users" SET "recoveryKeyHash" = ?1 WHERE "id" = ?2`).bind(await hashRecoveryKey(key), keyMatch[1]).run();
       if (result.meta.changes !== 1) throw new HttpError(404, "User not found.");
       return json({ recoveryKey: key });
+    }
+    const hosterMatch = path.match(/^\/api\/admin\/users\/([A-Za-z0-9-]{1,64})\/hoster$/);
+    if (method === "POST" && hosterMatch) {
+      const body = await readBody(request);
+      if (typeof body.isHoster !== "boolean") throw new HttpError(400, "isHoster must be a boolean.");
+      const target = await env.DB.prepare(`SELECT "isAdmin", "isDisplay" FROM "users" WHERE "id" = ?1`)
+        .bind(hosterMatch[1]).first<{ isAdmin: number; isDisplay: number }>();
+      if (!target) throw new HttpError(404, "User not found.");
+      if (target.isDisplay === 1) throw new HttpError(400, "Display accounts cannot be hosters.");
+      if (body.isHoster && target.isAdmin === 1) throw new HttpError(400, "Admins already have hoster permissions.");
+      await env.DB.prepare(`UPDATE "users" SET "isHoster" = ?1 WHERE "id" = ?2`)
+        .bind(body.isHoster ? 1 : 0, hosterMatch[1]).run();
+      return json({ isHoster: body.isHoster });
     }
   }
 

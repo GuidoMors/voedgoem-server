@@ -26,6 +26,8 @@ Browser (sibling ../voedgoem frontend)
 5. Routes lobby WebSocket upgrades through the `LOBBY` Durable Object namespace.
 6. Runs the hourly deletion of expired debug accounts.
 
+Admins are authorized by `isAdmin`. The separate `isHoster` flag grants lobby creation only; game host controls come from the lobby's `hostId`. Hoster accounts do not pass the admin API guard or receive admin bot controls.
+
 `src/auth.ts` implements password hashing/verification, session creation and lookup, recovery-key creation/normalization, and hashing. `src/avatar.ts` validates avatar payloads.
 
 ## Persistence
@@ -34,7 +36,7 @@ Browser (sibling ../voedgoem frontend)
 
 Schema evolution is recorded in `migrations/`:
 
-- `users`: account credentials, admin/display flags, recovery-key hash, avatar, creation time.
+- `users`: account credentials, admin/hoster/display flags, recovery-key hash, avatar, creation time.
 - `sessions`: hashed bearer token, account reference, expiration.
 - `lobbies`: lobby ID, game ID, display name, host, creation time.
 - `gameResults`: per-player completed-game role, result flags, score and extra fields.

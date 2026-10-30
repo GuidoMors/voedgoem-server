@@ -19,12 +19,15 @@ The game registry currently includes:
 
 The game-specific rules and persisted state live in `src/games/<game>/index.ts`. Player-facing presentation is in the frontend.
 
+Admins can grant the separate Hoster role to non-admin, non-display accounts. Admins already have Hoster capabilities. Hosters retain ordinary player access and can create and host lobbies, but do not receive admin dashboard or API permissions.
+
 ## Key rules for contributors
 
 - Preserve the `GameModule` contract in `src/games/types.ts`; game modules should not take over generic lobby transport or persistence.
 - Keep authoritative game rules and permission checks on the server. A disabled or hidden frontend control is not a permission check.
 - Treat snapshots as audience-specific where a game has hidden information. `GameModule.perViewer` controls snapshot caching; `Lobby.broadcast()` selects the appropriate viewer identity.
 - Display accounts are read-only spectators. They are intentionally not included in the connected-player set used by games.
+- Hoster privileges are separate from admin privileges; only admins can manage roles or use admin-only endpoints and bot controls.
 - Use ordered D1 migrations for schema changes. Do not edit already-applied migrations to change production schema.
 - Keep credentials, session tokens, and recovery keys out of source control and logs. Only password and recovery-key hashes are stored.
 - `npm run typecheck`, `npm run build`, and `npm run deploy` run word-list generation first.

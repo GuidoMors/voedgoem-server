@@ -71,9 +71,9 @@ export async function authenticate(request: Request, env: Env, url: URL): Promis
   const token = readToken(request, url);
   if (!token) return null;
   const row = await env.DB.prepare(`
-    SELECT u."id", u."username", u."isAdmin", u."isDisplay", u."avatar" FROM "sessions" s
+    SELECT u."id", u."username", u."isAdmin", u."isHoster", u."isDisplay", u."avatar" FROM "sessions" s
     JOIN "users" u ON u."id" = s."userId"
     WHERE s."tokenHash" = ?1 AND s."expiresAt" > ?2
-  `).bind(await sha256Hex(token), new Date().toISOString()).first<{ id: string; username: string; isAdmin: number; isDisplay: number; avatar: string | null }>();
-  return row ? { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } : null;
+  `).bind(await sha256Hex(token), new Date().toISOString()).first<{ id: string; username: string; isAdmin: number; isHoster: number; isDisplay: number; avatar: string | null }>();
+  return row ? { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isHoster: row.isHoster === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } : null;
 }
