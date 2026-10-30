@@ -9,6 +9,8 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - A user may reset their password using their recovery key. Resetting invalidates that recovery key and deletes the user's active sessions.
 - Admin privileges are assigned through the operator script (`npm run admin:grant -- <username>`); they are not self-service.
 - Admins can list users, create display accounts, generate/reset a user's recovery key, create game lobbies, close any lobby, and use lobby bot controls.
+- Admins can grant or revoke the separate Hoster role for non-admin, non-display accounts. Admins already have Hoster capabilities and cannot be granted that role. Hosters retain ordinary player access and can create and host lobbies and configure their games, but cannot access the admin dashboard/APIs, manage roles, create display accounts, generate recovery keys, or control test bots.
+- Hosters can close their own lobbies as the lobby host; only admins can close other users' lobbies.
 - A recovery key is displayed only when generated. The server stores its hash, not its plaintext value.
 - Display accounts are read-only: they cannot send game actions and do not count as connected players.
 - The hourly scheduled cleanup deletes `dbg_` test accounts older than one hour, except admins and display accounts.
@@ -17,7 +19,8 @@ This document records agreed behavior for the Voedgoem backend and important cro
 ## Lobbies and transport
 
 - Authenticated users can list lobbies and connect to them using a WebSocket.
-- Only admins can create lobbies. The host and admins can close a lobby.
+- Admins and hosters can create lobbies. The host and admins can close a lobby. Creating a lobby makes that account its host, with the game's normal host controls.
+- Admins and hosters may set an optional lobby password of up to 128 characters when creating a lobby. An empty or whitespace-only password creates a public lobby. Passwords are stored as hashes; joining a protected lobby requires the password before any lobby snapshot or game actions are available. The lobby host can enter without a password.
 - Each lobby has a game, name, host, and game-specific state. The Durable Object owns live connections and delegates game actions to that game's module.
 - Invalid or unauthorized actions must not change game state. Game modules should return the repository's `ignore`, `save`, `volatile`, or explicit error outcomes as appropriate.
 - Real-time games may request scheduled ticks through the optional game-module tick hooks.
@@ -115,13 +118,14 @@ The current routes are implemented in `src/index.ts`. Principal routes:
 | `PUT` | `/api/profile/avatar` | Update non-display profile avatar |
 | `GET` | `/api/games` | List registered games |
 | `GET` | `/api/lobbies` | List lobbies |
-| `POST` | `/api/lobbies` | Admin creates a lobby |
+| `POST` | `/api/lobbies` | Admin/Hoster creates a lobby; optional `password` (empty means public) |
 | `GET` | `/api/lobbies/:id` | Read lobby metadata |
-| `GET` | `/api/lobbies/:id/ws` | Authenticated WebSocket connection |
+| `GET` | `/api/lobbies/:id/ws` | Authenticated WebSocket connection; protected lobbies require the password before lobby data is sent |
 | `DELETE` | `/api/lobbies/:id` | Host or admin closes lobby |
 | `GET` | `/api/stats/:game` | Read game statistics |
 | `GET` | `/api/admin/users` | Admin lists accounts |
 | `POST` | `/api/admin/displays` | Admin creates a display account |
 | `POST` | `/api/admin/users/:id/recovery-key` | Admin generates/replaces recovery key |
+| `POST` | `/api/admin/users/:id/hoster` | Admin grants/revokes Hoster role with `{ "isHoster": boolean }` |
 
 All routes and the actual request/response schemas should be verified in source before changing or documenting an API contract.

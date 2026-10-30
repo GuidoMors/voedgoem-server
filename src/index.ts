@@ -57,15 +57,15 @@ async function register(request: Request, env: Env) {
   } catch {
     throw new HttpError(409, "That username is already taken.");
   }
-  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false, isDisplay: false, avatar: null } }, 201);
+  return json({ token: await createSession(env, id), user: { id, username, isAdmin: false, isHoster: false, isDisplay: false, avatar: null } }, 201);
 }
 
 async function login(request: Request, env: Env) {
   const body = await readBody(request);
-  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin", "isDisplay", "avatar" FROM "users" WHERE "username" = ?1`)
-    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number; isDisplay: number; avatar: string | null }>();
+  const row = await env.DB.prepare(`SELECT "id", "username", "passwordHash", "isAdmin", "isHoster", "isDisplay", "avatar" FROM "users" WHERE "username" = ?1`)
+    .bind(text(body.username).trim()).first<{ id: string; username: string; passwordHash: string; isAdmin: number; isHoster: number; isDisplay: number; avatar: string | null }>();
   if (!row || !(await verifyPassword(text(body.password), row.passwordHash))) throw new HttpError(401, "Username or password is incorrect.");
-  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } });
+  return json({ token: await createSession(env, row.id), user: { id: row.id, username: row.username, isAdmin: row.isAdmin === 1, isHoster: row.isHoster === 1, isDisplay: row.isDisplay === 1, avatar: parseStoredAvatar(row.avatar) } });
 }
 
 async function resetPassword(request: Request, env: Env) {
@@ -89,13 +89,13 @@ async function resetPassword(request: Request, env: Env) {
 
 const lobbyStub = (env: Env, id: string) => env.LOBBY.get(env.LOBBY.idFromName(id));
 
-interface LobbyRow { id: string; game: string; name: string; hostId: string; hostName: string; createdAt: string }
-const LOBBY_SELECT = `SELECT l."id", l."game", l."name", l."hostId", u."username" AS "hostName", l."createdAt" FROM "lobbies" l JOIN "users" u ON u."id" = l."hostId"`;
+interface LobbyRow { id: string; game: string; name: string; hostId: string; hostName: string; createdAt: string; isPasswordProtected: boolean }
+const LOBBY_SELECT = `SELECT l."id", l."game", l."name", l."hostId", u."username" AS "hostName", l."createdAt", l."passwordHash" IS NOT NULL AS "isPasswordProtected" FROM "lobbies" l JOIN "users" u ON u."id" = l."hostId"`;
 
 async function findLobby(env: Env, id: string) {
   const lobby = await env.DB.prepare(`${LOBBY_SELECT} WHERE l."id" = ?1`).bind(id).first<LobbyRow>();
   if (!lobby) throw new HttpError(404, "Lobby not found.");
-  return lobby;
+  return { ...lobby, isPasswordProtected: !!lobby.isPasswordProtected };
 }
 
 async function connectToLobby(request: Request, env: Env, user: SessionUser, id: string) {
@@ -112,6 +112,11 @@ async function connectToLobby(request: Request, env: Env, user: SessionUser, id:
   headers.set("x-host-name", lobby.hostName);
   headers.set("x-lobby-game", lobby.game);
   headers.set("x-lobby-name", lobby.name);
+  headers.set("x-is-lobby-host", lobby.hostId === user.id ? "1" : "0");
+  const { passwordHash } = await env.DB.prepare(`SELECT "passwordHash" FROM "lobbies" WHERE "id" = ?1`)
+    .bind(id).first<{ passwordHash: string | null }>() ?? { passwordHash: null };
+  if (passwordHash) headers.set("x-lobby-password-hash", passwordHash);
+  else headers.delete("x-lobby-password-hash");
   return lobbyStub(env, id).fetch("https://lobby/ws", { headers });
 }
 
@@ -165,17 +170,21 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   if (method === "GET" && path === "/api/lobbies") {
     const { results } = await env.DB.prepare(`${LOBBY_SELECT} ORDER BY l."createdAt" DESC`).all<LobbyRow>();
-    return json({ lobbies: results });
+    return json({ lobbies: results.map(({ id, game, name, hostId, hostName, createdAt, isPasswordProtected }) => ({ id, game, name, hostId, hostName, createdAt, isPasswordProtected: !!isPasswordProtected })) });
   }
   if (method === "POST" && path === "/api/lobbies") {
-    if (!user.isAdmin) throw new HttpError(403, "Only admins can create lobbies.");
+    if (!user.isAdmin && !user.isHoster) throw new HttpError(403, "Only admins and hosters can create lobbies.");
     const body = await readBody(request);
     const game = text(body.game);
     const name = text(body.name).trim();
+    const password = body.password === undefined ? "" : body.password;
     if (!GAMES[game]) throw new HttpError(400, "Unknown game.");
     if (name.length < 1 || name.length > 40) throw new HttpError(400, "Lobby name must be 1-40 characters.");
+    if (typeof password !== "string" || password.length > 128) throw new HttpError(400, "Lobby password must be at most 128 characters.");
     const id = randomId(6);
-    await env.DB.prepare(`INSERT INTO "lobbies" ("id", "game", "name", "hostId") VALUES (?1, ?2, ?3, ?4)`).bind(id, game, name, user.id).run();
+    const passwordHash = password.trim() ? await hashPassword(password) : null;
+    await env.DB.prepare(`INSERT INTO "lobbies" ("id", "game", "name", "hostId", "passwordHash") VALUES (?1, ?2, ?3, ?4, ?5)`)
+      .bind(id, game, name, user.id, passwordHash).run();
     return json({ lobby: await findLobby(env, id) }, 201);
   }
 
@@ -197,10 +206,10 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (!user.isAdmin) throw new HttpError(403, "Admins only.");
     if (method === "GET" && path === "/api/admin/users") {
       const { results } = await env.DB.prepare(`
-        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
+        SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isHoster" = 1 AS "isHoster", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"
         FROM "users" ORDER BY "username" COLLATE NOCASE
-      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isDisplay: number; hasRecoveryKey: number }>();
-      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
+      `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isHoster: number; isDisplay: number; hasRecoveryKey: number }>();
+      return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isHoster: !!row.isHoster, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
     }
     if (method === "POST" && path === "/api/admin/displays") {
       const body = await readBody(request);
@@ -221,6 +230,19 @@ async function route(request: Request, env: Env): Promise<Response> {
       const result = await env.DB.prepare(`UPDATE "users" SET "recoveryKeyHash" = ?1 WHERE "id" = ?2`).bind(await hashRecoveryKey(key), keyMatch[1]).run();
       if (result.meta.changes !== 1) throw new HttpError(404, "User not found.");
       return json({ recoveryKey: key });
+    }
+    const hosterMatch = path.match(/^\/api\/admin\/users\/([A-Za-z0-9-]{1,64})\/hoster$/);
+    if (method === "POST" && hosterMatch) {
+      const body = await readBody(request);
+      if (typeof body.isHoster !== "boolean") throw new HttpError(400, "isHoster must be a boolean.");
+      const target = await env.DB.prepare(`SELECT "isAdmin", "isDisplay" FROM "users" WHERE "id" = ?1`)
+        .bind(hosterMatch[1]).first<{ isAdmin: number; isDisplay: number }>();
+      if (!target) throw new HttpError(404, "User not found.");
+      if (target.isDisplay === 1) throw new HttpError(400, "Display accounts cannot be hosters.");
+      if (body.isHoster && target.isAdmin === 1) throw new HttpError(400, "Admins already have hoster permissions.");
+      await env.DB.prepare(`UPDATE "users" SET "isHoster" = ?1 WHERE "id" = ?2`)
+        .bind(body.isHoster ? 1 : 0, hosterMatch[1]).run();
+      return json({ isHoster: body.isHoster });
     }
   }
 

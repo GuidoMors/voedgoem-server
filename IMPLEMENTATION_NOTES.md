@@ -30,7 +30,7 @@ src/
     tetris/index.ts           solo/team Tetris module
     tetris/team.ts            server simulation for team mode
     thirtyone/index.ts        31 Seconds engine and snapshots
-migrations/                   append-only D1 migrations 0001–0005
+migrations/                   append-only D1 migrations 0001–0008
 scripts/
   build-words.mjs             build-time word bundling
   set-admin.mjs               console/local/remote admin grant/revoke
@@ -57,7 +57,7 @@ src/
 public/avatars/                imported mask and outline PNGs for each part/view
 ```
 
-The current workspace inspection found both directories under `F:\Workspace\voedgoem-groomp\`. The two project directories each have their own `.git` directory.
+The current workspace contains the sibling `voedgoem-server` backend and `voedgoem` frontend repositories. Each project directory has its own `.git` directory.
 
 ## Backend data and auth
 
@@ -70,10 +70,13 @@ Migration history:
 3. `0003_display.sql`: display-account flag.
 4. `0004_game_results.sql`: per-user completed-game result rows.
 5. `0005_result_details.sql`: score and extra columns.
+6. `0006_hoster.sql`: separate Hoster role flag.
+7. `0007_clear_admin_hoster.sql`: clear Hoster flags from admin accounts.
+8. `0008_lobby_password.sql`: optional password hash on lobbies.
 
 Read migrations before changing schema. Do not edit already-applied migrations; add a new one.
 
-`users` includes ID, case-insensitive unique username, password hash, admin/display flags, recovery-key hash, creation date, avatar. `sessions` stores token hashes and expiry. `lobbies` stores ID/game/name/host/time. `gameResults` stores game/user/role/win/flag/score/extra/time.
+`users` includes ID, case-insensitive unique username, password hash, admin/hoster/display flags, recovery-key hash, creation date, avatar. `sessions` stores token hashes and expiry. `lobbies` stores ID/game/name/host/time. `gameResults` stores game/user/role/win/flag/score/extra/time.
 
 ### Authentication
 
@@ -81,8 +84,8 @@ Read migrations before changing schema. Do not edit already-applied migrations; 
 - Bearer tokens are random and stored as SHA-256 hashes. WebSocket URL can carry `?token=...`.
 - Sessions last 30 days.
 - Recovery keys are normalized and hashed; only the newly generated plaintext is returned.
-- `authenticate()` joins sessions/users and supplies the user identity, admin/display flags and parsed avatar.
-- Admin authorization is based on the authenticated user. `scripts/set-admin.mjs` is the operator path; there is no public role-escalation endpoint.
+- `authenticate()` joins sessions/users and supplies the user identity, admin/hoster/display flags and parsed avatar.
+- Admin authorization is based only on `isAdmin`. `scripts/set-admin.mjs` is the operator path for admin grants; Hoster grants are admin-dashboard-only.
 
 ### API families
 
@@ -92,9 +95,10 @@ Implemented in `src/index.ts`:
 - `/api/auth/register`, `/login`, `/reset-password`, `/me`, `/logout`
 - `/api/profile/avatar`
 - `/api/games`
-- `/api/lobbies` and `/api/lobbies/:id` plus WebSocket `/ws`
+- `/api/lobbies` and `/api/lobbies/:id` plus WebSocket `/ws`; lobby creation may include an optional password, and public lobby summaries expose only an `isPasswordProtected` indicator.
 - `/api/stats/:game`
 - `/api/admin/users`, `/api/admin/displays`, `/api/admin/users/:id/recovery-key`
+- `/api/admin/users/:id/hoster` (admin-only role grant/revoke)
 
 Check source for exact methods and request/response shapes before extending the API. CORS currently permits GET, POST, PUT, DELETE, OPTIONS and Authorization/Content-Type.
 
@@ -149,7 +153,7 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 - Model: body/bodyColor, face/faceColor, hat/hatColor.
 - Frontend generates deterministic fallback avatars and supports editor preview/color selection.
 - Imported processed image assets are under `public/avatars/{bodies,faces,hats}/...`; renderer recolours masks based on luminance and composites outlines through canvas.
-- The raw source folders were referenced at `F:\Workspace\voedgoem-groomp\bodies`, `faces`, `hats`, but were missing when checked during handoff. Do not remove processed files.
+- The raw source folders `bodies`, `faces`, and `hats` were referenced but missing when checked during handoff. Do not remove the processed files in the frontend repository.
 - Display accounts have no avatar profile.
 
 ## UX and style decisions

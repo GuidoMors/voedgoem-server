@@ -10,7 +10,7 @@ if (!username || !/^[A-Za-z0-9_]{3,20}$/.test(username)) {
   process.exit(1);
 }
 
-const sql = `UPDATE "users" SET "isAdmin" = ${revoke ? 0 : 1} WHERE "username" = '${username}'`;
+const sql = `UPDATE "users" SET "isAdmin" = ${revoke ? 0 : 1}${revoke ? "" : ', "isHoster" = 0'} WHERE "username" = '${username}'`;
 const result = spawnSync("npx", ["wrangler", "d1", "execute", "voedgoem", remote ? "--remote" : "--local", "--command", `"${sql}"`], {
   stdio: "inherit",
   shell: true

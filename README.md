@@ -30,6 +30,10 @@ npm run admin:grant -- <username> --remote   # production database
 npm run admin:grant -- <username> --revoke
 ```
 
+Admins and Hosters can optionally set a password when creating a lobby. Leave it empty for a public lobby. Protected lobbies require the password before the server sends lobby state to a joining player; the host can enter directly.
+
+Admins can also grant or revoke the Hoster role from the Admin dashboard. Hosters can create and host lobbies, including configuring their games, but do not have access to the Admin dashboard or its user-management features.
+
 ## Deployment
 
 Cloudflare Worker, D1, and Durable Object bindings are configured in `wrangler.jsonc`. Confirm the target account, database, CORS origin, and migration state before deploying:

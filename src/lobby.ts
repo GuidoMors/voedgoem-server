@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { parseStoredAvatar, type Avatar } from "./avatar";
+import { verifyPassword } from "./auth";
 import type { Env } from "./env";
 import { DISPLAY_VIEWER } from "./viewer";
 import { MODULES } from "./games/registry";
@@ -26,7 +27,13 @@ interface Attachment {
   username: string;
   isAdmin?: boolean;
   isDisplay?: boolean;
+  isAuthenticated?: boolean;
+  passwordHash?: string;
+  passwordAttempts?: number;
+  avatar?: Avatar;
 }
+
+const isAuthenticated = (who: Attachment) => who.isAuthenticated ?? !who.passwordHash;
 
 const MAX_BOTS = 20;
 
@@ -127,26 +134,45 @@ export class Lobby extends DurableObject<Env> {
 
     const isDisplay = request.headers.get("x-is-display") === "1";
     const avatar = isDisplay ? null : parseStoredAvatar(request.headers.get("x-avatar"));
-    const avatars = (this.state.avatars ??= {});
-    if (isDisplay) { /* displays only watch */ }
-    else if (avatar) avatars[userId] = avatar;
-    else delete avatars[userId];
-    await this.save();
+    const passwordHash = request.headers.get("x-lobby-password-hash") ?? undefined;
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ userId, username, isAdmin: request.headers.get("x-is-admin") === "1", isDisplay } satisfies Attachment);
+    server.serializeAttachment({
+      userId,
+      username,
+      isAdmin: request.headers.get("x-is-admin") === "1",
+      isDisplay,
+      isAuthenticated: !passwordHash || request.headers.get("x-is-lobby-host") === "1",
+      passwordHash: request.headers.get("x-is-lobby-host") === "1" ? undefined : passwordHash,
+      avatar: avatar ?? undefined,
+      passwordAttempts: 0
+    } satisfies Attachment);
+    if (passwordHash && request.headers.get("x-is-lobby-host") !== "1") {
+      server.send(JSON.stringify({ type: "password_required" }));
+    } else {
+      await this.activateConnection(server);
+    }
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  private async activateConnection(ws: WebSocket) {
+    const who = ws.deserializeAttachment() as Attachment | null;
+    if (!who) return;
+    const avatars = (this.state!.avatars ??= {});
+    if (who.isDisplay || !who.avatar) delete avatars[who.userId];
+    else avatars[who.userId] = who.avatar;
+    await this.save();
     this.broadcast();
     this.broadcastAvatars();
-    return new Response(null, { status: 101, webSocket: client });
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     const state = this.state;
     if (!state || typeof raw !== "string" || raw.length > MAX_MESSAGE_LENGTH) return;
     const who = ws.deserializeAttachment() as Attachment | null;
-    if (!who || who.isDisplay) return;
+    if (!who) return;
 
     let message: Record<string, unknown>;
     try {
@@ -156,6 +182,27 @@ export class Lobby extends DurableObject<Env> {
     } catch {
       return;
     }
+
+    if (!isAuthenticated(who)) {
+      if (message.type !== "lobby:password" || typeof message.password !== "string" || !who.passwordHash) return;
+      if (!(await verifyPassword(message.password, who.passwordHash))) {
+        who.passwordAttempts = (who.passwordAttempts ?? 0) + 1;
+        if (who.passwordAttempts >= 5) {
+          try { ws.close(1008, "Too many incorrect password attempts"); } catch { /* socket is going away */ }
+          return;
+        }
+        ws.serializeAttachment(who);
+        try { ws.send(JSON.stringify({ type: "password_required", message: "Incorrect password. Try again." })); } catch { /* socket is going away */ }
+        return;
+      }
+      who.isAuthenticated = true;
+      delete who.passwordHash;
+      delete who.passwordAttempts;
+      ws.serializeAttachment(who);
+      await this.activateConnection(ws);
+      return;
+    }
+    if (who.isDisplay) return;
 
     const game = this.module();
     const hostId = state.hostId;
@@ -242,7 +289,7 @@ export class Lobby extends DurableObject<Env> {
   private async handleDisconnect(closing: WebSocket) {
     const state = this.state;
     const who = closing.deserializeAttachment() as Attachment | null;
-    if (state && who && !this.connectedUserIds(closing).has(who.userId)) {
+    if (state && who && isAuthenticated(who) && !this.connectedUserIds(closing).has(who.userId)) {
       if (this.module().disconnect(state.data, who.userId)) await this.save();
     }
     this.broadcast(closing);
@@ -253,7 +300,7 @@ export class Lobby extends DurableObject<Env> {
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === exclude || ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
       const who = ws.deserializeAttachment() as Attachment | null;
-      if (who && !who.isDisplay) ids.set(who.userId, who.username);
+      if (who && isAuthenticated(who) && !who.isDisplay) ids.set(who.userId, who.username);
     }
     for (const bot of this.state?.bots ?? []) ids.set(bot.id, bot.username);
     return ids;
@@ -296,6 +343,7 @@ export class Lobby extends DurableObject<Env> {
     for (const ws of this.ctx.getWebSockets()) {
       if (ws === exclude || ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
       const who = ws.deserializeAttachment() as Attachment | null;
+      if (!who || !isAuthenticated(who)) continue;
       let data: string | null = null;
       if (who?.isDisplay) {
         // Displays get the spectator view and never count as connected players.
@@ -324,6 +372,8 @@ export class Lobby extends DurableObject<Env> {
     const data = JSON.stringify({ type: "avatars", avatars: state.avatars });
     for (const ws of this.ctx.getWebSockets()) {
       if (ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
+      const who = ws.deserializeAttachment() as Attachment | null;
+      if (!who || !isAuthenticated(who)) continue;
       try { ws.send(data); } catch { /* socket is going away */ }
     }
   }

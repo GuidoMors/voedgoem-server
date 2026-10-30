@@ -10,6 +10,7 @@ export interface SessionUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  isHoster: boolean;
   isDisplay: boolean;
   avatar: Avatar | null;
 }
