@@ -45,7 +45,7 @@ The earlier CommonTime schedule planner is a separate project from the same broa
 
 ### Verified in the local source tree
 
-- Backend registry has four games: Tetris, Codenames, 31 Seconds (`thirtyone`), and Saboteur.
+- Backend registry has four games: Tetrys, Woerdgoem, 31 Seconds (`thirtyone`), and Saboteur.
 - Frontend has corresponding game lobby components and a union of lobby snapshot types.
 - Account/auth/profile/avatar, admin, display account, QR, game stats, history modal, and kick-button components are present.
 - Server migrations `0001_init.sql` through `0008_lobby_password.sql` are present. Hoster is a separate role that admins can grant to non-admin, non-display accounts; hosters can create and host lobbies but do not gain admin dashboard/API access. Lobby creation also supports optional password protection; joiners must authenticate before receiving game snapshots.

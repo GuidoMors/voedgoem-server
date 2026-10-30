@@ -57,4 +57,4 @@ The rules of 30 Seconds with 7 words per card and 31 seconds per turn. Teams hav
 - src/stats.ts defines the 3-6 stats per game (SQL aggregates). GET /api/stats/:game serves them.
 - Display accounts (users.isDisplay) can't join games and only receive the spectator view.
 - An hourly cron deletes non-admin, non-display users named dbg_* that are over an hour old.
-- Games: Tetris (solo and team mode), Woerdgoem, 31 Seconds, Saboteur.
+- Games: Tetrys (solo and team mode), Woerdgoem, 31 Seconds, Saboteur.

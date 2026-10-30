@@ -82,7 +82,7 @@ function dropPlayer(state: TetrisState, player: Player) {
 export const tetris: GameModule<TetrisState> = {
   info: {
     id: "tetris",
-    name: "Tetris",
+    name: "Tetrys",
     description: "Play your own board, or split into teams that share one wide board. The round lasts until everyone tops out.",
     maxPlayers: 20
   },

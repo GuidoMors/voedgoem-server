@@ -12,7 +12,7 @@ The separate frontend repository is the sibling `../voedgoem` project. It owns t
 
 The game registry currently includes:
 
-- **Tetris** — solo and team modes.
+- **Tetrys** — solo and team modes.
 - **Woerdgoem** — red/blue teams, spymasters and operatives, clues, private spymaster hints, operative word tags, and timed turns with a time bank.
 - **31 Seconds** — teams, captains and players; the describer opens a seven-word card for a 31-second turn and the opposing captain scores it.
 - **Saboteur** — tunnel placement and ability-card play.

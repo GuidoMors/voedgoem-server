@@ -28,7 +28,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 
 ## Games
 
-### Tetris
+### Tetrys
 
 - Supports solo and team play.
 - Scoring and piece/game rules are enforced by the server; team mode uses the lobby's real-time game tick mechanism.
@@ -86,7 +86,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Display accounts are read-only, cannot claim a seat, and exclude themselves from connected-player/game logic. Their QR code supports showing/joining a display URL.
 - User profiles support an avatar composed of a body, face, and hat, with a separate colour per part. Avatar data is persisted; processed mask/outline assets are bundled with the frontend.
 - Statistics are a modal tab while in the game shell. Each game has 3-6 stats including games played and win percentage; the player's row/stats appear first/highlighted, followed by a compact all-player table.
-- History is opened in a modal and uses game-specific entries; Saboteur's tab is labelled "Log". Tetris has no History tab.
+- History is opened in a modal and uses game-specific entries; Saboteur's tab is labelled "Log". Tetrys has no History tab.
 - On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports. In Saboteur the active player's tab appears above the map only on mobile.
 - Per-game visual themes are scoped to the current game's body state. Shared disabled styling must not mute interactive game tiles/cards or hide a disabled state that needs strong contrast.
 - Modals must preserve the active game rather than navigate away; the Hub/Game tab and brand are inert while a lobby is active where previously requested.
