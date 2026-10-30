@@ -14,7 +14,7 @@ Last reviewed: 2026-10-26.
 
 - Account registration/login, bearer sessions, password reset with recovery key, avatar validation.
 - Admin-gated user list, display-account creation, recovery-key generation, lobby creation, host/admin lobby closure, and admin bot controls.
-- Four registered games: Tetris, Codenames, 31 Seconds, and Saboteur.
+- Four registered games: Tetrys, Woerdgoem, 31 Seconds, and Saboteur.
 - Lobby WebSocket transport with per-viewer snapshots, participant tracking, persistent lobby state, and completed-game result storage.
 - Per-game statistics API and hourly cleanup of old non-admin/non-display `dbg_` accounts.
 - Codenames turn timers, red first-turn bonus, half-time carry-over on early end, opposing-team-only spymaster hints, and public operative word tags.

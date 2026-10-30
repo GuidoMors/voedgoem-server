@@ -27,7 +27,7 @@ src/
     registry.ts               authoritative game registry
     codenames/index.ts        Codenames engine and snapshots
     saboteur/index.ts         Saboteur engine and snapshots
-    tetris/index.ts           solo/team Tetris module
+    tetris/index.ts solo/team Tetrys module
     tetris/team.ts            server simulation for team mode
     thirtyone/index.ts        31 Seconds engine and snapshots
 migrations/                   append-only D1 migrations 0001–0008
@@ -141,7 +141,7 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 - Tunnels rotate only 180 degrees. Cross, vertical and horizontal cards are symmetric and their rotation controls are disabled.
 - The UI has separate tunnel/ability hand areas, a Shop of face-up cards, monster move arrows between cells, player turn/history panels, mobile turn banner, and game-specific dirt/stone theme.
 
-### Tetris
+### Tetrys
 
 - Solo game state is client-oriented; team mode uses a server-side shared board simulation.
 - Team configuration includes 0–8 teams. Players may join/switch teams; host can shuffle teams.
