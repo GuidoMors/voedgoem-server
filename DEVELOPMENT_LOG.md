@@ -28,6 +28,7 @@ Chronological summary of important changes and requirements. This log is based o
 ## 2026-10-30
 
 - **Hoster role:** Added a separate, admin-managed Hoster role. Hosters retain ordinary player access and can create and host lobbies, but do not receive admin dashboard/API or test-bot permissions. Admins can grant or revoke the role for non-admin, non-display accounts. Migrations `0006_hoster.sql` and `0007_clear_admin_hoster.sql` add the role and ensure admins aren't marked as hosters.
+- **Password-protected lobbies:** Admins and Hosters can set an optional lobby password. Lobby passwords are hashed in D1, and the Durable Object withholds snapshots/actions until the password is verified. Public lobbies remain password-free by default.
 
 ## Deployment notes
 

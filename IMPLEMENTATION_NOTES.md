@@ -30,7 +30,7 @@ src/
     tetris/index.ts           solo/team Tetris module
     tetris/team.ts            server simulation for team mode
     thirtyone/index.ts        31 Seconds engine and snapshots
-migrations/                   append-only D1 migrations 0001–0007
+migrations/                   append-only D1 migrations 0001–0008
 scripts/
   build-words.mjs             build-time word bundling
   set-admin.mjs               console/local/remote admin grant/revoke
@@ -72,6 +72,7 @@ Migration history:
 5. `0005_result_details.sql`: score and extra columns.
 6. `0006_hoster.sql`: separate Hoster role flag.
 7. `0007_clear_admin_hoster.sql`: clear Hoster flags from admin accounts.
+8. `0008_lobby_password.sql`: optional password hash on lobbies.
 
 Read migrations before changing schema. Do not edit already-applied migrations; add a new one.
 
@@ -94,7 +95,7 @@ Implemented in `src/index.ts`:
 - `/api/auth/register`, `/login`, `/reset-password`, `/me`, `/logout`
 - `/api/profile/avatar`
 - `/api/games`
-- `/api/lobbies` and `/api/lobbies/:id` plus WebSocket `/ws`
+- `/api/lobbies` and `/api/lobbies/:id` plus WebSocket `/ws`; lobby creation may include an optional password, and public lobby summaries expose only an `isPasswordProtected` indicator.
 - `/api/stats/:game`
 - `/api/admin/users`, `/api/admin/displays`, `/api/admin/users/:id/recovery-key`
 - `/api/admin/users/:id/hoster` (admin-only role grant/revoke)

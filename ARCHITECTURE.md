@@ -38,7 +38,7 @@ Schema evolution is recorded in `migrations/`:
 
 - `users`: account credentials, admin/hoster/display flags, recovery-key hash, avatar, creation time.
 - `sessions`: hashed bearer token, account reference, expiration.
-- `lobbies`: lobby ID, game ID, display name, host, creation time.
+- `lobbies`: lobby ID, game ID, display name, host, optional password hash, creation time.
 - `gameResults`: per-player completed-game role, result flags, score and extra fields.
 
 Foreign-key cascades remove associated sessions/results when a user is deleted. Lobby game state itself is not a D1 row; it is held by the lobby Durable Object.
@@ -66,10 +66,11 @@ The Durable Object handles connect/disconnect, serializes actions, manages host/
 ### Action flow
 
 1. The client sends a JSON action over its lobby WebSocket.
-2. `Lobby.webSocketMessage()` rejects invalid, oversized, or display-account messages.
-3. The active game module validates actor permissions and message content.
-4. The outcome selects whether the action is ignored, saved, broadcast as volatile, or returned as an error.
-5. Saved state is persisted; completed results are written to D1; a snapshot is broadcast.
+2. For password-protected lobbies, the Durable Object requires a password message before adding the socket to broadcasts, connected-player membership, or game action handling.
+3. `Lobby.webSocketMessage()` rejects invalid, oversized, or display-account messages.
+4. The active game module validates actor permissions and message content.
+5. The outcome selects whether the action is ignored, saved, broadcast as volatile, or returned as an error.
+6. Saved state is persisted; completed results are written to D1; a snapshot is broadcast.
 
 The frontend is not an authority for roles, legal actions, turn timing, or scoring. Those rules must be checked in the game module.
 

@@ -20,6 +20,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 
 - Authenticated users can list lobbies and connect to them using a WebSocket.
 - Admins and hosters can create lobbies. The host and admins can close a lobby. Creating a lobby makes that account its host, with the game's normal host controls.
+- Admins and hosters may set an optional lobby password of up to 128 characters when creating a lobby. An empty or whitespace-only password creates a public lobby. Passwords are stored as hashes; joining a protected lobby requires the password before any lobby snapshot or game actions are available. The lobby host can enter without a password.
 - Each lobby has a game, name, host, and game-specific state. The Durable Object owns live connections and delegates game actions to that game's module.
 - Invalid or unauthorized actions must not change game state. Game modules should return the repository's `ignore`, `save`, `volatile`, or explicit error outcomes as appropriate.
 - Real-time games may request scheduled ticks through the optional game-module tick hooks.
@@ -117,9 +118,9 @@ The current routes are implemented in `src/index.ts`. Principal routes:
 | `PUT` | `/api/profile/avatar` | Update non-display profile avatar |
 | `GET` | `/api/games` | List registered games |
 | `GET` | `/api/lobbies` | List lobbies |
-| `POST` | `/api/lobbies` | Admin creates a lobby |
+| `POST` | `/api/lobbies` | Admin/Hoster creates a lobby; optional `password` (empty means public) |
 | `GET` | `/api/lobbies/:id` | Read lobby metadata |
-| `GET` | `/api/lobbies/:id/ws` | Authenticated WebSocket connection |
+| `GET` | `/api/lobbies/:id/ws` | Authenticated WebSocket connection; protected lobbies require the password before lobby data is sent |
 | `DELETE` | `/api/lobbies/:id` | Host or admin closes lobby |
 | `GET` | `/api/stats/:game` | Read game statistics |
 | `GET` | `/api/admin/users` | Admin lists accounts |

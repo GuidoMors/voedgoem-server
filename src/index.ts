@@ -89,13 +89,13 @@ async function resetPassword(request: Request, env: Env) {
 
 const lobbyStub = (env: Env, id: string) => env.LOBBY.get(env.LOBBY.idFromName(id));
 
-interface LobbyRow { id: string; game: string; name: string; hostId: string; hostName: string; createdAt: string }
-const LOBBY_SELECT = `SELECT l."id", l."game", l."name", l."hostId", u."username" AS "hostName", l."createdAt" FROM "lobbies" l JOIN "users" u ON u."id" = l."hostId"`;
+interface LobbyRow { id: string; game: string; name: string; hostId: string; hostName: string; createdAt: string; isPasswordProtected: boolean }
+const LOBBY_SELECT = `SELECT l."id", l."game", l."name", l."hostId", u."username" AS "hostName", l."createdAt", l."passwordHash" IS NOT NULL AS "isPasswordProtected" FROM "lobbies" l JOIN "users" u ON u."id" = l."hostId"`;
 
 async function findLobby(env: Env, id: string) {
   const lobby = await env.DB.prepare(`${LOBBY_SELECT} WHERE l."id" = ?1`).bind(id).first<LobbyRow>();
   if (!lobby) throw new HttpError(404, "Lobby not found.");
-  return lobby;
+  return { ...lobby, isPasswordProtected: !!lobby.isPasswordProtected };
 }
 
 async function connectToLobby(request: Request, env: Env, user: SessionUser, id: string) {
@@ -112,6 +112,11 @@ async function connectToLobby(request: Request, env: Env, user: SessionUser, id:
   headers.set("x-host-name", lobby.hostName);
   headers.set("x-lobby-game", lobby.game);
   headers.set("x-lobby-name", lobby.name);
+  headers.set("x-is-lobby-host", lobby.hostId === user.id ? "1" : "0");
+  const { passwordHash } = await env.DB.prepare(`SELECT "passwordHash" FROM "lobbies" WHERE "id" = ?1`)
+    .bind(id).first<{ passwordHash: string | null }>() ?? { passwordHash: null };
+  if (passwordHash) headers.set("x-lobby-password-hash", passwordHash);
+  else headers.delete("x-lobby-password-hash");
   return lobbyStub(env, id).fetch("https://lobby/ws", { headers });
 }
 
@@ -165,17 +170,21 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   if (method === "GET" && path === "/api/lobbies") {
     const { results } = await env.DB.prepare(`${LOBBY_SELECT} ORDER BY l."createdAt" DESC`).all<LobbyRow>();
-    return json({ lobbies: results });
+    return json({ lobbies: results.map(({ id, game, name, hostId, hostName, createdAt, isPasswordProtected }) => ({ id, game, name, hostId, hostName, createdAt, isPasswordProtected: !!isPasswordProtected })) });
   }
   if (method === "POST" && path === "/api/lobbies") {
     if (!user.isAdmin && !user.isHoster) throw new HttpError(403, "Only admins and hosters can create lobbies.");
     const body = await readBody(request);
     const game = text(body.game);
     const name = text(body.name).trim();
+    const password = body.password === undefined ? "" : body.password;
     if (!GAMES[game]) throw new HttpError(400, "Unknown game.");
     if (name.length < 1 || name.length > 40) throw new HttpError(400, "Lobby name must be 1-40 characters.");
+    if (typeof password !== "string" || password.length > 128) throw new HttpError(400, "Lobby password must be at most 128 characters.");
     const id = randomId(6);
-    await env.DB.prepare(`INSERT INTO "lobbies" ("id", "game", "name", "hostId") VALUES (?1, ?2, ?3, ?4)`).bind(id, game, name, user.id).run();
+    const passwordHash = password.trim() ? await hashPassword(password) : null;
+    await env.DB.prepare(`INSERT INTO "lobbies" ("id", "game", "name", "hostId", "passwordHash") VALUES (?1, ?2, ?3, ?4, ?5)`)
+      .bind(id, game, name, user.id, passwordHash).run();
     return json({ lobby: await findLobby(env, id) }, 201);
   }
 
