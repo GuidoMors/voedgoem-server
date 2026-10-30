@@ -8,8 +8,8 @@
 
 This package describes the Voedgoem game hub. The authoritative code is in two separate local Git repositories:
 
-- Backend: `F:\Workspace\voedgoem-groomp\voedgoem-server`
-- Frontend: `F:\Workspace\voedgoem-groomp\voedgoem`
+- Backend: `voedgoem-server`
+- Frontend: `voedgoem`
 
 Use the checked-out source and migrations as the authority for current implementation. This package combines the current repository inspection with available conversation summaries and checkpoints. The original conversation is very long and partly summarized; statements are marked as verified, historical, or uncertain where appropriate.
 
@@ -164,7 +164,7 @@ No implementation task is currently specified by this handoff request; do not in
 - Keep the D1 migration history append-only.
 - Preserve display accounts as non-playing spectators and their tightly scoped viewer behavior.
 - Preserve Codenames hidden-key rules and per-viewer snapshots.
-- Preserve the stable sibling repo paths under `F:\Workspace\voedgoem-groomp\`, not stale `availability-planner\voedgoem*` IDE tags.
+- Work in the `voedgoem-server` backend and `voedgoem` frontend repositories, not stale `availability-planner\voedgoem*` IDE tags.
 - No known user request rejected core features. A Codenames rotation experiment to 90 degrees was explicitly reverted; only 180-degree Saboteur tunnel rotation remains.
 
 ## 11. Open questions and assumptions

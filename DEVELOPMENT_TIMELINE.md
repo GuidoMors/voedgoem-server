@@ -23,7 +23,7 @@ The first checkpoints concern a schedule planner with a React/Vite frontend and 
 
 The first game was Tetris: spectators can join, an admin/host starts the game, each player has a board, a score/results screen appears when play ends, and the host can return to the lobby.
 
-- The first work was accidentally placed in incorrect sibling folders. The user corrected the location; code was moved to `F:\Workspace\voedgoem-groomp\voedgoem` and `...\voedgoem-server`. These are the actual repositories.
+- The first work was accidentally placed in incorrect sibling folders. The user corrected the location; code was moved into the `voedgoem` and `voedgoem-server` repositories.
 - Frontend hosting was kept as a static-assets Cloudflare Worker, not changed to Pages. A production `.env.production` value supplies the API URL.
 - API and frontend Workers were deployed and smoke-checked; the API health endpoint returned `{"ok":true}`.
 - Lobby capacity was raised to 20 for the initial game hub.

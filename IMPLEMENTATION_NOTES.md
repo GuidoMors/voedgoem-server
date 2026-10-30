@@ -57,7 +57,7 @@ src/
 public/avatars/                imported mask and outline PNGs for each part/view
 ```
 
-The current workspace inspection found both directories under `F:\Workspace\voedgoem-groomp\`. The two project directories each have their own `.git` directory.
+The current workspace contains the sibling `voedgoem-server` backend and `voedgoem` frontend repositories. Each project directory has its own `.git` directory.
 
 ## Backend data and auth
 
@@ -149,7 +149,7 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 - Model: body/bodyColor, face/faceColor, hat/hatColor.
 - Frontend generates deterministic fallback avatars and supports editor preview/color selection.
 - Imported processed image assets are under `public/avatars/{bodies,faces,hats}/...`; renderer recolours masks based on luminance and composites outlines through canvas.
-- The raw source folders were referenced at `F:\Workspace\voedgoem-groomp\bodies`, `faces`, `hats`, but were missing when checked during handoff. Do not remove processed files.
+- The raw source folders `bodies`, `faces`, and `hats` were referenced but missing when checked during handoff. Do not remove the processed files in the frontend repository.
 - Display accounts have no avatar profile.
 
 ## UX and style decisions
