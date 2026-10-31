@@ -17,6 +17,8 @@ interface Player {
   id: string;
   username: string;
   role: Role;
+  cell: number | null;
+  dead: boolean;
   tunnels: string[]; // open sides of each tunnel card in hand, e.g. "NS"
   abilities: AbilityType[];
   pickaxeBroken: boolean;
@@ -51,7 +53,7 @@ export interface DworfState {
   lastTurn?: string[]; // log lines of the turn before
   log: string[];
   winner: Role | null;
-  endReason: "gold" | "monster" | "tunnels" | null;
+  endReason: "gold" | "monster" | "tunnels" | "elimination" | null;
   recorded?: boolean;
 }
 
@@ -177,7 +179,7 @@ function addLog(state: DworfState, line: string) {
   if (state.log.length > LOG_LIMIT) state.log.shift();
 }
 
-function finish(state: DworfState, winner: Role, reason: "gold" | "monster" | "tunnels") {
+function finish(state: DworfState, winner: Role, reason: "gold" | "monster" | "tunnels" | "elimination") {
   state.phase = "results";
   state.winner = winner;
   state.endReason = reason;
@@ -217,6 +219,7 @@ function startGame(state: DworfState) {
 
   state.players = seats.map((seat, index) => ({
     id: seat.id, username: seat.username, role: roles[index],
+    cell: null, dead: false,
     tunnels: state.deck.splice(0, HAND_SIZE), abilities: abilities.splice(0, dealt),
     pickaxeBroken: false, lanternBroken: false, knownGoals: {}, knownDwarves: {}
   }));
@@ -246,12 +249,12 @@ function startGame(state: DworfState) {
   skipEmptyHands(state);
 }
 
-// A dwarf without cards loses their turn.
+// A dwarf without cards, or an eliminated explorer, loses their turn.
 function skipEmptyHands(state: DworfState) {
   for (let i = 0; i < state.players.length; i++) {
     const player = current(state);
-    if (player.tunnels.length + player.abilities.length > 0) return;
-    addLog(state, `${player.username} has no cards and is skipped.`);
+    if (!player.dead && player.tunnels.length + player.abilities.length > 0) return;
+    addLog(state, player.dead ? `${player.username} is eliminated and skipped.` : `${player.username} has no cards and is skipped.`);
     state.turn = (state.turn + 1) % state.players.length;
   }
 }
@@ -303,10 +306,21 @@ function monsterOptions(state: DworfState, at: number): number[] {
   return options;
 }
 
-// Returns true when the cultists won because the monster reached the ladder.
+// Returns true when the monster ends the game, either by reaching the ladder or eliminating every explorer.
 function moveMonster(state: DworfState, index: number, to: number): boolean {
   state.monsters[index] = to;
   addLog(state, "A monster crawls closer to the ladder.");
+  for (const player of state.players) {
+    if (player.cell !== to || player.dead || player.role !== "explorer") continue;
+    player.dead = true;
+    player.tunnels = [];
+    player.abilities = [];
+    addLog(state, `A monster devours ${player.username}.`);
+  }
+  if (!state.players.some(player => player.role === "explorer" && !player.dead)) {
+    finish(state, "cultist", "elimination");
+    return true;
+  }
   if (to === LADDER) {
     finish(state, "cultist", "monster");
     return true;
@@ -380,6 +394,8 @@ export const dworf: GameModule<DworfState> = {
     }
     if ((state.winner as string | null) === "saboteur") state.winner = "cultist";
     for (const player of state.players) {
+      if (player.cell === undefined) player.cell = null;
+      if (player.dead === undefined) player.dead = false;
       if ((player.role as string) === "saboteur") player.role = "cultist";
       for (const [id, role] of Object.entries(player.knownDwarves)) {
         if ((role as string) === "saboteur") player.knownDwarves[id] = "cultist";
@@ -427,6 +443,7 @@ export const dworf: GameModule<DworfState> = {
         if (cell < 0 || cell >= ROWS * COLS || !canPlace(state, cell, sides, distances(state))) return { error: "That tunnel does not fit there." };
         me.tunnels.splice(index, 1);
         state.tunnels[cell] = sides;
+        me.cell = cell;
         addLog(state, `${name} placed a tunnel.`);
         if (revealGoals(state, cell, sides)) {
           finish(state, "explorer", "gold");
@@ -618,6 +635,7 @@ export const dworf: GameModule<DworfState> = {
       players: playing ? state.players.map(player => ({
         id: player.id, username: player.username, connected: connected.has(player.id),
         tunnels: player.tunnels.length, abilities: player.abilities.length,
+        cell: player.cell, dead: player.dead,
         pickaxeBroken: player.pickaxeBroken, lanternBroken: player.lanternBroken,
         // Roles stay hidden until the game ends, except your own and the ones you have looked at.
         role: showRoles ? player.role : player.id === viewerId ? player.role : me?.knownDwarves[player.id] ?? null
