@@ -1,8 +1,9 @@
 # Cookaloor Milestones
-1. Rules engine skeleton. Game state as plain data (players, items, blocks, maps, dispensers). Add it as a joinable game from the lobby.
-2. Walkable kitchen. Implement a single kitchen with the basic tiles. Allow the user to walk around in the kitchen using their avatar.
-3. Items. Implement items. They should be droppable and stackable through interactions.
-3. Dispensers, Processors: Make the internal logic work for dispensers and processors. Also add any animations to the processors and dispensers where required. Users should be able to walk in the kitchen, take items from dispensers, and process them on the relevant processors.
-4. Submit Counter and Recipes: Add recipes to the game that come in random intervals. Allow recipes to be submitted to submit counters.
-5. Versus mode: implement versus mode.
-6. Remaining features: add highscore tracking to games. Add any features not mentioned in previous milestone steps.
+1. Rules engine skeleton. Game state as plain data (players, items, tiles, maps, dispensers). Add it as a joinable game from the lobby.
+2. Walkable kitchen. Implement a single kitchen with the basic tiles. Allow the game host to select this kitchen and start game. When game has started they can walk around in the kitchen using their avatar.
+3. Implement Dispensers and items. players should be able to interact with dispensers to get items. Items can be dropped and stacked.
+4. Implement tools and Processors: Make the internal logic work for processors. Also add any animations to the processors where required. Users should be able to walk in the kitchen, take items from dispensers, and process them on the relevant processors.
+5. Submit Counter and Recipes: Add the submit counter to the game. When it is interacted with it consumed the items held by the player. Add recipes to the game. The game starts with 3 recipes. Do not implement the game logic yet for new recipes spawning for cooperative or versus mode. When a stack of items is submitted that mathces a recipe gain points.
+6. Cooperative mode: inspect the source code to find the duration it takes to increase recipe difficulty level. Inspect the source code to find how much points each submission give. Implement point scoring for cooperative mode. Implement high score tracking in the statistics for cookaloor.
+7. Versus mode: implement versus mode. When selected there are 2 teams. Each teams starts with 2 recipes. REcipes dont score points. Instead completing a recipe causes a recipe to appear for the other team. At 5 minutes each team gains an additional recipe. When a recipe times out it is given to the other team as if they had submitted it, but that team loses 1 life. Each team has 4 lives. The first team to lose all lives loses the game.
+8. Remaining features: Check the source code and the markdown for any remaining features that were missed.

@@ -108,20 +108,6 @@
 				["XXX","XXX","sib","XXX","XXX","XXX","pld","sub","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX","XXX"]
 				]
 		},
-"small":{"id": 6,
-			"teamsize": 0,
-			"name":"Small Kitchon",
-			"grid":[["XXX","sit","pld","XXX","sub","trs","XXX"],
-					["XXX","   ","   ","   ","   ","   ","XXX"],
-					["pod","   ","   ","   ","   ","   ","XXX"],
-					["chd","   ","   "," 1 ","   ","   ","med"],
-					["tod","   ","   "," 2 ","   ","   ","sad"],
-					["cad","   ","   "," 3 ","   ","   ","bud"],
-					["cud","   ","   ","   ","   ","   ","XXX"],
-					["XXX","   ","   ","   ","   ","   ","XXX"],
-					["XXX","fur","fur","XXX","cut","cut","XXX"]
-					]
-				},
 "cheesesplit":{"id": 7,
 	"teamsize": 2,
 	"name":"The Cheese Split",

@@ -5,10 +5,12 @@
 Cookaloor is a cooperative kitchen game in which players move around a kitchen, collect ingredients and tools, prepare food, and submit completed dishes to fulfil recipes.
 
 The game is played on a grid-based kitchen layout. Players move around the kitchen and interact with the objects and items around them.
+The grids for the kitchens are found in kitchens.json. Ignore the template kitchen, it should not be a playable kitchen. What each tile means is found in KitchenHashes.js. Kitchens with 111 doors and 222 doors are kitchens for the versus game mode. Kitchen without 111 and 222 doors are kitchens for the cooperative game mode.
 
-The result of an interaction depends on the player's current situation, what they are holding, what is directly in front of them, and whether the relevant object can be used.
+The result of an interaction depends on the player's current situation, what they are holding, what is directly in front of them, and whether the relevant object can be used. For how specific interactions work check spacebar priority and controld and interaction markdowns.
 
 The goal is to collect ingredients from dispensers, interact with them by cooking them or chopping them, to make dishes. Dishes are submitted to the submit counter for points. Only dishes that are requested can be submitted, wrong dishes lead to minus points.
+To find all the recipes check the recipes.json. Each recipe also has a difficulty. At the beginning of the game only recipes of difficulty one are chosen, but as the game lasts longer, more and more difficult recipes are picked when selecting recipes.
 
 If the context of a specific game element is not clear, check the game files folder to find out.
 
@@ -20,7 +22,7 @@ When using models for the players of the game, use the avatars that players have
 
 ## 2. Players and Teams
 
-Players have individual positions and facing directions. Each player has hands that can hold ingredients and/or a tool.
+Players have individual positions and facing directions. The starting positions of players are found in kitchens.json.
 
 The game has 2 modes. Cooperative, and versus. In cooperative all players belong to the same team. In versus, players belong to different teams.
 
@@ -55,6 +57,8 @@ When a player interacts with a nearby item while their hands are empty, the item
 
 When a player interacts while carrying something, the carried stack is handled first.
 
+The items and tools that exist are found in ingredients.json and tools.json
+
 ## 5. Combining Items
 
 When a player places their carried stack where another stack already exists, the game attempts to combine the two stacks.
@@ -75,6 +79,7 @@ Depending on the tile, interacting with it may:
 - Trash: Delete an item.
 - Trigger another tile-specific behaviour.
 
+For what tiles do, check the tiles.json.
 An item can only be used by a tile when it meets that tile's compatibility requirements.
 
 ## 7. Dispensers
@@ -105,6 +110,8 @@ Picking up an item can stop its current processing. Moving during manual process
 When ingredients are added to an existing ground stack, the existing processing progress is reset.
 
 Some tile actions happen immediately, while others require a processing period.
+
+Processing is detailed in the transitions.json
 
 ## 9. Recipes and Submissions
 
