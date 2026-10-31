@@ -90,12 +90,22 @@ function drawCard(state: ThirtyOneState) {
   state.marks = state.card.map(() => false);
 }
 
+function nextDescriberSeat(state: ThirtyOneState): { seat: Seat; index: number } | null {
+  const team = members(state, state.turn);
+  const start = state.rotation[state.turn] % team.length;
+  for (let step = 0; step < team.length; step++) {
+    const index = (start + step) % team.length;
+    if (team[index].id !== state.describerId) return { seat: team[index], index };
+  }
+  return null;
+}
+
 // Hands the card to the next member in team order, whether or not they are connected.
 function nextDescriber(state: ThirtyOneState) {
-  const team = members(state, state.turn);
-  const chosen = state.rotation[state.turn] % team.length;
-  state.rotation[state.turn] = chosen + 1;
-  state.describerId = team[chosen].id;
+  const next = nextDescriberSeat(state);
+  if (!next) return;
+  state.rotation[state.turn] = next.index + 1;
+  state.describerId = next.seat.id;
   state.turnPhase = "ready";
   state.endsAt = 0;
   state.judgeAt = 0;
@@ -279,11 +289,16 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         state.endsAt = now;
         state.judgeAt = now;
         return "save";
-      case "skip": {
-        // Hands an unopened card to the next teammate, for when the describer is away.
-        if (state.phase !== "playing" || state.turnPhase !== "ready" || (actor.userId !== state.describerId && !actor.isHost)) return "ignore";
-        if (members(state, state.turn).length < 2) return "ignore";
-        nextDescriber(state);
+      case "pass_card": {
+        if ((!actor.isHost && !actor.isAdmin) || state.phase !== "playing" || state.turnPhase !== "ready") return "ignore";
+        if (typeof message.userId !== "string") return { error: "Select a player to receive the card." };
+        const team = members(state, state.turn);
+        const recipientIndex = team.findIndex(seat => seat.id === message.userId);
+        if (recipientIndex < 0 || message.userId === state.describerId) {
+          return { error: "That player cannot receive the current card." };
+        }
+        state.rotation[state.turn] = recipientIndex + 1;
+        state.describerId = team[recipientIndex].id;
         return "save";
       }
       case "mark": {
