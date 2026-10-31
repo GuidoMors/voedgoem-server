@@ -75,4 +75,4 @@ Standard four-player Blokus on a 20×20 board, with 21 pieces per color, rotatio
 - src/stats.ts defines the 3-6 stats per game (SQL aggregates). GET /api/stats/:game serves them.
 - Display accounts (users.isDisplay) can't join games and only receive the spectator view.
 - An hourly cron deletes non-admin, non-display users named dbg_* that are over an hour old.
-- Games: Tetrys (solo and team mode), Woerdgoem, 31 Seconds, Saboteur, and Blokus.
+- Games: Tetrys (solo and team mode), Woerdgoem, 31 Seconds, Dworf, and Blokus.

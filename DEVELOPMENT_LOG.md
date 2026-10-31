@@ -5,9 +5,9 @@ Chronological summary of important changes and requirements. This log is based o
 ## Earlier project history (date details unavailable)
 
 - Established the Cloudflare Worker, D1 account/lobby data, Durable Object lobby shell, and game-module registry.
-- Added Tetris, Codenames, 31 Seconds, and Saboteur as game modules.
+- Added Tetris, Codenames, 31 Seconds, and Dworf as game modules.
 - Added avatar profiles, display accounts, admin user management, recovery-key reset, completed-game results, per-game statistics, and scheduled cleanup of old debug accounts.
-- Added game-specific behavior over time, including Codenames timer and time banking, Saboteur turn history and tunnel rotation rules, and 31 Seconds team scoring and overtime.
+- Added game-specific behavior over time, including Codenames timer and time banking, Dworf turn history and tunnel rotation rules, and 31 Seconds team scoring and overtime.
 - Added per-game visual themes and responsive game layouts in the separate `voedgoem` frontend repository; these are not server implementation files.
 
 ## 2026-10-24

@@ -103,6 +103,7 @@ export class Lobby extends DurableObject<Env> {
         const { game, name, hostId, hostName, ...data } = stored;
         this.state = { game, name, hostId, hostName, data };
       }
+      if (this.state?.game === "saboteur") this.state.game = "dworf";
       if (this.state) MODULES[this.state.game]?.migrate?.(this.state.data);
     }
     await this.loadChat();
@@ -271,11 +272,17 @@ export class Lobby extends DurableObject<Env> {
   private async activateConnection(ws: WebSocket) {
     const who = ws.deserializeAttachment() as Attachment | null;
     if (!who) return;
+    const connectionChanged = isAuthenticated(who) && !who.isDisplay
+      ? this.module().connect?.(this.state!.data, who.userId) ?? false
+      : false;
     const avatars = (this.state!.avatars ??= {});
     if (who.isDisplay || !who.avatar) delete avatars[who.userId];
     else avatars[who.userId] = who.avatar;
-    await this.save();
-    this.broadcast();
+    if (connectionChanged) await this.commit();
+    else {
+      await this.save();
+      this.broadcast();
+    }
     this.broadcastAvatars();
     this.broadcastChatHistory(ws);
   }

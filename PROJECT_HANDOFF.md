@@ -45,7 +45,7 @@ The earlier CommonTime schedule planner is a separate project from the same broa
 
 ### Verified in the local source tree
 
-- Backend registry has four games: Tetrys, Woerdgoem, 31 Seconds (`thirtyone`), and Saboteur.
+- Backend registry has five games: Tetrys, Woerdgoem, 31 Seconds (`thirtyone`), Dworf, and Blokus.
 - Frontend has corresponding game lobby components and a union of lobby snapshot types.
 - Account/auth/profile/avatar, admin, display account, QR, game stats, history modal, and kick-button components are present.
 - Server migrations `0001_init.sql` through `0008_lobby_password.sql` are present. Hoster is a separate role that admins can grant to non-admin, non-display accounts; hosters can create and host lobbies but do not gain admin dashboard/API access. Lobby creation also supports optional password protection; joiners must authenticate before receiving game snapshots.
@@ -61,7 +61,7 @@ This is historical evidence, not proof of the currently running production versi
 
 ### Known incomplete/uncertain state
 
-- No end-to-end browser or physical mobile validation was recorded for the recent Codenames tag/hint/timer changes, 31 Seconds display scoring visibility, Saboteur presentation, QR, or mobile layouts.
+- No end-to-end browser or physical mobile validation was recorded for the recent Codenames tag/hint/timer changes, 31 Seconds display scoring visibility, Dworf presentation, QR, or mobile layouts.
 - The hourly debug-account cleanup was tested by manually running its SQL but not observed running as a scheduled cron.
 - The current `voedgoem/README.md` is stale: it mentions Pages and only the initial games, despite the actual Worker config and four-game source. It also shows malformed text in the avatar import command/migration sentence. Use code/config as authority; update the README when appropriate.
 - Production admin account notes conflict: one recorded action promoted account `Admin`; another later note says the remaining production accounts were `Groomp` (admin) and `TV` (display). Do not assume which admin usernames exist now. Confirm from the admin UI or database only when authorized.
@@ -112,7 +112,7 @@ Do not transfer Cloudflare credentials or session-state secrets. They are not pa
 
 - The frontend uses a hash-based route shell; in-lobby Statistics, History, and Admin are modal tabs so they don't navigate away from a running game.
 - Small-screen navigation uses a hamburger; game controls and layouts have responsive variants.
-- The shared theme is arcade/neon. Saboteur, Codenames, and 31 Seconds override it with distinct visual treatments: dirt/stone, beige board/card, and blue/gold quiz-show styles, respectively.
+- The shared theme is arcade/neon. Dworf, Codenames, and 31 Seconds override it with distinct visual treatments: dirt/stone, beige board/card, and blue/gold quiz-show styles, respectively.
 - User profile editing covers body, face, hat, and a separately selected colour per part. The avatar is shown by names in game UIs.
 - Codenames desktop word tagging uses right-click; touch tagging uses a hold. Tags have one team-coloured username box per operative and are visible to all players.
 - Important game-specific UI corrections and presentation requirements are in [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md).
@@ -124,7 +124,7 @@ The detailed file map is in [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md)
 - Backend routes/auth: `voedgoem-server/src/index.ts`, `auth.ts`, `env.ts`.
 - Generic live lobby: `voedgoem-server/src/lobby.ts`.
 - Game contracts/registry: `voedgoem-server/src/games/types.ts`, `registry.ts`.
-- Game engines: `voedgoem-server/src/games/{tetris,codenames,thirtyone,saboteur}/`.
+- Game engines: `voedgoem-server/src/games/{tetris,codenames,thirtyone,dworf}/`.
 - Database schema history: `voedgoem-server/migrations/`.
 - Frontend app/nav: `voedgoem/src/App.tsx`.
 - Frontend game dispatch: `voedgoem/src/games/registry.tsx`.
@@ -141,7 +141,7 @@ High-value lessons recorded from development:
 - A 404 on login was caused by a production frontend bundle lacking `VITE_API_BASE_URL`, so relative `/api` calls reached the static frontend Worker. `.env.production` now provides the API origin; preserve it and check the built bundle before release.
 - Old Durable Object state can lack newly added properties. Use the module `migrate()` hook and/or safe optional state access. A missing Codenames `hintsUsed` property caused an admin bot-view WebSocket 500; it was fixed by migration and optional access.
 - Snapshot caching must not leak game keys. Check `perViewer` and how display/admin/bot views are constructed when changing snapshots.
-- The Codenames theme once made disabled spymaster cards look muted. Generic disabled rules must exclude game pieces such as `.cn-card`, `.sb-card`, `.sb-cell`, and `.ts-word`.
+- The Codenames theme once made disabled spymaster cards look muted. Generic disabled rules must exclude game pieces such as `.cn-card`, `.dworf-card`, `.dworf-cell`, and `.ts-word`.
 - A PowerShell search/replace patch once corrupted imports in the kick UI. Always inspect patched file headers and run builds before deployment.
 - Running a deploy concurrently with a build once deployed an old frontend bundle. Wait for the successful build before deploying.
 - Historical tooling notes: use `npm.cmd`/`npx.cmd` in PowerShell; don't rely on Bash `&&`; avoid PowerShell rewrites that corrupt Unicode; absolute paths are safest for .NET file APIs.
@@ -166,7 +166,7 @@ No implementation task is currently specified by this handoff request; do not in
 - Preserve display accounts as non-playing spectators and their tightly scoped viewer behavior.
 - Preserve Codenames hidden-key rules and per-viewer snapshots.
 - Work in the `voedgoem-server` backend and `voedgoem` frontend repositories, not stale `availability-planner\voedgoem*` IDE tags.
-- No known user request rejected core features. A Codenames rotation experiment to 90 degrees was explicitly reverted; only 180-degree Saboteur tunnel rotation remains.
+- No known user request rejected core features. A Codenames rotation experiment to 90 degrees was explicitly reverted; only 180-degree Dworf tunnel rotation remains.
 
 ## 11. Open questions and assumptions
 

@@ -37,7 +37,7 @@ The first game was Tetris: spectators can join, an admin/host starts the game, e
 - Fixed an old Durable Object state WebSocket 500 by adding module migration support and safe property access.
 - Added avatars/profile editor, user avatar persistence, generated asset index, canvas tinting and avatar presence in lobby views.
 - Added 31 Seconds with team/captain draft, seven-word cards, 31-second clock, grace interval, scoring by opposing captain, history and overtime.
-- Added Saboteur server engine and UI, tunnel map, abilities, monsters, turn history, and detailed responsive controls.
+- Added Dworf server engine and UI, tunnel map, abilities, monsters, turn history, and detailed responsive controls.
 - Added per-game completed results and statistics, display-only accounts, admin display-account creation, QR display, and hourly cleanup of old debug users.
 - Added host kick controls; a kicked player returns to spectator and can re-seat. No ban was implemented.
 - Added the general arcade-neon theme and distinct per-game themes.
@@ -58,17 +58,17 @@ Follow-ups recorded exactly:
 
 The admin UI/API and account promotion were implemented in stages. Later an account named `Admin` was also promoted in production by a direct D1 update. The production account history is now inconsistent in the retained notes; verify current admin identities rather than assuming.
 
-### Codenames, Saboteur, and responsive fixes
+### Codenames, Dworf, and responsive fixes
 
 These prompt fragments were preserved exactly in the conversation summary:
 
 - “the paimary disabled button that says "Can't choose yourself" still needs to have disabled stylign that makes it look darker”
 - “The arrow that indicates movement of the monster should be between the tiles that it moves to, instead of the tile it is on, the monsters z-index should also be higher than the arrow”
-- “in saboteur: the background of the player whose turn it is is transparent. Dont make it transparent, instead amek it a lighter version of the default brown that the player background usually is”
+- “in dworf: the background of the player whose turn it is is transparent. Dont make it transparent, instead amek it a lighter version of the default brown that the player background usually is”
 - “the can't choose yourself button needs to be a darker color when its disabled, its still not a darker color. This is the html I mean: `<button class="primary small" disabled="">Can't choose yourself</button>`”
 - “On mobile, put the tab whose turn it is above the map (only on mobile)”
 - “fix lantern should be a needle and thread icon instead of a hammer and wrench icon”
-- “`<span class="sb-icon big">🪡🧵</span>` right now its this, make it this: `<span class="sb-icon big">🧵</span>`”
+- “`<span class="dworf-icon big">🪡🧵</span>` right now its this, make it this: `<span class="dworf-icon big">🧵</span>`”
 - “In the hisstory it doesnt say which ability card type was given to which player. It should say that”
 - “the history log should be larger, on desktop it should cover most of the screen”
 - “you should only be able to rotate tunnels by 180 degrees, not 90 degrees. As such the + tunnels can't be rotated and the straight up vertical and horizontal tunnels also can't be rotated. So disabled their buttons. Also edit the text to "↻ 180°" instead of "turn ↻"”

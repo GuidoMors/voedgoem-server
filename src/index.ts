@@ -95,7 +95,7 @@ const LOBBY_SELECT = `SELECT l."id", l."game", l."name", l."hostId", u."username
 async function findLobby(env: Env, id: string) {
   const lobby = await env.DB.prepare(`${LOBBY_SELECT} WHERE l."id" = ?1`).bind(id).first<LobbyRow>();
   if (!lobby) throw new HttpError(404, "Lobby not found.");
-  return { ...lobby, isPasswordProtected: !!lobby.isPasswordProtected };
+  return { ...lobby, game: lobby.game === "saboteur" ? "dworf" : lobby.game, isPasswordProtected: !!lobby.isPasswordProtected };
 }
 
 async function connectToLobby(request: Request, env: Env, user: SessionUser, id: string) {
@@ -180,14 +180,18 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   const statsMatch = path.match(/^\/api\/stats\/([a-z0-9]+)$/);
   if (method === "GET" && statsMatch) {
-    const defs = GAME_STATS[statsMatch[1]];
+    const game = statsMatch[1] === "saboteur" ? "dworf" : statsMatch[1];
+    const defs = GAME_STATS[game];
     if (!defs) throw new HttpError(404, "Unknown game.");
     const columns = defs.map(def => `${def.sql} AS "${def.key}"`).join(", ");
-    const { results } = await env.DB.prepare(`
+    const gameFilter = game === "dworf" ? `"game" IN (?1, ?2)` : `"game" = ?1`;
+    const statement = env.DB.prepare(`
       SELECT "userId" AS "id", "username", "avatar", ${columns}
       FROM "gameResults" JOIN "users" ON "users"."id" = "gameResults"."userId"
-      WHERE "game" = ?1 GROUP BY "userId" ORDER BY COUNT(*) DESC, "username" COLLATE NOCASE
-    `).bind(statsMatch[1]).all<Record<string, string | number | null> & { id: string; username: string; avatar: string | null }>();
+      WHERE ${gameFilter} GROUP BY "userId" ORDER BY COUNT(*) DESC, "username" COLLATE NOCASE
+    `);
+    const query = game === "dworf" ? statement.bind("dworf", "saboteur") : statement.bind(game);
+    const { results } = await query.all<Record<string, string | number | null> & { id: string; username: string; avatar: string | null }>();
     const players = results.map(({ id, username, avatar, ...values }) => ({ id, username, avatar: parseStoredAvatar(avatar), values }));
     return json({
       stats: defs.map(({ key, label, format }) => ({ key, label, format })),
@@ -204,14 +208,14 @@ async function route(request: Request, env: Env): Promise<Response> {
       const { playerCount } = await response.json<{ playerCount: number }>();
       return {
         id: lobby.id,
-        game: lobby.game,
+        game: lobby.game === "saboteur" ? "dworf" : lobby.game,
         name: lobby.name,
         hostId: lobby.hostId,
         hostName: lobby.hostName,
         createdAt: lobby.createdAt,
         isPasswordProtected: !!lobby.isPasswordProtected,
         playerCount,
-        maxPlayers: GAMES[lobby.game].maxPlayers
+        maxPlayers: GAMES[lobby.game === "saboteur" ? "dworf" : lobby.game].maxPlayers
       };
     }));
     return json({ lobbies });

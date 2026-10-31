@@ -27,11 +27,13 @@ export interface TetrisState {
   teamCount: number;
   teams: Team[];
   teamResults: { index: number; score: number; lines: number; level: number; members: { id: string; username: string }[] }[];
+  disconnects?: Record<string, number>;
   recorded?: boolean;
 }
 
 export const MAX_TEAMS = 8;
 const TICK_MS = 50;
+const DISCONNECT_GRACE_MS = 30_000;
 
 const BOARD_PATTERN = /^[0-7]{200}$/;
 const MIN_UPDATE_INTERVAL_MS = 60;
@@ -79,6 +81,18 @@ function dropPlayer(state: TetrisState, player: Player) {
   if (team) removeMember(team, player.id);
 }
 
+function expireDisconnectedPlayers(state: TetrisState, now: number) {
+  let changed = false;
+  for (const [userId, disconnectedAt] of Object.entries(state.disconnects ?? {})) {
+    if (now - disconnectedAt < DISCONNECT_GRACE_MS) continue;
+    delete state.disconnects![userId];
+    const player = state.players[userId];
+    if (player?.alive) dropPlayer(state, player);
+    changed = true;
+  }
+  return changed;
+}
+
 export const tetris: GameModule<TetrisState> = {
   info: {
     id: "tetris",
@@ -89,20 +103,23 @@ export const tetris: GameModule<TetrisState> = {
   perViewer: false,
   volatileMs: 40,
 
-  create: () => ({ phase: "lobby", seed: 0, round: 0, nextOrder: 0, players: {}, results: [], teamCount: 0, teams: [], teamResults: [] }),
+  create: () => ({ phase: "lobby", seed: 0, round: 0, nextOrder: 0, players: {}, results: [], teamCount: 0, teams: [], teamResults: [], disconnects: {} }),
 
   migrate(state) {
     state.teamCount ??= 0;
     state.teams ??= [];
     state.teamResults ??= [];
+    state.disconnects ??= {};
   },
 
   tickMs: state => (state.phase === "playing" && state.teamCount > 0 && state.teams.some(team => team.alive) ? TICK_MS : null),
 
   tick(state) {
-    let change = "none";
+    const now = Date.now();
+    let change = expireDisconnectedPlayers(state, now) ? "locked" : "none";
+    const pausedMembers = new Set(Object.keys(state.disconnects ?? {}));
     for (const team of state.teams) {
-      const result = tickTeam(team, Date.now());
+      const result = tickTeam(team, now, pausedMembers);
       if (result === "locked" || (result === "moved" && change === "none")) change = result;
     }
     const before = state.phase;
@@ -166,6 +183,7 @@ export const tetris: GameModule<TetrisState> = {
         state.recorded = false;
         state.teams = [];
         state.teamResults = [];
+        state.disconnects = {};
         for (const player of Object.values(state.players)) Object.assign(player, { alive: true, score: 0, lines: 0, level: 1, board: "" });
         if (state.teamCount > 0) {
           const now = Date.now();
@@ -222,10 +240,21 @@ export const tetris: GameModule<TetrisState> = {
     const player = state.players[userId];
     if (!player) return false;
     if (state.phase === "lobby") delete state.players[userId];
+    else if (state.phase === "playing" && player.alive && state.teamCount > 0) {
+      (state.disconnects ??= {})[userId] = Date.now();
+    }
     else if (state.phase === "playing" && player.alive) dropPlayer(state, player);
     else return false;
     finishIfOver(state);
     return true;
+  },
+
+  connect(state, userId) {
+    const expired = expireDisconnectedPlayers(state, Date.now());
+    const reconnected = !!state.disconnects && userId in state.disconnects;
+    if (reconnected) delete state.disconnects![userId];
+    finishIfOver(state);
+    return expired || reconnected;
   },
 
   participants: state => new Set(Object.keys(state.players)),

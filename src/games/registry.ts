@@ -1,6 +1,6 @@
 import { codenames } from "./codenames";
 import { blokus } from "./blokus";
-import { saboteur } from "./saboteur";
+import { dworf } from "./dworf";
 import { tetris } from "./tetris";
 import { thirtyone } from "./thirtyone";
 import type { GameInfo, GameModule } from "./types";
@@ -11,7 +11,7 @@ export const MODULES: Record<string, GameModule<any>> = {
   [blokus.info.id]: blokus,
   [codenames.info.id]: codenames,
   [thirtyone.info.id]: thirtyone,
-  [saboteur.info.id]: saboteur
+  [dworf.info.id]: dworf
 };
 
 export const GAMES: Record<string, GameInfo> = Object.fromEntries(Object.values(MODULES).map(module => [module.info.id, module.info]));

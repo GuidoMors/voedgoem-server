@@ -3,7 +3,7 @@
 //   codenames: flag = guessed the black card
 //   tetris:    score = player's (or team's) final score, extra = lines cleared
 //   thirtyone: score = the player's team score
-//   saboteur:  nothing extra
+//   dworf:     nothing extra
 // Every sql expression is an aggregate over the rows of one player.
 
 export interface StatDef {
@@ -32,8 +32,7 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     winRate,
     { key: "bestScore", label: "Best score", format: "number", sql: `MAX("score")` },
     { key: "avgScore", label: "Average score", format: "number", sql: `ROUND(AVG("score"))` },
-    { key: "lines", label: "Lines cleared", format: "number", sql: `SUM("extra")` },
-    { key: "teamRate", label: "Win rate in teams", format: "percent", sql: rate(`"role" = 'team'`, `"role" = 'team'`) }
+    { key: "lines", label: "Lines cleared", format: "number", sql: `SUM("extra")` }
   ],
   blokus: [
     games,
@@ -48,11 +47,11 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "playerRate", label: "Win rate as player", format: "percent", sql: rate(`"role" = 'player'`, `"role" = 'player'`) },
     { key: "avgPoints", label: "Average team points", format: "number", sql: `ROUND(AVG("score"))` }
   ],
-  saboteur: [
+  dworf: [
     games,
     winRate,
-    { key: "saboteurRate", label: "Win rate as saboteur", format: "percent", sql: rate(`"role" = 'saboteur'`, `"role" = 'saboteur'`) },
+    { key: "cultistRate", label: "Win rate as cultist", format: "percent", sql: rate(`"role" IN ('cultist', 'saboteur')`, `"role" IN ('cultist', 'saboteur')`) },
     { key: "explorerRate", label: "Win rate as explorer", format: "percent", sql: rate(`"role" = 'explorer'`, `"role" = 'explorer'`) },
-    { key: "saboteurGames", label: "Games as saboteur", format: "number", sql: `SUM("role" = 'saboteur')` }
+    { key: "cultistGames", label: "Games as cultist", format: "number", sql: `SUM("role" IN ('cultist', 'saboteur'))` }
   ]
 };
