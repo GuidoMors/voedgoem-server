@@ -192,6 +192,17 @@ function finish(state: DworfState, winner: Role, reason: "gold" | "monster" | "t
   state.monsterOptions = [];
 }
 
+function eliminatePlayer(state: DworfState, player: Player, reason: string) {
+  player.dead = true;
+  player.tunnels = [];
+  player.abilities = [];
+  addLog(state, reason);
+}
+
+function hasLivingExplorers(state: DworfState) {
+  return state.players.some(player => player.role === "explorer" && !player.dead);
+}
+
 function resetToLobby(state: DworfState) {
   state.phase = "lobby";
   state.players = [];
@@ -323,17 +334,50 @@ function moveMonster(state: DworfState, index: number, to: number): boolean {
   addLog(state, "A monster crawls closer to the ladder.");
   for (const player of state.players) {
     if (player.cell !== to || player.dead || player.role !== "explorer") continue;
-    player.dead = true;
-    player.tunnels = [];
-    player.abilities = [];
-    addLog(state, `A monster devours ${player.username}.`);
+    eliminatePlayer(state, player, `A monster devours ${player.username}.`);
   }
-  if (!state.players.some(player => player.role === "explorer" && !player.dead)) {
+  if (!hasLivingExplorers(state)) {
     finish(state, "cultist", "elimination");
     return true;
   }
   if (to === LADDER) {
     finish(state, "cultist", "monster");
+    return true;
+  }
+  return false;
+}
+
+function evacuatePlayers(state: DworfState, cell: number): boolean {
+  const sides = sidesAt(state, cell);
+  if (!sides) return false;
+  const reachable = distances(state);
+  const distance = reachable.get(cell);
+  const adjacent = SIDES.flatMap(side => {
+    if (!sides.includes(side)) return [];
+    const next = neighbour(cell, side);
+    if (next === null || !sidesAt(state, next)?.includes(OPPOSITE[side])) return [];
+    return [next];
+  });
+
+  for (const player of state.players) {
+    if (player.cell !== cell || player.dead) continue;
+    const closer = distance === undefined ? [] : adjacent.filter(next => {
+      const nextDistance = reachable.get(next);
+      return nextDistance !== undefined && nextDistance < distance;
+    });
+    const bestDistance = closer.length ? Math.min(...closer.map(next => reachable.get(next)!)) : undefined;
+    const preferred = bestDistance === undefined ? [] : closer.filter(next => reachable.get(next) === bestDistance);
+    const destinations = preferred.length ? preferred : adjacent;
+    if (destinations.length) {
+      player.cell = destinations[randomInt(destinations.length)];
+      addLog(state, `${player.username} escaped the destroyed tunnel.`);
+    } else {
+      eliminatePlayer(state, player, `${player.username} was trapped when the tunnel was destroyed.`);
+    }
+  }
+
+  if (!hasLivingExplorers(state)) {
+    finish(state, "cultist", "elimination");
     return true;
   }
   return false;
@@ -346,7 +390,7 @@ function allTunnelsPlayed(state: DworfState) {
 // Ends the active dwarf's turn: refill the hand, move the monsters, then pass the turn on.
 function endTurn(state: DworfState) {
   const player = current(state);
-  while (player.tunnels.length < HAND_SIZE && state.deck.length > 0) player.tunnels.push(state.deck.shift()!);
+  while (!player.dead && player.tunnels.length < HAND_SIZE && state.deck.length > 0) player.tunnels.push(state.deck.shift()!);
   state.step = "turn";
   state.monsterQueue = state.monsters.map((_, index) => index);
   moveMonsters(state);
@@ -515,6 +559,7 @@ export const dworf: GameModule<DworfState> = {
             if (typeof cell !== "number" || !Number.isInteger(cell) || !state.tunnels[cell]) return { error: "Choose a tunnel to destroy." };
             if (state.monsters.includes(cell)) return { error: "A monster is standing there." };
             spend();
+            if (evacuatePlayers(state, cell)) return "save";
             delete state.tunnels[cell];
             addLog(state, `${name} destroyed a tunnel.`);
             break;
