@@ -20,6 +20,15 @@ npm run db:migrate:local
 npm run dev
 ```
 
+## Live deployment
+
+migrations:
+npx.cmd wrangler d1 migrations list voedgoem --remote
+npm.cmd run db:migrate:remote
+
+deployment:
+npx wranger deploy
+
 ## Making a user an admin
 
 Admins are set from the console only:
