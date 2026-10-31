@@ -35,6 +35,12 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "lines", label: "Lines cleared", format: "number", sql: `SUM("extra")` },
     { key: "teamRate", label: "Win rate in teams", format: "percent", sql: rate(`"role" = 'team'`, `"role" = 'team'`) }
   ],
+  blokus: [
+    games,
+    winRate,
+    { key: "bestResult", label: "Fewest unplaced squares", format: "number", sql: `MAX(-"score")` },
+    { key: "piecesPlaced", label: "Pieces placed", format: "number", sql: `SUM("extra")` }
+  ],
   thirtyone: [
     games,
     winRate,

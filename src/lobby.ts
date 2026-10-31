@@ -406,10 +406,14 @@ export class Lobby extends DurableObject<Env> {
   private async handleDisconnect(closing: WebSocket) {
     const state = this.state;
     const who = closing.deserializeAttachment() as Attachment | null;
+    let committed = false;
     if (state && who && isAuthenticated(who) && !this.connectedUserIds(closing).has(who.userId)) {
-      if (this.module().disconnect(state.data, who.userId)) await this.save();
+      if (this.module().disconnect(state.data, who.userId)) {
+        await this.commit();
+        committed = true;
+      }
     }
-    this.broadcast(closing);
+    if (!committed) this.broadcast(closing);
   }
 
   private connectedUserIds(exclude?: WebSocket) {

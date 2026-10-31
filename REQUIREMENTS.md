@@ -78,6 +78,14 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - When the tunnel deck is empty and no player holds a tunnel, the game ends under the current "all tunnels played" rule. Treat this interpretation as an established implementation decision unless the user changes it.
 - Turn state and legal actions are validated by the game module.
 
+### Blokus
+
+- Standard play uses four players on a 20×20 board. Colors and fixed turn order are Blue, Yellow, Red, Green.
+- Each player has the 21 unique polyomino pieces made from one to five squares, with rotations and mirror flips allowed. Pieces cannot be moved after placement.
+- A first piece must cover an unoccupied board corner. Every later piece must cover only empty board squares, corner-touch at least one piece of its own color, and never edge-touch its own color. Contact with other colors is unrestricted.
+- A player must place a piece whenever any legal placement exists. When no legal placement remains, that player is permanently out; play continues until every player is out.
+- Basic scoring counts unplaced unit squares; the player with the fewest wins and tied scores share victory. Two/three-player variants, Blokus Duo, and optional advanced scoring are not part of the standard implementation.
+
 ## Cross-game UI and interaction requirements
 
 - The hub lists active lobbies with game/name/host and join action. Admins create lobbies and may close them; hosts may close their own lobby.

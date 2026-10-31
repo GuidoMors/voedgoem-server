@@ -15,6 +15,7 @@ The game registry currently includes:
 - **Tetrys** — solo and team modes.
 - **Woerdgoem** — red/blue teams, spymasters and operatives, clues, private spymaster hints, operative word tags, and timed turns with a time bank.
 - **31 Seconds** — teams, captains and players; the describer opens a six-word card (four easy, then two hard) for a 31-second turn and the opposing captain scores it. Players can report or recommend words for admin review.
+- **Blokus** — standard four-player, 20×20 board with 21 rotatable/reflectable pieces per color, corner-only same-color contact, and basic unplaced-square scoring.
 - **Saboteur** — tunnel placement and ability-card play.
 
 The game-specific rules and persisted state live in `src/games/<game>/index.ts`. Player-facing presentation is in the frontend.
