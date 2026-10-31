@@ -4,6 +4,7 @@ type Phase = "lobby" | "playing" | "results";
 type Role = "cultist" | "explorer";
 type Step = "turn" | "gift" | "monster";
 type GoalType = "gold" | "monster";
+type MonsterType = "bull" | "cyclops" | "ghost" | "ogre" | "werewolf";
 export type AbilityType = "lookGoal" | "lookDwarf" | "destroyTunnel" | "destroyPickaxe" | "fixPickaxe" | "destroyLantern" | "fixLantern";
 type Side = "N" | "E" | "S" | "W";
 
@@ -30,6 +31,7 @@ interface Player {
 interface Goal {
   cell: number;
   type: GoalType;
+  monsterType: MonsterType | null;
   revealed: boolean;
 }
 
@@ -47,6 +49,7 @@ export interface DworfState {
   goals: Goal[];
   gems: number[];
   monsters: number[]; // cells
+  monsterTypes: MonsterType[]; // appearance for each monster, matching monsters by index
   monsterQueue: number[]; // indices into monsters still to move this turn
   monsterOptions: number[];
   turnLog?: string[]; // log lines of the turn in progress
@@ -67,6 +70,7 @@ const LOG_LIMIT = 40;
 
 const GOAL_CELLS = [1 * COLS + 11, 3 * COLS + 11, 5 * COLS + 11];
 const GEM_CELLS = [1, 3, 5].flatMap(row => [row * COLS + 1, row * COLS + 7]);
+const MONSTER_TYPES: MonsterType[] = ["bull", "cyclops", "ghost", "ogre", "werewolf"];
 
 // Players -> [cultists, explorers], and how many ability cards each dwarf is dealt. The rest go in The Shop beside the board.
 const ROLES: Record<number, [number, number]> = {
@@ -195,6 +199,7 @@ function resetToLobby(state: DworfState) {
   state.goals = [];
   state.gems = [];
   state.monsters = [];
+  state.monsterTypes = [];
   state.monsterQueue = [];
   state.monsterOptions = [];
   state.deck = [];
@@ -215,7 +220,12 @@ function startGame(state: DworfState) {
   state.deck = shuffle(TUNNEL_CARDS.flatMap(([sides, count]) => Array<string>(count).fill(sides)));
 
   const goalTypes = shuffle<GoalType>(["gold", "monster", "monster"]);
-  state.goals = GOAL_CELLS.map((cell, index) => ({ cell, type: goalTypes[index], revealed: false }));
+  state.goals = GOAL_CELLS.map((cell, index) => ({
+    cell,
+    type: goalTypes[index],
+    monsterType: goalTypes[index] === "monster" ? MONSTER_TYPES[randomInt(MONSTER_TYPES.length)] : null,
+    revealed: false
+  }));
 
   state.players = seats.map((seat, index) => ({
     id: seat.id, username: seat.username, role: roles[index],
@@ -233,6 +243,7 @@ function startGame(state: DworfState) {
   state.tunnels = {};
   state.gems = [...GEM_CELLS];
   state.monsters = [];
+  state.monsterTypes = [];
   state.monsterQueue = [];
   state.monsterOptions = [];
   state.log = [];
@@ -366,7 +377,9 @@ function revealGoals(state: DworfState, cell: number, sides: string): boolean {
       gold = true;
       addLog(state, "The tunnel reaches the gold!");
     } else {
+      state.tunnels[goal.cell] = "NESW";
       state.monsters.push(goal.cell);
+      state.monsterTypes.push(goal.monsterType ?? MONSTER_TYPES[randomInt(MONSTER_TYPES.length)]);
       addLog(state, "The tunnel opens a monster's lair!");
     }
   }
@@ -383,7 +396,7 @@ export const dworf: GameModule<DworfState> = {
   perViewer: true,
 
   create: () => ({
-    phase: "lobby", round: 0, nextOrder: 0, seats: {}, players: [], turn: 0, step: "turn", deck: [], row: [], tunnels: {}, goals: [], gems: [], monsters: [],
+    phase: "lobby", round: 0, nextOrder: 0, seats: {}, players: [], turn: 0, step: "turn", deck: [], row: [], tunnels: {}, goals: [], gems: [], monsters: [], monsterTypes: [],
     monsterQueue: [], monsterOptions: [], log: [], winner: null, endReason: null
   }),
 
@@ -392,6 +405,7 @@ export const dworf: GameModule<DworfState> = {
     for (const key of Object.keys(fresh) as (keyof DworfState)[]) {
       if (state[key] === undefined) (state as any)[key] = fresh[key];
     }
+    if (state.monsterTypes === undefined) state.monsterTypes = [];
     if ((state.winner as string | null) === "saboteur") state.winner = "cultist";
     for (const player of state.players) {
       if (player.cell === undefined) player.cell = null;
@@ -643,14 +657,20 @@ export const dworf: GameModule<DworfState> = {
       turnId: state.phase === "playing" ? current(state)?.id ?? null : null,
       step: state.step,
       tunnels: Object.entries(state.tunnels).map(([cell, sides]) => ({ cell: Number(cell), sides })),
-      goals: state.goals.map((goal, index) => ({
-        index, cell: goal.cell,
-        // Public once revealed (or when the game is over); otherwise only what this dwarf has learned.
-        type: goal.revealed || showRoles ? goal.type : me?.knownGoals[index] ?? null,
-        revealed: goal.revealed
-      })),
+      goals: state.goals.map((goal, index) => {
+        const knownType = me?.knownGoals[index];
+        const visible = goal.revealed || showRoles || knownType !== undefined;
+        return {
+          index, cell: goal.cell,
+          // Public once revealed (or when the game is over); otherwise only what this dwarf has learned.
+          type: goal.revealed || showRoles ? goal.type : knownType ?? null,
+          monsterType: visible && goal.type === "monster" ? goal.monsterType : null,
+          revealed: goal.revealed
+        };
+      }),
       gems: state.gems,
       monsters: state.monsters,
+      monsterTypes: state.monsterTypes,
       lastTurn: state.lastTurn ?? [],
       monsterNext: state.phase === "playing" ? state.monsters.flatMap(from => monsterOptions(state, from).map(to => ({ from, to }))) : [],
       row: state.row,
