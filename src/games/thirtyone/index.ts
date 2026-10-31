@@ -1,5 +1,5 @@
 import type { GameModule } from "../types";
-import { WORDS } from "./words.generated";
+import { EASY_WORDS, HARD_WORDS } from "./words.generated";
 import { DISPLAY_VIEWER } from "../../viewer";
 
 type Team = "red" | "blue";
@@ -34,8 +34,9 @@ export interface ThirtyOneState {
   turn: Team;
   turnPhase: TurnPhase;
   describerId: string | null;
-  // Indices into WORDS that have not been dealt yet.
-  deck: number[];
+  // Indices into the easy and hard word lists that have not been dealt yet.
+  easyDeck: number[];
+  hardDeck: number[];
   card: string[];
   marks: boolean[];
   endsAt: number;
@@ -47,7 +48,9 @@ export interface ThirtyOneState {
   recorded?: boolean;
 }
 
-export const WORDS_PER_CARD = 7;
+export const EASY_WORDS_PER_CARD = 4;
+export const HARD_WORDS_PER_CARD = 2;
+export const WORDS_PER_CARD = EASY_WORDS_PER_CARD + HARD_WORDS_PER_CARD;
 export const TURN_SECONDS = 31;
 export const DEFAULT_POINTS_TO_WIN = 31;
 export const MAX_POINTS_TO_WIN = 200;
@@ -85,8 +88,11 @@ function judgeId(state: ThirtyOneState, connected: Set<string>): string | null {
 }
 
 function drawCard(state: ThirtyOneState) {
-  if (state.deck.length < WORDS_PER_CARD) state.deck = shuffle(WORDS.map((_, index) => index));
-  state.card = state.deck.splice(0, WORDS_PER_CARD).map(index => WORDS[index]);
+  if (state.easyDeck.length < EASY_WORDS_PER_CARD) state.easyDeck = shuffle(EASY_WORDS.map((_, index) => index));
+  if (state.hardDeck.length < HARD_WORDS_PER_CARD) state.hardDeck = shuffle(HARD_WORDS.map((_, index) => index));
+  const easy = state.easyDeck.splice(0, EASY_WORDS_PER_CARD).map(index => EASY_WORDS[index]);
+  const hard = state.hardDeck.splice(0, HARD_WORDS_PER_CARD).map(index => HARD_WORDS[index]);
+  state.card = [...easy, ...hard];
   state.marks = state.card.map(() => false);
 }
 
@@ -169,7 +175,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
 
   create: () => ({
     phase: "lobby", round: 0, nextOrder: 0, seats: {}, pointsToWin: DEFAULT_POINTS_TO_WIN, graceSeconds: DEFAULT_GRACE_SECONDS, draftTurn: "red",
-    scores: { red: 0, blue: 0 }, turn: "red", turnPhase: "ready", describerId: null, deck: [], card: [], marks: [], endsAt: 0, judgeAt: 0,
+    scores: { red: 0, blue: 0 }, turn: "red", turnPhase: "ready", describerId: null, easyDeck: [], hardDeck: [], card: [], marks: [], endsAt: 0, judgeAt: 0,
     rotation: { red: 0, blue: 0 }, history: [], winner: null
   }),
 
@@ -177,6 +183,13 @@ export const thirtyone: GameModule<ThirtyOneState> = {
     const fresh = thirtyone.create();
     for (const key of Object.keys(fresh) as (keyof ThirtyOneState)[]) {
       if (state[key] === undefined) (state as any)[key] = fresh[key];
+    }
+    delete (state as ThirtyOneState & { deck?: number[] }).deck;
+    if (state.phase === "playing" && state.card.length !== WORDS_PER_CARD) {
+      drawCard(state);
+      state.turnPhase = "ready";
+      state.endsAt = 0;
+      state.judgeAt = 0;
     }
   },
 
@@ -284,7 +297,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         state.judgeAt = state.endsAt + state.graceSeconds * 1000;
         return "save";
       case "stop":
-        // The describer can end the clock early, e.g. when all seven words are done.
+        // The describer can end the clock early, e.g. when all six words are done.
         if (state.phase !== "playing" || state.turnPhase !== "running" || actor.userId !== state.describerId || now >= state.endsAt) return "ignore";
         state.endsAt = now;
         state.judgeAt = now;
@@ -388,7 +401,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
       turnSeconds: TURN_SECONDS,
       wordsPerCard: WORDS_PER_CARD,
       draftTurn: state.draftTurn,
-      wordPoolSize: WORDS.length,
+      wordPoolSize: EASY_WORDS.length + HARD_WORDS.length,
       seats: Object.values(state.seats).sort((a, b) => a.order - b.order).map(({ id, username, team, role }) => ({ id, username, team, role, connected: connected.has(id) })),
       scores: state.scores,
       overtime: state.phase === "playing" && Math.max(state.scores.red, state.scores.blue) >= state.pointsToWin,
