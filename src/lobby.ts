@@ -345,7 +345,7 @@ export class Lobby extends DurableObject<Env> {
         } else {
           const inner = message.message;
           if (typeof inner !== "object" || inner === null || Array.isArray(inner)) return;
-          const outcome = game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false }, inner as Record<string, unknown>, context());
+          const outcome = game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false, isAdmin: false }, inner as Record<string, unknown>, context());
           if (outcome === "ignore") return;
           if (typeof outcome === "object") {
             try { ws.send(JSON.stringify({ type: "error", message: `${bot.username}: ${outcome.error}` })); } catch { /* socket is going away */ }
@@ -361,7 +361,7 @@ export class Lobby extends DurableObject<Env> {
       return;
     }
 
-    const outcome = game.handle(state.data, { userId: who.userId, username: who.username, isHost: who.userId === hostId }, message, context());
+    const outcome = game.handle(state.data, { userId: who.userId, username: who.username, isHost: who.userId === hostId, isAdmin: !!who.isAdmin }, message, context());
     if (outcome === "ignore") return;
     if (typeof outcome === "object") {
       try { ws.send(JSON.stringify({ type: "error", message: outcome.error })); } catch { /* socket is going away */ }

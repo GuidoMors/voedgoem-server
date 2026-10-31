@@ -4,6 +4,7 @@ export interface Actor {
   userId: string;
   username: string;
   isHost: boolean;
+  isAdmin: boolean;
 }
 
 // Who is currently connected to the lobby (user id -> username).

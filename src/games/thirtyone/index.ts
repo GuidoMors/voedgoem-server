@@ -90,15 +90,10 @@ function drawCard(state: ThirtyOneState) {
   state.marks = state.card.map(() => false);
 }
 
-// Hands the card to the next member of the team, preferring people who are online.
-function nextDescriber(state: ThirtyOneState, connected: Map<string, string>) {
+// Hands the card to the next member in team order, whether or not they are connected.
+function nextDescriber(state: ThirtyOneState) {
   const team = members(state, state.turn);
-  const start = state.rotation[state.turn];
-  let chosen = start % team.length;
-  for (let step = 0; step < team.length; step++) {
-    const index = (start + step) % team.length;
-    if (connected.has(team[index].id)) { chosen = index; break; }
-  }
+  const chosen = state.rotation[state.turn] % team.length;
   state.rotation[state.turn] = chosen + 1;
   state.describerId = team[chosen].id;
   state.turnPhase = "ready";
@@ -121,7 +116,7 @@ function resetToLobby(state: ThirtyOneState) {
   state.winner = null;
 }
 
-function startGame(state: ThirtyOneState, connected: Map<string, string>) {
+function startGame(state: ThirtyOneState) {
   state.scores = { red: 0, blue: 0 };
   state.rotation = { red: 0, blue: 0 };
   state.history = [];
@@ -130,7 +125,7 @@ function startGame(state: ThirtyOneState, connected: Map<string, string>) {
   state.turn = "red";
   state.phase = "playing";
   state.round += 1;
-  nextDescriber(state, connected);
+  nextDescriber(state);
 }
 
 function validateDraftStart(state: ThirtyOneState, pointsToWin: unknown, graceSeconds: unknown): string | null {
@@ -194,7 +189,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         return "save";
       }
       case "assign": {
-        if (!actor.isHost || state.phase !== "playing") return "ignore";
+        if ((!actor.isHost && !actor.isAdmin) || state.phase !== "playing") return "ignore";
         const { team, userId } = message;
         if ((team !== "red" && team !== "blue") || typeof userId !== "string") return "ignore";
         const username = context.connected.get(userId);
@@ -269,7 +264,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         if (!actor.isHost || state.phase !== "draft") return "ignore";
         const problem = validateGameStart(state);
         if (problem) return { error: problem };
-        startGame(state, context.connected);
+        startGame(state);
         return "save";
       }
       case "open":
@@ -288,8 +283,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
         // Hands an unopened card to the next teammate, for when the describer is away.
         if (state.phase !== "playing" || state.turnPhase !== "ready" || (actor.userId !== state.describerId && !actor.isHost)) return "ignore";
         if (members(state, state.turn).length < 2) return "ignore";
-        const previous = state.describerId;
-        nextDescriber(state, new Map([...context.connected].filter(([id]) => id !== previous)));
+        nextDescriber(state);
         return "save";
       }
       case "mark": {
@@ -321,7 +315,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
           return "save";
         }
         state.turn = other(state.turn);
-        nextDescriber(state, context.connected);
+        nextDescriber(state);
         return "save";
       }
       case "exit":
