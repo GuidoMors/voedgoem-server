@@ -82,8 +82,11 @@ const ABILITY_COUNTS: Record<AbilityType, number> = {
   lookGoal: 4, lookDwarf: 2, destroyTunnel: 4, destroyPickaxe: 3, fixPickaxe: 2, destroyLantern: 3, fixLantern: 2
 };
 
-// 45 tunnel cards. Cards can be turned 180 degrees but not 90.
-const TUNNEL_CARDS: [string, number][] = [["NESW", 6], ["NES", 7], ["ESW", 7], ["NS", 7], ["EW", 6], ["NE", 6], ["SE", 6]];
+// 38 tunnel cards. Cards can be turned 180 degrees but not 90.
+const TUNNEL_CARDS: [string, number][] = [
+  ["NS", 3], ["EW", 3], ["NESW", 5], ["NEW", 5], ["NES", 5],
+  ["NE", 5], ["NW", 5], ["N", 3], ["E", 3]
+];
 
 const ABILITY_NAMES: Record<AbilityType, string> = {
   lookGoal: "Look at goal", lookDwarf: "Look at dwarf", destroyTunnel: "Destroy tunnel", destroyPickaxe: "Destroy pickaxe",
