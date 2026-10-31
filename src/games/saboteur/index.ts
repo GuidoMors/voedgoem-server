@@ -363,7 +363,7 @@ export const saboteur: GameModule<SaboteurState> = {
   info: {
     id: "saboteur",
     name: "Saboteur",
-    description: "Dwarves dig toward the gold, but saboteurs are among them. Explorers must reach the gold; saboteurs must wake a monster and let it reach the ladder. 4-14 players.",
+    description: "Dwarves dig tunnels looking for gold, but cultists are among them. Explorers must reach the gold before they run out of tunnels; cultists must wake a monster and let it reach the ladder. 4-14 players.",
     maxPlayers: MAX_PLAYERS
   },
   perViewer: true,

@@ -279,7 +279,7 @@ function refreshBrowserTabUserName(){
 			document.title=gameType; 
 		}
 		else{
-			document.title="Voedgoem";
+			document.title="voedgoem";
 		}
 	}
 }

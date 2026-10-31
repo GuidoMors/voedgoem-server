@@ -213,7 +213,7 @@ export const codenames: GameModule<CodenamesState> = {
   info: {
     id: "codenames",
     name: "Woerdgoem",
-    description: "Two teams race to find their agents. Spymasters give one-word clues; operatives guess the words. Avoid the assassin.",
+    description: "The spymaster gives one-word clues; operatives guess the words belonging to the clue. Avoid the black card.",
     maxPlayers: 20
   },
   perViewer: true,

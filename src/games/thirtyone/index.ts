@@ -157,7 +157,7 @@ export const thirtyone: GameModule<ThirtyOneState> = {
   info: {
     id: "thirtyone",
     name: "31 Seconds",
-    description: "Two teams describe words to each other against the clock. Each card has 7 words and you get 31 seconds. The other team's captain checks your answers. First to 31 points wins.",
+    description: "Two teams describe words to each other against the clock. You are not allowed to use the word itself, or parts of it, even in other language. This game requires the players to be able to hear eachother.",
     maxPlayers: 20
   },
   perViewer: true,
