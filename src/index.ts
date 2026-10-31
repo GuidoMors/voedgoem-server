@@ -160,6 +160,22 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   if (path === "/api/chat/hub/ws" && method === "GET") return connectToHubChat(request, env, user);
 
+  if (method === "POST" && path === "/api/word-feedback") {
+    if (user.isDisplay) throw new HttpError(403, "Display accounts cannot submit word feedback.");
+    const body = await readBody(request);
+    if (body.kind !== "report" && body.kind !== "recommendation") throw new HttpError(400, "Choose whether to report or recommend a word.");
+    const word = text(body.word).trim().replace(/\s+/g, " ");
+    if (!word || word.length > 60 || /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/.test(word)) {
+      throw new HttpError(400, "Words must be 1-60 characters.");
+    }
+    const wordKey = word.toLocaleLowerCase("en-US");
+    await env.DB.prepare(`
+      INSERT INTO "wordFeedback" ("wordKey", "word", "kind") VALUES (?1, ?2, ?3)
+      ON CONFLICT ("wordKey", "kind") DO NOTHING
+    `).bind(wordKey, word, body.kind).run();
+    return json({ message: body.kind === "report" ? "Word reported." : "Word recommended." }, 201);
+  }
+
   if (method === "GET" && path === "/api/games") return json({ games: Object.values(GAMES) });
 
   const statsMatch = path.match(/^\/api\/stats\/([a-z0-9]+)$/);
@@ -238,6 +254,27 @@ async function route(request: Request, env: Env): Promise<Response> {
         FROM "users" ORDER BY "username" COLLATE NOCASE
       `).all<{ id: string; username: string; createdAt: string; isAdmin: number; isHoster: number; isDisplay: number; hasRecoveryKey: number }>();
       return json({ users: results.map(row => ({ ...row, isAdmin: !!row.isAdmin, isHoster: !!row.isHoster, isDisplay: !!row.isDisplay, hasRecoveryKey: !!row.hasRecoveryKey })) });
+    }
+    if (method === "GET" && path === "/api/admin/word-feedback") {
+      const { results } = await env.DB.prepare(`
+        SELECT "wordKey", MAX("word") AS "word",
+          MAX(CASE WHEN "kind" = 'report' THEN 1 ELSE 0 END) AS "reported",
+          MAX(CASE WHEN "kind" = 'recommendation' THEN 1 ELSE 0 END) AS "recommended",
+          MAX("submittedAt") AS "submittedAt"
+        FROM "wordFeedback"
+        GROUP BY "wordKey"
+        ORDER BY "submittedAt" DESC, "word" COLLATE NOCASE
+        LIMIT 500
+      `).all<{ wordKey: string; word: string; reported: number; recommended: number; submittedAt: string }>();
+      return json({ words: results.map(row => ({ ...row, reported: !!row.reported, recommended: !!row.recommended })) });
+    }
+    if (method === "DELETE" && path === "/api/admin/word-feedback") {
+      const body = await readBody(request);
+      const wordKey = text(body.wordKey).trim().toLocaleLowerCase("en-US");
+      if (!wordKey || wordKey.length > 60) throw new HttpError(400, "A valid word is required.");
+      const result = await env.DB.prepare(`DELETE FROM "wordFeedback" WHERE "wordKey" = ?1`).bind(wordKey).run();
+      if (result.meta.changes === 0) throw new HttpError(404, "Word feedback not found.");
+      return new Response(null, { status: 204 });
     }
     if (method === "POST" && path === "/api/admin/displays") {
       const body = await readBody(request);

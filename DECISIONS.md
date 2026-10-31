@@ -54,7 +54,7 @@ This is a living record of decisions that shape the server. It describes the cur
 
 ## Word lists are generated during lifecycle scripts
 
-**Decision:** Text word lists are bundled into generated TypeScript by `scripts/build-words.mjs`, which runs before typecheck, build, and deploy.
+**Decision:** Text word lists are bundled into generated TypeScript by `scripts/build-words.mjs`, which runs before typecheck, build, and deploy. Codenames lists are read from `src/games/codenames/words/`; the 31 Seconds easy and hard pools are read from `content/31seconds/`.
 
 **Rationale:** Word data remains maintainable as text files while the Worker receives a build-time module it can import.
 
