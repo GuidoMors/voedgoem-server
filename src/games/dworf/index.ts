@@ -557,11 +557,21 @@ export const dworf: GameModule<DworfState> = {
           case "destroyTunnel": {
             const cell = message.cell;
             if (typeof cell !== "number" || !Number.isInteger(cell) || !state.tunnels[cell]) return { error: "Choose a tunnel to destroy." };
-            if (state.monsters.includes(cell)) return { error: "A monster is standing there." };
             spend();
-            if (evacuatePlayers(state, cell)) return "save";
+            const gameEnded = evacuatePlayers(state, cell);
             delete state.tunnels[cell];
+            let killedMonsters = 0;
+            for (let index = state.monsters.length - 1; index >= 0; index--) {
+              if (state.monsters[index] !== cell) continue;
+              state.monsters.splice(index, 1);
+              state.monsterTypes.splice(index, 1);
+              killedMonsters++;
+            }
+            if (killedMonsters > 0) {
+              addLog(state, killedMonsters === 1 ? "A monster was killed when its tunnel was destroyed." : `${killedMonsters} monsters were killed when their tunnel was destroyed.`);
+            }
             addLog(state, `${name} destroyed a tunnel.`);
+            if (gameEnded) return "save";
             break;
           }
           case "destroyPickaxe":
@@ -614,6 +624,19 @@ export const dworf: GameModule<DworfState> = {
         state.step = "turn";
         if (moveMonster(state, index, cell)) return "save";
         moveMonsters(state);
+        return "save";
+      }
+      case "forcepass": {
+        if (!actor.isHost || state.phase !== "playing" || state.step !== "turn") return "ignore";
+        const player = current(state);
+        if (player.tunnels.length > 0) {
+          const index = randomInt(player.tunnels.length);
+          player.tunnels.splice(index, 1);
+          addLog(state, `${player.username} was force-passed by the host and discarded a random tunnel card.`);
+        } else {
+          addLog(state, `${player.username} was force-passed by the host and had no tunnel card to discard.`);
+        }
+        endTurn(state);
         return "save";
       }
       case "forceskip": {
