@@ -120,6 +120,16 @@ async function connectToLobby(request: Request, env: Env, user: SessionUser, id:
   return lobbyStub(env, id).fetch("https://lobby/ws", { headers });
 }
 
+async function connectToHubChat(request: Request, env: Env, user: SessionUser) {
+  if (request.headers.get("Upgrade") !== "websocket") throw new HttpError(426, "Expected a WebSocket upgrade.");
+  if (user.isDisplay) throw new HttpError(403, "Display accounts cannot use chat.");
+  const headers = new Headers(request.headers);
+  headers.set("x-user-id", user.id);
+  headers.set("x-username", user.username);
+  headers.set("x-is-display", "0");
+  return env.LOBBY.get(env.LOBBY.idFromName("hub-chat")).fetch("https://lobby/chat/ws", { headers });
+}
+
 async function route(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const { pathname: path } = url;
@@ -147,6 +157,8 @@ async function route(request: Request, env: Env): Promise<Response> {
     if (token) await env.DB.prepare(`DELETE FROM "sessions" WHERE "tokenHash" = ?1`).bind(await sha256Hex(token)).run();
     return new Response(null, { status: 204 });
   }
+
+  if (path === "/api/chat/hub/ws" && method === "GET") return connectToHubChat(request, env, user);
 
   if (method === "GET" && path === "/api/games") return json({ games: Object.values(GAMES) });
 

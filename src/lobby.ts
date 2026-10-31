@@ -22,6 +22,13 @@ interface State {
   avatars?: Record<string, Avatar>;
 }
 
+interface ChatMessage {
+  id: string;
+  username: string;
+  text: string;
+  createdAt: number;
+}
+
 interface Attachment {
   userId: string;
   username: string;
@@ -38,10 +45,15 @@ const isAuthenticated = (who: Attachment) => who.isAuthenticated ?? !who.passwor
 const MAX_BOTS = 20;
 
 const MAX_MESSAGE_LENGTH = 1000;
+const MAX_CHAT_MESSAGE_LENGTH = 500;
+const MAX_CHAT_MESSAGES = 100;
+const CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const VOLATILE_BROADCAST_MS = 100;
 
 export class Lobby extends DurableObject<Env> {
   private state: State | null = null;
+  private chatMessages: ChatMessage[] = [];
+  private lastChatByUser = new Map<string, number>();
   private lastVolatileBroadcast = 0;
   private volatileTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -82,9 +94,8 @@ export class Lobby extends DurableObject<Env> {
 
   private async load() {
     const ctx = this.ctx;
-    {
-      const stored = await ctx.storage.get<any>("state");
-      if (!stored) return;
+    const stored = await ctx.storage.get<any>("state");
+    if (stored) {
       if ("data" in stored) {
         this.state = stored as State;
       } else {
@@ -94,7 +105,85 @@ export class Lobby extends DurableObject<Env> {
       }
       if (this.state) MODULES[this.state.game]?.migrate?.(this.state.data);
     }
+    await this.loadChat();
     this.scheduleTick();
+  }
+
+  private async loadChat() {
+    const stored = await this.ctx.storage.get<ChatMessage[]>("chatMessages");
+    const messages = Array.isArray(stored) ? stored : [];
+    this.chatMessages = messages
+      .filter(message => message && typeof message.text === "string" && typeof message.createdAt === "number" && message.createdAt + CHAT_RETENTION_MS > Date.now())
+      .slice(-MAX_CHAT_MESSAGES);
+    if (this.chatMessages.length !== messages.length) await this.persistChat();
+    else await this.scheduleChatExpiry();
+  }
+
+  private async persistChat() {
+    if (this.chatMessages.length) await this.ctx.storage.put("chatMessages", this.chatMessages);
+    else await this.ctx.storage.delete("chatMessages");
+    await this.scheduleChatExpiry();
+  }
+
+  private async scheduleChatExpiry() {
+    const expiresAt = this.chatMessages[0]?.createdAt + CHAT_RETENTION_MS;
+    if (expiresAt) await this.ctx.storage.setAlarm(expiresAt);
+    else await this.ctx.storage.deleteAlarm();
+  }
+
+  async alarm() {
+    const previousLength = this.chatMessages.length;
+    this.chatMessages = this.chatMessages.filter(message => message.createdAt + CHAT_RETENTION_MS > Date.now());
+    if (this.chatMessages.length !== previousLength) {
+      await this.persistChat();
+      this.broadcastChatHistory();
+    } else {
+      await this.scheduleChatExpiry();
+    }
+  }
+
+  private broadcastChatHistory(target?: WebSocket) {
+    const payload = JSON.stringify({ type: "chat:history", messages: this.chatMessages });
+    const sockets = target ? [target] : this.ctx.getWebSockets();
+    for (const ws of sockets) {
+      if (ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
+      const who = ws.deserializeAttachment() as Attachment | null;
+      if (!who || !isAuthenticated(who) || who.isDisplay) continue;
+      try { ws.send(payload); } catch { /* socket is going away */ }
+    }
+  }
+
+  private broadcastChatMessage(message: ChatMessage) {
+    const payload = JSON.stringify({ type: "chat:message", message });
+    for (const ws of this.ctx.getWebSockets()) {
+      if (ws.readyState !== WebSocket.READY_STATE_OPEN) continue;
+      const who = ws.deserializeAttachment() as Attachment | null;
+      if (!who || !isAuthenticated(who) || who.isDisplay) continue;
+      try { ws.send(payload); } catch { /* socket is going away */ }
+    }
+  }
+
+  private async handleChatMessage(ws: WebSocket, who: Attachment, text: unknown) {
+    if (typeof text !== "string") {
+      try { ws.send(JSON.stringify({ type: "error", message: "Chat message must be text." })); } catch { /* socket is going away */ }
+      return;
+    }
+    const normalized = text.trim();
+    if (!normalized || normalized.length > MAX_CHAT_MESSAGE_LENGTH) {
+      try { ws.send(JSON.stringify({ type: "error", message: `Chat messages must be 1-${MAX_CHAT_MESSAGE_LENGTH} characters.` })); } catch { /* socket is going away */ }
+      return;
+    }
+    const now = Date.now();
+    if (now - (this.lastChatByUser.get(who.userId) ?? 0) < 700) {
+      try { ws.send(JSON.stringify({ type: "error", message: "Please wait before sending another chat message." })); } catch { /* socket is going away */ }
+      return;
+    }
+    this.lastChatByUser.set(who.userId, now);
+    const message: ChatMessage = { id: crypto.randomUUID(), username: who.username, text: normalized, createdAt: now };
+    this.chatMessages.push(message);
+    this.chatMessages = this.chatMessages.filter(item => item.createdAt + CHAT_RETENTION_MS > now).slice(-MAX_CHAT_MESSAGES);
+    await this.persistChat();
+    this.broadcastChatMessage(message);
   }
 
   private module() {
@@ -103,6 +192,21 @@ export class Lobby extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === "/chat/ws") {
+      if (request.headers.get("Upgrade") !== "websocket") return new Response("Expected a WebSocket upgrade.", { status: 426 });
+      const userId = request.headers.get("x-user-id");
+      const username = request.headers.get("x-username");
+      if (!userId || !username) return new Response("Unauthorized", { status: 401 });
+      const isDisplay = request.headers.get("x-is-display") === "1";
+      if (isDisplay) return new Response("Display accounts cannot use chat.", { status: 403 });
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+      this.ctx.acceptWebSocket(server);
+      server.serializeAttachment({ userId, username, isAuthenticated: true } satisfies Attachment);
+      this.broadcastChatHistory(server);
+      return new Response(null, { status: 101, webSocket: client });
+    }
 
     if (url.pathname === "/summary" && request.method === "GET") {
       return new Response(JSON.stringify({ playerCount: this.state ? this.module().participants(this.state.data).size : 0 }), {
@@ -116,6 +220,7 @@ export class Lobby extends DurableObject<Env> {
       }
       await this.ctx.storage.deleteAll();
       this.state = null;
+      this.chatMessages = [];
       return new Response(null, { status: 204 });
     }
 
@@ -172,11 +277,12 @@ export class Lobby extends DurableObject<Env> {
     await this.save();
     this.broadcast();
     this.broadcastAvatars();
+    this.broadcastChatHistory(ws);
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     const state = this.state;
-    if (!state || typeof raw !== "string" || raw.length > MAX_MESSAGE_LENGTH) return;
+    if (typeof raw !== "string" || raw.length > MAX_MESSAGE_LENGTH) return;
     const who = ws.deserializeAttachment() as Attachment | null;
     if (!who) return;
 
@@ -209,6 +315,11 @@ export class Lobby extends DurableObject<Env> {
       return;
     }
     if (who.isDisplay) return;
+    if (message.type === "chat:send") {
+      await this.handleChatMessage(ws, who, message.text);
+      return;
+    }
+    if (!state) return;
 
     const game = this.module();
     const hostId = state.hostId;
