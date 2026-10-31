@@ -170,7 +170,23 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   if (method === "GET" && path === "/api/lobbies") {
     const { results } = await env.DB.prepare(`${LOBBY_SELECT} ORDER BY l."createdAt" DESC`).all<LobbyRow>();
-    return json({ lobbies: results.map(({ id, game, name, hostId, hostName, createdAt, isPasswordProtected }) => ({ id, game, name, hostId, hostName, createdAt, isPasswordProtected: !!isPasswordProtected })) });
+    const lobbies = await Promise.all(results.map(async lobby => {
+      const response = await lobbyStub(env, lobby.id).fetch("https://lobby/summary");
+      if (!response.ok) throw new HttpError(502, "Could not load lobby player counts.");
+      const { playerCount } = await response.json<{ playerCount: number }>();
+      return {
+        id: lobby.id,
+        game: lobby.game,
+        name: lobby.name,
+        hostId: lobby.hostId,
+        hostName: lobby.hostName,
+        createdAt: lobby.createdAt,
+        isPasswordProtected: !!lobby.isPasswordProtected,
+        playerCount,
+        maxPlayers: GAMES[lobby.game].maxPlayers
+      };
+    }));
+    return json({ lobbies });
   }
   if (method === "POST" && path === "/api/lobbies") {
     if (!user.isAdmin && !user.isHoster) throw new HttpError(403, "Only admins and hosters can create lobbies.");
@@ -185,7 +201,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     const passwordHash = password.trim() ? await hashPassword(password) : null;
     await env.DB.prepare(`INSERT INTO "lobbies" ("id", "game", "name", "hostId", "passwordHash") VALUES (?1, ?2, ?3, ?4, ?5)`)
       .bind(id, game, name, user.id, passwordHash).run();
-    return json({ lobby: await findLobby(env, id) }, 201);
+    return json({ lobby: { ...await findLobby(env, id), playerCount: 0, maxPlayers: GAMES[game].maxPlayers } }, 201);
   }
 
   const lobbyMatch = path.match(/^\/api\/lobbies\/([A-Za-z0-9_-]{1,32})(\/ws)?$/);

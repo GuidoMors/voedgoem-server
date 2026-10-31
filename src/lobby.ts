@@ -104,6 +104,12 @@ export class Lobby extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname === "/summary" && request.method === "GET") {
+      return new Response(JSON.stringify({ playerCount: this.state ? this.module().participants(this.state.data).size : 0 }), {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     if (url.pathname === "/close") {
       for (const ws of this.ctx.getWebSockets()) {
         try { ws.close(1000, "Lobby closed"); } catch { /* already closed */ }
