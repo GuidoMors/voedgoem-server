@@ -27,6 +27,8 @@ export interface GameModule<S> {
   create(): S;
   // Fills in fields missing from state saved by an older version of the game.
   migrate?(state: S): void;
+  // Called when a user's authenticated connection is activated.
+  connect?(state: S, userId: string): boolean;
   handle(state: S, actor: Actor, message: Record<string, unknown>, context: Context): Outcome;
   // Called when a user's last socket closed. Returns true if the state changed.
   disconnect(state: S, userId: string): boolean;

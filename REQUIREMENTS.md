@@ -68,10 +68,10 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Players can submit existing words for review or recommend additions. Submissions do not automatically remove or add words; admins can review and dismiss reported/recommended entries.
 - The host can abort with confirmation; the finished score/history and per-player results are recorded.
 
-### Saboteur
+### Dworf
 
 - Supports 4-14 players with a 7x13 board, ladder start, three goal positions, and role-specific win conditions.
-- Tunnel placement must connect to the reachable path and match each adjacent tunnel/ladder edge. A placement can reveal a goal. Gold gives explorers an immediate win; monsters move toward the ladder at turn end and reaching it gives saboteurs the win.
+- Tunnel placement must connect to the reachable path and match each adjacent tunnel/ladder edge. A placement can reveal a goal. Gold gives explorers an immediate win; monsters move toward the ladder at turn end and reaching it gives cultists the win.
 - Includes gems and a face-up ability-card shop; gem placements can let the player gift a shop card to another player.
 - Includes pickaxe/lantern break and repair, tunnel destruction, private goal/role peeks, and host force-skip when the active player is offline.
 - Tunnel rotation is 180 degrees only. Symmetric tunnels (cross, vertical, and horizontal) do not need rotation.
@@ -95,8 +95,8 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Display accounts are read-only, cannot claim a seat, and exclude themselves from connected-player/game logic. Their QR code supports showing/joining a display URL.
 - User profiles support an avatar composed of a body, face, and hat, with a separate colour per part. Avatar data is persisted; processed mask/outline assets are bundled with the frontend.
 - Statistics are a modal tab while in the game shell. Each game has 3-6 stats including games played and win percentage; the player's row/stats appear first/highlighted, followed by a compact all-player table.
-- History is opened in a modal and uses game-specific entries; Saboteur's tab is labelled "Log". Tetrys has no History tab.
-- On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports. In Saboteur the active player's tab appears above the map only on mobile.
+- History is opened in a modal and uses game-specific entries; Dworf's tab is labelled "Log". Tetrys has no History tab.
+- On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports. In Dworf the active player's tab appears above the map only on mobile.
 - Per-game visual themes are scoped to the current game's body state. Shared disabled styling must not mute interactive game tiles/cards or hide a disabled state that needs strong contrast.
 - Modals must preserve the active game rather than navigate away; the Hub/Game tab and brand are inert while a lobby is active where previously requested.
 

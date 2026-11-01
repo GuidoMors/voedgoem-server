@@ -26,7 +26,7 @@ src/
     types.ts                  GameModule, Actor, Context, GameResult contracts
     registry.ts               authoritative game registry
     codenames/index.ts        Codenames engine and snapshots
-    saboteur/index.ts         Saboteur engine and snapshots
+    dworf/index.ts         Dworf engine and snapshots
     tetris/index.ts solo/team Tetrys module
     tetris/team.ts            server simulation for team mode
     thirtyone/index.ts        31 Seconds engine and snapshots
@@ -50,7 +50,7 @@ src/
   games/
     registry.tsx              game-specific lobby dispatcher
     types.ts                  common snapshot and lobby props
-    {codenames,saboteur,tetris,thirtyone}/
+    {codenames,dworf,tetris,thirtyone}/
   pages/
     AuthPage.tsx, HubPage.tsx, LobbyPage.tsx
     AdminPage.tsx, ProfilePage.tsx, StatsPage.tsx
@@ -134,7 +134,7 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 - Display-only account sees the words only in the opposing captain's scoring phase. Lobby tick broadcasts this transition without a player action.
 - Overtime continues until a full round concludes with non-tied scores under the target rules. Abort is at the bottom with confirmation.
 
-### Saboteur
+### Dworf
 
 - 7x13 board, ladder at row 3/column 3, three goal locations in far column, six gems, tunnel placements and role-specific objectives.
 - Engine was separately simulated across random player counts/game outcomes. Historical assumptions about counts/edge cases are in [CURRENT_STATUS.md](./CURRENT_STATUS.md) and the 2026-10-24 checkpoint.
@@ -162,8 +162,8 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 - Statistics, History, Admin are modal views so the active game remains open. Only Hub/Game and profile have navigation active styles.
 - Admin test-bot panel is below the game panel.
 - Kick controls are host-only and appear next to seated users. Kicking returns the player to spectator; no rejoin ban.
-- Responsive layout work includes mobile hamburger, narrow Codenames word-fit, Tetris control arrangement, side-scroll tables, and active Saboteur turn placement above the map on mobile.
-- Theme fonts: arcade neon uses Press Start 2P and Tilt Neon; Saboteur Silkscreen and VT323; Codenames Playfair Display and Libre Baskerville; 31 Seconds Cinzel and Raleway. Verify existing CSS/index before changing fonts.
+- Responsive layout work includes mobile hamburger, narrow Codenames word-fit, Tetris control arrangement, side-scroll tables, and active Dworf turn placement above the map on mobile.
+- Theme fonts: arcade neon uses Press Start 2P and Tilt Neon; Dworf Silkscreen and VT323; Codenames Playfair Display and Libre Baskerville; 31 Seconds Cinzel and Raleway. Verify existing CSS/index before changing fonts.
 
 ## Build, validation, deployment
 

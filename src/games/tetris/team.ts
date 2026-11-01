@@ -211,12 +211,13 @@ export function act(team: Team, id: string, action: Action): Change {
   }
 }
 
-export function tickTeam(team: Team, now: number): Change {
+export function tickTeam(team: Team, now: number, pausedMembers: ReadonlySet<string> = new Set()): Change {
   if (!team.alive) return "none";
   let change: Change = "none";
   if (now >= team.nextDropAt) {
     team.nextDropAt = now + gravityMs(team);
     for (const id of team.memberIds) {
+      if (pausedMembers.has(id)) continue;
       const piece = team.pieces[id];
       if (!piece) continue;
       const down = { ...piece, y: piece.y + 1 };
@@ -231,6 +232,7 @@ export function tickTeam(team: Team, now: number): Change {
     }
   }
   for (const id of team.memberIds) {
+    if (pausedMembers.has(id)) continue;
     if (!team.pieces[id] && !team.out.includes(id) && team.alive) {
       spawn(team, id);
       if (team.pieces[id] && change === "none") change = "moved";

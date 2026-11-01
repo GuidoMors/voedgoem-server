@@ -1,99 +1,99 @@
-I want to make a new game. It is called Werewolves. Its rules are based on Werewolves. The rules are as following:
+I want to make a new game called **Werewolves**, based on the Werewolves party game.
 
-While the admin is in the lobby: they can assign a pool of characters that are in the draft. They can also choose the number of werewolves that must be in the draft.
-There is also an option that admins can toggle off or on. When it is toggled on: before the vote for lynching starts the players may vote to skip lynching. If they do so unanimously, the lynching vote is skipped. There is also an option to allow the mayor to do moon cards at the start of each day.
+## Lobby and setup
 
-When the game starts: each player is assigned a random character from among the draft pool, making sure to have that number of werewolves as assigned by the admin.
-The players are seated at a table in a circle. Players are represented in seating order by their avatars.
+The admin configures the lobby and selects which roles are in the role pool. Each role may appear at most once in the pool. The admin also chooses the exact number of Werewolf-aligned role cards to deal; this number cannot exceed the number of Werewolf cards in the pool. At game start, deal one distinct role card to each role-holding player, choosing randomly from the pool without duplicates and ensuring the chosen roles include the configured number of Werewolf cards. The pool must contain enough roles for all role-holding players and enough Werewolf cards for the configured count.
 
-These are the characters (the icons for the roles are in the content/ werewolf folder, use these icons liberally throughout the game to refer to the roles accompanied by the name of the role):
-Big Bad Wolf - Werewolf: Once during the day they can reveal that they are the Big Bad Wolf. When they do, they kill a player of their choice outright, but then their role is revealed to everyone. They may only activate this ability once, and they must do so during the day before voting starts.
-Cloaked Wolf - Werewolf: The Cloaked Werewolf is harder to detect. The guard’s dog cannot detect him, the bearman’s bear will not growl in the morning, the seer cannot see their identity.
-The Wise Wolf - Werewolf: As long as the Wise Wolf is alive the werewolves will get a thumbs down from the gamemaster when they target one of the following characters: Knight, someone protected by the knight, the hunter, the elder. After getting the thumbs down the werewolves may reconsider their target, any number of times.
-Throatcutter - Werewolf: After the werewolves chose their target, the Throatcutter may raise their hand. If they do they can target someone. That target is silenced the next round and cannot talk. The Throatcutter can only use this ability once per game.
-The Sniffer - Werewolf: Before the werewolves wake up, the sniffer wakes up alone and can check out a specific player for their role. On the first night only: if they chose to check out a werewolf they get a thumbs down and can reconsider, any number of times.
-Wolfchild - Neutral: The first night the Wolfchild picks a target to imitate. If the target they are imitating is alive they are a villager. If the target they are imitating is dead, they become a werewolf.
-Fool - Neutral: When the fool is voted to hang he does not die. Instead he reveals that he is the fool and he wins the game, but all other players do not lose the game. They may still talk, but they have to have their eyes closed during the night.
-Cupido - Villager: During their first night Cupido must point at two players. These players fall in love. They win if they are alive together when werewolves or villagers win, or when they are the only two left alive in the village. When one of the two lovers dies, the other dies from love sickness as well.
-Elder - Villager: The Elder is protected from being devoured by Werewolves. If the werewolves picked him, in the morning it appears as if they did not attack anyone. If the Elder is killed by any means, like by a villager’s power or by lynching, for the rest of the game all villagers lose their role abilities
-Hunter - Villager: When the hunter dies, either by hanging or by werewolves, he may use his gun to shoot another player, killing them outright.
-Alchemist - Villager: Every night they wake up and they may use a potion and/or a poison. A potion to heal the target of a werewolf attack, or a poison to kill a player of their choice. The potion has one use, and the poison also has one use.
-Old Knight - Villager: Each night you can choose to defend a target. If you or they are attacked by werewolves, they survive instead, and in the morning the first werewolf to the left of the target is found dead.
-Judge - Villager: At any point during a trial, but before someone has been hanged, you may reveal that you are the judge. When you do, you become the major and the trial is redone from scratch.
-Little Girl - Villager: May target a person each night. The gamemaster shows if they visited someone that night, examples are: a werewolf picking a kill target, an Throatcutter choosing to silence someone, the alchemist using a poison or potion, the knight choosing to go on guard, the fox sniffing someone, the sniffer sniffing someone, the seer looking at someone’s identity.
-Guard- Villager: The Guard picks a target at night to check out with his dog. They get a thumbs up from the Gamemaster if the target or one of their neighbours is a werewolf. Otherwise they get a thumbs down. The neighbours are the players that are alive in seating order, skipping over dead players.
-Bearman - Villager: At the break of dawn, after the killings are revealed, if one of his closest alive neighbours is a werewolf his bear growls.
-Seer - Villager: Once per night may look at the identity card of another player. If the seer points at one of the following roles, they get a thumbs down instead: The Cloak Wolf, The Wolfchild, the Fool, Bearman.
+The lobby supports up to 20 participants in total, including the Game Master (GM). The GM occupies a separate seat and has no role. The admin and GM are separate responsibilities: the admin configures the lobby, and the GM runs the game. The admin does not have to be the GM.
 
-While in the lobby: up to 20 players can join the town, but one player must join as GM.
+The maximum number of role-holding players in the village is the number of distinct roles in the configured pool. Once that village capacity is full, additional participants may still join the lobby as spectators; spectators do not receive roles, sit in the village, or take part in game actions. The lobby must not start a game with more role-holding players than available distinct roles.
 
-While ingame: the townsfolk see on their screen what role they are, and the seating order at the table. There is also a tab which they can click which opens a modal popup. This tab shows the rules of the game, and the rules of all the roles, and which roles are inside the pool for this game.
+At game start, randomly select a distinct subset of roles from the pool, one for each role-holding player. The selected roles must include exactly the configured number of Werewolf roles. Any Werewolf roles in the pool may be selected; there are no additional role-selection constraints.
 
-While ingame: the GM sets the sitting order at the table. The can also see which roles everyone is. Below that it shows a prompt of what the next step is. The GM can mark a step as done to move on.
-Below that it shows a table of all the next steps for this day, and the next night.  Or if it is night: for this night and the next day.
-The GM can also open the modal popup which shows the rules of the game and the rules of all the roles, and the roles inside the pool of the game.
+Before the game starts, the admin may enable an optional unanimous vote to skip lynching. When enabled, all living players, including the mayor and silenced players, vote on whether to skip the lynch before the lynch vote begins. If every living player votes to skip, there is no lynch that day; otherwise, proceed to the lynch vote.
 
-These are the steps that are possible in the game which the GM can see and that they mark through. A step should only be shown if it is relevant. A step is not relevant if the character that is involved is not in the pool or is known by everyone to be dead.
-If below it says [UI] it should show a UI element with which the GM can do the thing it says to do. Whenever a target has to pick it, they can also do so by sending that information using their device to the GM. But the GM can also just fill it in themselves on their device.
+The admin may also enable daily Moon cards. When enabled, the mayor chooses from up to three randomly offered eligible Moon cards at the start of each day. If fewer than three eligible cards remain, offer all of them; if none remain, no Moon card is played that day or for the rest of the game. Once chosen, a card is removed from the game and cannot be offered again.
 
-Step 0: before game starts:
-Ask who wants to be mayor.
-All the mayors hold a speech for whey they want to be mayor.
-Hold mayor elections.
-Assign a player the position of mayor.
-The mayor gives the name of the town.
+Players are seated around a circular table and represented by their avatars in seating order. At game start, assign roles randomly from the configured pool as described above.
 
-Night:
-FIRST NIGHT ONLY: Cupido
-Wake up Cupido. Make them point at two players that fall in love. Mark the lovers on your device [UI]. Then go to sleep.
-Wake up the lovers. Make them look at eachother. Show it on the [UI] of their devices as well. Explain that their lives are tied together. If one of them dies, they both die. Then go to sleep.
-FIRST NIGHT ONLY: Wolfchild:
-Wake up the Wolfchild. Make them point at a target to imitate. Mark the imitated person on your device [UI]. Explain that you are about to tap the imitated person on the shoulder, and that they should not open their eyes. Show it on the [UI] of their device as well. Then go to sleep.
-Knight: Wake up the Knight. They may pick a target to defend. Then go to sleep.
-Guard: Wake up the Guard. They may pick a target to have their dog sniff out. Give a thumbs up if they are one of their closest neighbours is a werewolf. The White Wolf smells like a villager. Otherwise give a thumbs down.  Show it on their [UI] as well. Then go to sleep.
-Seer: Wake up the Seer. They may pick a target to see the identity of. Send this identity to their phone [UI]. If they chose the The White Wolf, The Wolfchild, the Village Idiot, Bearman, send them a thumbs down. Then go to sleep.
-Sniffer: Wake up the sniffer. They may point at someone to detect. Send this identity to their phone [UI]. On the first night only: if they chose to check out a werewolf they get a thumbs down and can reconsider, any number of times.
-Werewolves: 
-Wake up the werewolves. They must pick a target unanimously. That target is killed at night. 
-If the Wise Wolf is alive and among them: they get a thumbsdown if they pick one of the following targets: Old Knight, someone protected by the Old Knight, the Hunter, the Elder. On a thumbs down they may reconsider, any number of times.
-If the Throatcutter is alive and among them: check if the Throatcutter has their hand raised in the air. If so, they must pick a target to silence for the next day. Tap that target on the shoulder, explaining that they should not open their eyes, but they are tapped.
-Then go to sleep.
-Witch: 
-Wake up the Witch if they still have a poison or potion available.
-If they have a potion available: ask them if they want to save the person who got devoured by werewolves while pointing at the target. If the Witch nods yes, they are saved. If the witch shakes their head, they are not saved.
-If they have a poison available: ask them if they want to use their poison on someone. If they nod yes, they must target someone to kill that night.
-Then go to sleep.
-Little Girl: Wake up the Little Girl. They point at someone. In the [UI] you select who they point at. Then you can see if that person visited someone that night. Point at the person. Then go to sleep.
+## Roles
 
+Use the role icons in `content/werewolf` throughout the UI, accompanied by each role's name.
 
-Day:
-Reveal anyone that died (for example from Werewolves, Hunter, Knight, Witch, Cupido’s lovers). Show the dead in the [UI]
-Check if the gamestate is over. This shows in the [UI] with an explanation why or why not the game is over. The Game is over when only villagers are left, or only werewolves are left. The game also ends when the lovers are the only ones left.
-Then the bearman’s bear growls if their closest neighbour is a werewolf. This shows in the [ui] with a reason as to why.
-Only when this option is turned on: The Mayor selects a moon card from among 3 random cards. They are shown on their [UI] of their device. When a card is picked it is out of the game and will not appear as a random option again.
-Ghost: a ghost visits the town. It’s the ghost of the very first person killed. The [UI] of the GM shows which player that is. That ghost can point at one person. What that means is up the players to find out.
-Executioner: At the end of the evening the players vote for who is their executioner. The executioner is the sole person in charge of the lynchin at the end of the day, which they do immediately afterwards. They must execute someone.
-Strict Sentence: If the player lynched this evening is not a werewolf, the villagers must immediately afterwards lynch a second time.
-Mistrust: Each player votes on their device in secret for their 2 closest friends. If anyone doesn’t get votes, they are lynched that evening.
-In Need of Aid: The mayor picks a person to get help from the next village over. That person leaves for the rest of the day, and the rest of the night. They cannot vote, they cannot use their powers that night, and they cannot be targeted by anyone.
-Buried: From now on, no identities of killed people are revealed to the village.
-Good Manners: This day everyone gets one turn to talk. Players who interrupt someone talking aren’t allowed to vote that evening. If they must vote, their vote is controlled by the mayor.
-The players are now free to talk to each other. Make sure to keep up the tempo. When people go in circles, or the conversation goes silent, go to the next step.
-Be mindful of the Big Bad Wolf: They can reveal themselves to instantly kill someone.
-The players now vote. 
-First they vote on whether or not they will lynch in the first place. If there is unanimous agreement among the townsfolk to not lynch, then no lynching happens. The GM decides whether the lynching vote will happen or not. 
-The lynch vote is as follows: Starting with the Mayor they pick someone they trust. Then that person sits down and picks another person they trust, until one player is left over. You cannot choose yourself to free. That person is lynched.
-In case of a vote between 2 players, then the mayor wins the lynch vote and the other person is lynched.
-If the judge is in the game: they can now cancel the lynch vote at the moment the results are revealed, but before the person is lynched. They then become the first voter instead of the mayor.
-Kill the Lynched person. Reveal their identity to the group.
-If they are a Lover, the other Lover dies.
-If they are a Hunter, they may shoot someone.
-Check if the gamestate is over. This shows in the [UI] with an explanation why or why not the game is over. The Game is over when only villagers are left, or only werewolves are left. The game also ends when the lovers are the only ones left.
+- **Big Bad Wolf — Werewolf:** Once per game, during the day and before voting starts, may reveal their role and kill a player of their choice outright. Their role is then revealed to everyone.
+- **Cloaked Wolf — Werewolf:** Cannot be detected by the Guard's dog; does not make the Bearman's bear growl; and is not identified by the Seer.
+- **Wise Wolf — Werewolf:** While alive, causes the GM to give the Werewolves a thumbs-down when they target the Old Knight, a player protected by the Old Knight, the Hunter, or the Elder. This is a warning, not a restriction: the Werewolves may reconsider any number of times, or unanimously keep the warned target.
+- **Throatcutter — Werewolf:** After the Werewolves choose their kill target, may raise their hand and choose a player to silence for the next day. The Throatcutter may use this ability once per game.
+- **Sniffer — Werewolf:** Wakes alone before the Werewolves and may check a player's role. On the first night only, if the Sniffer checks a Werewolf, the GM gives a thumbs-down and the Sniffer may reconsider any number of times.
+- **Wolfchild — Neutral:** On the first night, before anyone has died, chooses one player to imitate. The Wolfchild does not copy that player's role. Their role remains Wolfchild, but their faction follows the chosen player's living status: they count as a Villager while that player is alive and become a Werewolf as soon as that player dies.
+- **Fool — Neutral:** If selected to be lynched, reveals their role and wins individually without dying. The game continues and the Fool does not affect its normal win conditions. If the game ends because only one faction remains, a living Fool loses unless they are a living lover; lovers win together under the lover win condition. If killed by a Werewolf, the Fool loses. The Fool may continue talking, but must keep their eyes closed during the night.
+- **Cupido — Villager:** On the first night, chooses two players who become lovers. If either lover dies, the other dies of heartbreak. The lovers win together if they are both alive when either faction wins, or if they are the only two players left alive.
+- **Elder — Villager:** Is protected from being killed by the Werewolves; if targeted, no one appears to have been attacked. If killed by any other means, all Villagers lose their role abilities for the rest of the game.
+- **Hunter — Villager:** When killed, may shoot and kill another player. If killed at night, the Hunter may shoot when their death is revealed in the morning. If killed by lynching or by the Big Bad Wolf during the day, the Hunter may shoot when that death occurs.
+- **Alchemist — Villager:** Has one potion and one poison for the entire game. Each night, may use either or both. The potion may save the Werewolves' target or, if the Old Knight's protection was triggered, save the Old Knight instead. The poison kills a player chosen by the Alchemist.
+- **Old Knight — Villager:** Each night, chooses another player to protect; the Old Knight cannot protect themself. If the Werewolves attack that protected player, the attack is prevented, the Old Knight dies, and the first living Werewolf to the left of the protected player in seating order also dies. This protection only applies to the Werewolves' attack.
+- **Judge — Villager:** During a trial, after the result is revealed but before the selected player is killed, may reveal their role. The Judge becomes mayor and the lynch vote restarts from the beginning.
+- **Little Girl — Villager:** Each night, chooses a player. The GM shows whether that player visited anyone that night. Examples of visits include a Werewolf choosing a kill target, the Throatcutter choosing a target, the Alchemist using a potion or poison, the Old Knight choosing whom to protect, the Guard checking someone, the Sniffer checking someone, or the Seer viewing a role.
+- **Guard — Villager:** Each night, chooses a player for the Guard's dog to check. The GM gives a thumbs-up if the chosen player or either of their closest living neighbors in seating order is a Werewolf; otherwise, the GM gives a thumbs-down. Dead players are skipped when finding neighbors. The Cloaked Wolf is not detected.
+- **Bearman — Villager:** At dawn, after deaths are resolved, the bear growls if either closest living neighbor is a Werewolf. The Cloaked Wolf does not cause a growl.
+- **Seer — Villager:** Each night, may view another player's role. If the target is the Cloaked Wolf, Wolfchild, Fool, or Bearman, the GM gives a thumbs-down instead of revealing the role.
 
-When the mayor is dead they can choose which still alive player becomes the new mayor.
+## In-game screens
 
-This game should be playable with everyone being behind the computer, not seeing eachother, but should also be playable with everyone being present in real life.
+Role-holding players see their own role and the seating order. A rules tab opens a modal showing the game rules, all role rules, and the roles in this game's pool. Spectators see public information only; they do not see roles or private actions.
 
-You may change the descriptors of the text and the words used for explanations to make them more clear.
+The GM sets the seating order, can see every player's role, and sees a prompt for the next step with a control to mark it done. The GM also sees a table of the remaining steps for the current day and following night, or for the current night and following day. The GM can open the same rules modal as the players.
 
-There should be a toggleable button to hide secret information from your screen so that you can show your screen to others.
+The game must work both for remote players who cannot see one another and for players together in person. Each player has a toggle to hide secret information before showing their screen to others.
+
+## Win conditions
+
+The Fool is ignored when checking faction win conditions. If no Villagers and no Werewolves remain, the game is a draw. Otherwise, the Villagers win when no Werewolves remain, and the Werewolves win when no Villagers remain. The Wolfchild counts as a Villager or Werewolf according to their current alignment. A living Fool loses when either faction wins unless they are one of the living lovers; lovers win together under the lover win condition. If the lovers are the only two players alive, they win together. If both lovers are Werewolves, they can win as part of the Werewolf faction.
+
+## GM flow
+
+Show a step only when its role is in the pool and is not known by everyone to be dead. Steps marked **[UI]** need a GM-facing control. A player may submit their choice from their device, or the GM may enter it. The GM confirms game actions and step completion; do not resolve an unclear step automatically. The GM adjudicates rule violations such as interruptions or silencing and records the consequence by selecting the player in the UI.
+
+### Before the first night
+
+1. Ask who wants to run for mayor.
+2. Give each candidate time to make a speech.
+3. Hold the mayoral election and record the elected mayor **[UI]**.
+4. The mayor names the town.
+
+### Night
+
+1. **First night only — Cupido:** Cupido chooses two players to become lovers. Record them **[UI]**. Then wake the lovers, show each of them their partner on their device, and explain that when one dies the other dies too.
+2. **First night only — Wolfchild:** The Wolfchild chooses a player to imitate. Record the choice **[UI]** and explain the Wolfchild's alignment rule. In a physical game, tap the imitated player on the shoulder; they must keep their eyes closed.
+3. **Old Knight:** The Old Knight chooses a player to protect **[UI]**.
+4. **Guard:** The Guard chooses a player to check **[UI]**. Show the Guard the result on their device.
+5. **Seer:** The Seer chooses a player to view **[UI]**. Show the role, or a thumbs-down result for the roles specified above, privately on the Seer's device.
+6. **Sniffer:** The Sniffer chooses a player to check **[UI]**. Show the result privately. On the first night, if the target is a Werewolf, show thumbs-down and allow the Sniffer to reconsider any number of times.
+7. **Werewolves:** Each Werewolf submits a target on their device; the GM sees the submitted targets **[UI]**. The GM records the final target only when the Werewolves agree unanimously. If they cannot agree, the GM may choose to skip the Werewolf attack for that night. If the Wise Wolf is alive, show thumbs-down when they target the Old Knight, a player protected by the Old Knight, the Hunter, or the Elder. This is only a warning; the Werewolves may reconsider any number of times or unanimously keep the warned target. If the Throatcutter is alive and uses their ability, record the silence target **[UI]**. The target is silenced the next day but may still vote.
+8. **Alchemist:** If the Alchemist still has a potion or poison, ask whether they want to use either or both. The potion may save the Werewolves' target or, if the Old Knight's protection was triggered, save the Old Knight instead. If the potion saves the Old Knight, the Old Knight survives, but the first living Werewolf to the left of the protected player still dies. If used, the poison targets a player to kill **[UI]**.
+9. **Little Girl:** The Little Girl chooses a player **[UI]**. Show the GM whether that player visited anyone during the night.
+
+The GM confirms each action and advances the night when its steps are complete. Determine the result of the Werewolf attack and Old Knight effect, including any deaths that would result. The Alchemist then chooses whether to use the potion on the Werewolves' target or the Old Knight, and whether to use the poison. A potion used on the Old Knight prevents the Old Knight's pending death, but does not prevent the first living Werewolf to the left of the protected player from dying. Reveal night deaths in the morning; if multiple deaths are to be revealed, reveal them in random order. A Hunter killed at night may shoot when their death is revealed. A Hunter killed by lynching or by the Big Bad Wolf may shoot when killed. Resolve any resulting deaths from lovers or Hunter shots, including further Hunter shots when their trigger conditions are met, before checking for a game-ending condition.
+
+### Day
+
+1. Reveal deaths in the UI and resolve death-triggered abilities, including the Hunter and lovers.
+2. Check for the end of the game and show the GM the outcome or why play continues **[UI]**. Ignore the Fool when checking faction wins. If no Villagers and no Werewolves remain, the game is a draw; otherwise, the Villagers win when no Werewolves remain, and the Werewolves win when no Villagers remain. The Wolfchild counts toward the faction matching their current alignment. A living Fool loses when either faction wins unless they are one of the living lovers; lovers win together under the lover win condition. If the lovers are the only two players alive, they win together. If both lovers are Werewolves, they may win with the Werewolves.
+3. If the Bearman is alive, report whether their bear growls and why **[UI]**.
+4. If daily Moon cards are enabled, the mayor chooses one of three random available cards on their device **[UI]**. Remove the chosen card from the available cards for the rest of the game.
+5. Apply the chosen Moon card, if any:
+   - **Ghost:** This card is not offered until at least one player has died. The ghost of the first player killed visits town and points at one player. The GM UI identifies the ghost. The meaning of the ghost's choice is for the players to interpret.
+   - **Executioner:** Each living player casts one vote to choose the executioner. The player with the most votes wins; the mayor breaks ties by choosing among the tied players. The chosen executioner alone decides and carries out the lynching, and must lynch someone.
+   - **Strict Sentence:** If the first lynched player is not a Werewolf, the villagers immediately hold a second lynch.
+   - **Mistrust:** Each player secretly votes for their two closest friends. Any player who receives no votes is lynched that evening.
+   - **In Need of Aid:** The mayor chooses a player to leave for the rest of the day and the following night. They cannot vote, use night powers, or be targeted.
+   - **Buried:** From now on, the village is not told the identities of dead players.
+   - **Good Manners:** Each player gets one uninterrupted turn to speak. The GM determines violations. A player who interrupts cannot vote; if that player must vote, the mayor controls their vote.
+6. Let the players discuss. The GM advances when discussion is no longer productive or time is up. The Big Bad Wolf may reveal themselves and use their ability during the day, but before voting begins.
+7. If the unanimous skip-lynching option is enabled, let all living players, including the mayor and silenced players, vote whether to skip the lynch. If all living players vote to skip, end the day without a lynch. Otherwise, continue to the lynch vote.
+8. **Lynch vote:** Starting with the mayor, each voter selects a living player they trust to spare; that player then selects someone else to spare. A player cannot select themselves. Continue until one player is left; that player is lynched. If two players remain, the mayor is spared and the other player is lynched.
+9. If the Judge is alive, they may reveal their role after the result is shown but before the lynched player is killed. If they do, they become mayor and the lynch vote restarts from the beginning.
+10. Kill the lynched player and reveal their identity unless Buried is active. If the player is one of the lovers, the other lover dies too. If the player is the Hunter, allow them to shoot another player.
+11. Check for the end of the game again and show the outcome or why play continues **[UI]**.
+
+If the mayor dies, the GM chooses a new mayor from the living players **[UI]**.

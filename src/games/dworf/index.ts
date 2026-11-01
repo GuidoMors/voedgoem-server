@@ -1,9 +1,10 @@
 import type { GameModule } from "../types";
 
 type Phase = "lobby" | "playing" | "results";
-type Role = "saboteur" | "explorer";
+type Role = "cultist" | "explorer";
 type Step = "turn" | "gift" | "monster";
 type GoalType = "gold" | "monster";
+type MonsterType = "bull" | "cyclops" | "ghost" | "ogre" | "werewolf";
 export type AbilityType = "lookGoal" | "lookDwarf" | "destroyTunnel" | "destroyPickaxe" | "fixPickaxe" | "destroyLantern" | "fixLantern";
 type Side = "N" | "E" | "S" | "W";
 
@@ -17,6 +18,8 @@ interface Player {
   id: string;
   username: string;
   role: Role;
+  cell: number | null;
+  dead: boolean;
   tunnels: string[]; // open sides of each tunnel card in hand, e.g. "NS"
   abilities: AbilityType[];
   pickaxeBroken: boolean;
@@ -28,10 +31,11 @@ interface Player {
 interface Goal {
   cell: number;
   type: GoalType;
+  monsterType: MonsterType | null;
   revealed: boolean;
 }
 
-export interface SaboteurState {
+export interface DworfState {
   phase: Phase;
   round: number;
   nextOrder: number;
@@ -45,13 +49,14 @@ export interface SaboteurState {
   goals: Goal[];
   gems: number[];
   monsters: number[]; // cells
+  monsterTypes: MonsterType[]; // appearance for each monster, matching monsters by index
   monsterQueue: number[]; // indices into monsters still to move this turn
   monsterOptions: number[];
   turnLog?: string[]; // log lines of the turn in progress
   lastTurn?: string[]; // log lines of the turn before
   log: string[];
   winner: Role | null;
-  endReason: "gold" | "monster" | "tunnels" | null;
+  endReason: "gold" | "monster" | "tunnels" | "elimination" | null;
   recorded?: boolean;
 }
 
@@ -65,8 +70,9 @@ const LOG_LIMIT = 40;
 
 const GOAL_CELLS = [1 * COLS + 11, 3 * COLS + 11, 5 * COLS + 11];
 const GEM_CELLS = [1, 3, 5].flatMap(row => [row * COLS + 1, row * COLS + 7]);
+const MONSTER_TYPES: MonsterType[] = ["bull", "cyclops", "ghost", "ogre", "werewolf"];
 
-// Players -> [saboteurs, explorers], and how many ability cards each dwarf is dealt. The rest go in The Shop beside the board.
+// Players -> [cultists, explorers], and how many ability cards each dwarf is dealt. The rest go in The Shop beside the board.
 const ROLES: Record<number, [number, number]> = {
   4: [1, 3], 5: [2, 3], 6: [2, 4], 7: [2, 5], 8: [3, 5], 9: [3, 6], 10: [3, 7], 11: [4, 7], 12: [4, 8], 13: [4, 9], 14: [5, 9]
 };
@@ -76,8 +82,11 @@ const ABILITY_COUNTS: Record<AbilityType, number> = {
   lookGoal: 4, lookDwarf: 2, destroyTunnel: 4, destroyPickaxe: 3, fixPickaxe: 2, destroyLantern: 3, fixLantern: 2
 };
 
-// 45 tunnel cards. Cards can be turned 180 degrees but not 90.
-const TUNNEL_CARDS: [string, number][] = [["NESW", 6], ["NES", 7], ["ESW", 7], ["NS", 7], ["EW", 6], ["NE", 6], ["SE", 6]];
+// 38 tunnel cards. Cards can be turned 180 degrees but not 90.
+const TUNNEL_CARDS: [string, number][] = [
+  ["NS", 3], ["EW", 3], ["NESW", 5], ["NEW", 5], ["NES", 5],
+  ["NE", 5], ["NW", 5], ["N", 3], ["E", 3]
+];
 
 const ABILITY_NAMES: Record<AbilityType, string> = {
   lookGoal: "Look at goal", lookDwarf: "Look at dwarf", destroyTunnel: "Destroy tunnel", destroyPickaxe: "Destroy pickaxe",
@@ -117,11 +126,11 @@ function neighbour(cell: number, side: Side): number | null {
 }
 
 // The ladder is open on every side.
-const sidesAt = (state: SaboteurState, cell: number): string | null => (cell === LADDER ? "NESW" : state.tunnels[cell] ?? null);
-const goalAt = (state: SaboteurState, cell: number) => state.goals.find(goal => goal.cell === cell);
+const sidesAt = (state: DworfState, cell: number): string | null => (cell === LADDER ? "NESW" : state.tunnels[cell] ?? null);
+const goalAt = (state: DworfState, cell: number) => state.goals.find(goal => goal.cell === cell);
 
 // Distance from the ladder along tunnels that open into each other.
-function distances(state: SaboteurState): Map<number, number> {
+function distances(state: DworfState): Map<number, number> {
   const dist = new Map<number, number>([[LADDER, 0]]);
   const queue = [LADDER];
   for (let head = 0; head < queue.length; head++) {
@@ -140,7 +149,7 @@ function distances(state: SaboteurState): Map<number, number> {
   return dist;
 }
 
-function canPlace(state: SaboteurState, cell: number, sides: string, reachable: Map<number, number>): boolean {
+function canPlace(state: DworfState, cell: number, sides: string, reachable: Map<number, number>): boolean {
   if (cell === LADDER || state.tunnels[cell] || goalAt(state, cell)) return false;
   let connected = false;
   for (const side of SIDES) {
@@ -156,7 +165,7 @@ function canPlace(state: SaboteurState, cell: number, sides: string, reachable: 
   return connected;
 }
 
-function placements(state: SaboteurState, sides: string): Record<number, number[]> {
+function placements(state: DworfState, sides: string): Record<number, number[]> {
   const reachable = distances(state);
   const out: Record<number, number[]> = {};
   for (const rot of [0, 1]) {
@@ -168,16 +177,16 @@ function placements(state: SaboteurState, sides: string): Record<number, number[
   return out;
 }
 
-const current = (state: SaboteurState) => state.players[state.turn];
-const playerOf = (state: SaboteurState, id: unknown) => (typeof id === "string" ? state.players.find(player => player.id === id) : undefined);
+const current = (state: DworfState) => state.players[state.turn];
+const playerOf = (state: DworfState, id: unknown) => (typeof id === "string" ? state.players.find(player => player.id === id) : undefined);
 
-function addLog(state: SaboteurState, line: string) {
+function addLog(state: DworfState, line: string) {
   state.log.push(line);
   (state.turnLog ??= []).push(line);
   if (state.log.length > LOG_LIMIT) state.log.shift();
 }
 
-function finish(state: SaboteurState, winner: Role, reason: "gold" | "monster" | "tunnels") {
+function finish(state: DworfState, winner: Role, reason: "gold" | "monster" | "tunnels" | "elimination") {
   state.phase = "results";
   state.winner = winner;
   state.endReason = reason;
@@ -186,13 +195,25 @@ function finish(state: SaboteurState, winner: Role, reason: "gold" | "monster" |
   state.monsterOptions = [];
 }
 
-function resetToLobby(state: SaboteurState) {
+function eliminatePlayer(state: DworfState, player: Player, reason: string) {
+  player.dead = true;
+  player.tunnels = [];
+  player.abilities = [];
+  addLog(state, reason);
+}
+
+function hasLivingExplorers(state: DworfState) {
+  return state.players.some(player => player.role === "explorer" && !player.dead);
+}
+
+function resetToLobby(state: DworfState) {
   state.phase = "lobby";
   state.players = [];
   state.tunnels = {};
   state.goals = [];
   state.gems = [];
   state.monsters = [];
+  state.monsterTypes = [];
   state.monsterQueue = [];
   state.monsterOptions = [];
   state.deck = [];
@@ -203,33 +224,40 @@ function resetToLobby(state: SaboteurState) {
   state.endReason = null;
 }
 
-function startGame(state: SaboteurState) {
+function startGame(state: DworfState) {
   const seats = Object.values(state.seats).sort((a, b) => a.order - b.order);
-  const [saboteurs] = ROLES[seats.length];
-  const roles = shuffle<Role>([...Array<Role>(saboteurs).fill("saboteur"), ...Array<Role>(seats.length - saboteurs).fill("explorer")]);
+  const [cultists] = ROLES[seats.length];
+  const roles = shuffle<Role>([...Array<Role>(cultists).fill("cultist"), ...Array<Role>(seats.length - cultists).fill("explorer")]);
 
   const abilities = shuffle((Object.keys(ABILITY_COUNTS) as AbilityType[]).flatMap(type => Array<AbilityType>(ABILITY_COUNTS[type]).fill(type)));
   const dealt = ABILITIES_DEALT[seats.length];
   state.deck = shuffle(TUNNEL_CARDS.flatMap(([sides, count]) => Array<string>(count).fill(sides)));
 
   const goalTypes = shuffle<GoalType>(["gold", "monster", "monster"]);
-  state.goals = GOAL_CELLS.map((cell, index) => ({ cell, type: goalTypes[index], revealed: false }));
+  state.goals = GOAL_CELLS.map((cell, index) => ({
+    cell,
+    type: goalTypes[index],
+    monsterType: goalTypes[index] === "monster" ? MONSTER_TYPES[randomInt(MONSTER_TYPES.length)] : null,
+    revealed: false
+  }));
 
   state.players = seats.map((seat, index) => ({
     id: seat.id, username: seat.username, role: roles[index],
+    cell: null, dead: false,
     tunnels: state.deck.splice(0, HAND_SIZE), abilities: abilities.splice(0, dealt),
     pickaxeBroken: false, lanternBroken: false, knownGoals: {}, knownDwarves: {}
   }));
-  // Saboteurs see the goals and each other before play starts.
+  // Cultists see the goals and each other before play starts.
   for (const player of state.players) {
-    if (player.role !== "saboteur") continue;
+    if (player.role !== "cultist") continue;
     state.goals.forEach((goal, index) => { player.knownGoals[index] = goal.type; });
-    for (const mate of state.players) if (mate.role === "saboteur") player.knownDwarves[mate.id] = "saboteur";
+    for (const mate of state.players) if (mate.role === "cultist") player.knownDwarves[mate.id] = "cultist";
   }
   state.row = abilities;
   state.tunnels = {};
   state.gems = [...GEM_CELLS];
   state.monsters = [];
+  state.monsterTypes = [];
   state.monsterQueue = [];
   state.monsterOptions = [];
   state.log = [];
@@ -246,18 +274,18 @@ function startGame(state: SaboteurState) {
   skipEmptyHands(state);
 }
 
-// A dwarf without cards loses their turn.
-function skipEmptyHands(state: SaboteurState) {
+// A dwarf without cards, or an eliminated explorer, loses their turn.
+function skipEmptyHands(state: DworfState) {
   for (let i = 0; i < state.players.length; i++) {
     const player = current(state);
-    if (player.tunnels.length + player.abilities.length > 0) return;
-    addLog(state, `${player.username} has no cards and is skipped.`);
+    if (!player.dead && player.tunnels.length + player.abilities.length > 0) return;
+    addLog(state, player.dead ? `${player.username} is eliminated and skipped.` : `${player.username} has no cards and is skipped.`);
     state.turn = (state.turn + 1) % state.players.length;
   }
 }
 
 // Runs the monsters one by one. Stops when the player whose turn it is must choose between equally short routes.
-function moveMonsters(state: SaboteurState) {
+function moveMonsters(state: DworfState) {
   while (state.monsterQueue.length > 0) {
     const index = state.monsterQueue[0];
     const options = monsterOptions(state, state.monsters[index]);
@@ -276,7 +304,7 @@ function moveMonsters(state: SaboteurState) {
   nextTurn(state);
 }
 
-function monsterOptions(state: SaboteurState, at: number): number[] {
+function monsterOptions(state: DworfState, at: number): number[] {
   const dist = distances(state);
   let best = Infinity;
   let options: number[] = [];
@@ -303,34 +331,78 @@ function monsterOptions(state: SaboteurState, at: number): number[] {
   return options;
 }
 
-// Returns true when the saboteurs won because the monster reached the ladder.
-function moveMonster(state: SaboteurState, index: number, to: number): boolean {
+// Returns true when the monster ends the game, either by reaching the ladder or eliminating every explorer.
+function moveMonster(state: DworfState, index: number, to: number): boolean {
   state.monsters[index] = to;
   addLog(state, "A monster crawls closer to the ladder.");
+  for (const player of state.players) {
+    if (player.cell !== to || player.dead || player.role !== "explorer") continue;
+    eliminatePlayer(state, player, `A monster devours ${player.username}.`);
+  }
+  if (!hasLivingExplorers(state)) {
+    finish(state, "cultist", "elimination");
+    return true;
+  }
   if (to === LADDER) {
-    finish(state, "saboteur", "monster");
+    finish(state, "cultist", "monster");
     return true;
   }
   return false;
 }
 
-function allTunnelsPlayed(state: SaboteurState) {
+function evacuatePlayers(state: DworfState, cell: number): boolean {
+  const sides = sidesAt(state, cell);
+  if (!sides) return false;
+  const reachable = distances(state);
+  const distance = reachable.get(cell);
+  const adjacent = SIDES.flatMap(side => {
+    if (!sides.includes(side)) return [];
+    const next = neighbour(cell, side);
+    if (next === null || !sidesAt(state, next)?.includes(OPPOSITE[side])) return [];
+    return [next];
+  });
+
+  for (const player of state.players) {
+    if (player.cell !== cell || player.dead) continue;
+    const closer = distance === undefined ? [] : adjacent.filter(next => {
+      const nextDistance = reachable.get(next);
+      return nextDistance !== undefined && nextDistance < distance;
+    });
+    const bestDistance = closer.length ? Math.min(...closer.map(next => reachable.get(next)!)) : undefined;
+    const preferred = bestDistance === undefined ? [] : closer.filter(next => reachable.get(next) === bestDistance);
+    const destinations = preferred.length ? preferred : adjacent;
+    if (destinations.length) {
+      player.cell = destinations[randomInt(destinations.length)];
+      addLog(state, `${player.username} escaped the destroyed tunnel.`);
+    } else {
+      eliminatePlayer(state, player, `${player.username} was trapped when the tunnel was destroyed.`);
+    }
+  }
+
+  if (!hasLivingExplorers(state)) {
+    finish(state, "cultist", "elimination");
+    return true;
+  }
+  return false;
+}
+
+function allTunnelsPlayed(state: DworfState) {
   return state.players.every(player => player.tunnels.length === 0);
 }
 
 // Ends the active dwarf's turn: refill the hand, move the monsters, then pass the turn on.
-function endTurn(state: SaboteurState) {
+function endTurn(state: DworfState) {
   const player = current(state);
-  while (player.tunnels.length < HAND_SIZE && state.deck.length > 0) player.tunnels.push(state.deck.shift()!);
+  while (!player.dead && player.tunnels.length < HAND_SIZE && state.deck.length > 0) player.tunnels.push(state.deck.shift()!);
   state.step = "turn";
   state.monsterQueue = state.monsters.map((_, index) => index);
   moveMonsters(state);
 }
 
-function nextTurn(state: SaboteurState) {
+function nextTurn(state: DworfState) {
   if (state.phase !== "playing") return;
   if (allTunnelsPlayed(state)) {
-    finish(state, "saboteur", "tunnels");
+    finish(state, "cultist", "tunnels");
     return;
   }
   state.lastTurn = state.turnLog ?? [];
@@ -340,7 +412,7 @@ function nextTurn(state: SaboteurState) {
   skipEmptyHands(state);
 }
 
-function revealGoals(state: SaboteurState, cell: number, sides: string): boolean {
+function revealGoals(state: DworfState, cell: number, sides: string): boolean {
   let gold = false;
   for (const side of SIDES) {
     if (!sides.includes(side)) continue;
@@ -352,31 +424,43 @@ function revealGoals(state: SaboteurState, cell: number, sides: string): boolean
       gold = true;
       addLog(state, "The tunnel reaches the gold!");
     } else {
+      state.tunnels[goal.cell] = "NESW";
       state.monsters.push(goal.cell);
+      state.monsterTypes.push(goal.monsterType ?? MONSTER_TYPES[randomInt(MONSTER_TYPES.length)]);
       addLog(state, "The tunnel opens a monster's lair!");
     }
   }
   return gold;
 }
 
-export const saboteur: GameModule<SaboteurState> = {
+export const dworf: GameModule<DworfState> = {
   info: {
-    id: "saboteur",
-    name: "Saboteur",
+    id: "dworf",
+    name: "Dworf",
     description: "Dwarves dig tunnels looking for gold, but cultists are among them. Explorers must reach the gold before they run out of tunnels; cultists must wake a monster and let it reach the ladder. 4-14 players.",
     maxPlayers: MAX_PLAYERS
   },
   perViewer: true,
 
   create: () => ({
-    phase: "lobby", round: 0, nextOrder: 0, seats: {}, players: [], turn: 0, step: "turn", deck: [], row: [], tunnels: {}, goals: [], gems: [], monsters: [],
+    phase: "lobby", round: 0, nextOrder: 0, seats: {}, players: [], turn: 0, step: "turn", deck: [], row: [], tunnels: {}, goals: [], gems: [], monsters: [], monsterTypes: [],
     monsterQueue: [], monsterOptions: [], log: [], winner: null, endReason: null
   }),
 
   migrate(state) {
-    const fresh = saboteur.create();
-    for (const key of Object.keys(fresh) as (keyof SaboteurState)[]) {
+    const fresh = dworf.create();
+    for (const key of Object.keys(fresh) as (keyof DworfState)[]) {
       if (state[key] === undefined) (state as any)[key] = fresh[key];
+    }
+    if (state.monsterTypes === undefined) state.monsterTypes = [];
+    if ((state.winner as string | null) === "saboteur") state.winner = "cultist";
+    for (const player of state.players) {
+      if (player.cell === undefined) player.cell = null;
+      if (player.dead === undefined) player.dead = false;
+      if ((player.role as string) === "saboteur") player.role = "cultist";
+      for (const [id, role] of Object.entries(player.knownDwarves)) {
+        if ((role as string) === "saboteur") player.knownDwarves[id] = "cultist";
+      }
     }
   },
 
@@ -420,6 +504,7 @@ export const saboteur: GameModule<SaboteurState> = {
         if (cell < 0 || cell >= ROWS * COLS || !canPlace(state, cell, sides, distances(state))) return { error: "That tunnel does not fit there." };
         me.tunnels.splice(index, 1);
         state.tunnels[cell] = sides;
+        me.cell = cell;
         addLog(state, `${name} placed a tunnel.`);
         if (revealGoals(state, cell, sides)) {
           finish(state, "explorer", "gold");
@@ -467,7 +552,7 @@ export const saboteur: GameModule<SaboteurState> = {
             break;
           }
           case "lookDwarf":
-            if (!target || target.id === me.id) return { error: "Choose another dwarf." };
+            if (!target || target.id === me.id) return { error: "Choose another player." };
             spend();
             me.knownDwarves[target.id] = target.role;
             addLog(state, `${name} looked at ${target.username}'s dwarf card.`);
@@ -475,10 +560,21 @@ export const saboteur: GameModule<SaboteurState> = {
           case "destroyTunnel": {
             const cell = message.cell;
             if (typeof cell !== "number" || !Number.isInteger(cell) || !state.tunnels[cell]) return { error: "Choose a tunnel to destroy." };
-            if (state.monsters.includes(cell)) return { error: "A monster is standing there." };
             spend();
+            const gameEnded = evacuatePlayers(state, cell);
             delete state.tunnels[cell];
+            let killedMonsters = 0;
+            for (let index = state.monsters.length - 1; index >= 0; index--) {
+              if (state.monsters[index] !== cell) continue;
+              state.monsters.splice(index, 1);
+              state.monsterTypes.splice(index, 1);
+              killedMonsters++;
+            }
+            if (killedMonsters > 0) {
+              addLog(state, killedMonsters === 1 ? "A monster was killed when its tunnel was destroyed." : `${killedMonsters} monsters were killed when their tunnel was destroyed.`);
+            }
             addLog(state, `${name} destroyed a tunnel.`);
+            if (gameEnded) return "save";
             break;
           }
           case "destroyPickaxe":
@@ -533,6 +629,19 @@ export const saboteur: GameModule<SaboteurState> = {
         moveMonsters(state);
         return "save";
       }
+      case "forcepass": {
+        if (!actor.isHost || state.phase !== "playing" || state.step !== "turn") return "ignore";
+        const player = current(state);
+        if (player.tunnels.length > 0) {
+          const index = randomInt(player.tunnels.length);
+          player.tunnels.splice(index, 1);
+          addLog(state, `${player.username} was force-passed by the host and discarded a random tunnel card.`);
+        } else {
+          addLog(state, `${player.username} was force-passed by the host and had no tunnel card to discard.`);
+        }
+        endTurn(state);
+        return "save";
+      }
       case "forceskip": {
         // Lets the host unstick the game when the dwarf whose turn it is has left.
         if (!actor.isHost || state.phase !== "playing" || context.connected.has(current(state).id)) return "ignore";
@@ -569,7 +678,7 @@ export const saboteur: GameModule<SaboteurState> = {
   },
 
   disconnect(state, userId) {
-    // Once the game is running every dwarf keeps their seat so they can come back.
+    // Once the game is running every player keeps their seat so they can come back.
     if (state.phase !== "lobby" || !state.seats[userId]) return false;
     delete state.seats[userId];
     return true;
@@ -611,6 +720,7 @@ export const saboteur: GameModule<SaboteurState> = {
       players: playing ? state.players.map(player => ({
         id: player.id, username: player.username, connected: connected.has(player.id),
         tunnels: player.tunnels.length, abilities: player.abilities.length,
+        cell: player.cell, dead: player.dead,
         pickaxeBroken: player.pickaxeBroken, lanternBroken: player.lanternBroken,
         // Roles stay hidden until the game ends, except your own and the ones you have looked at.
         role: showRoles ? player.role : player.id === viewerId ? player.role : me?.knownDwarves[player.id] ?? null
@@ -618,14 +728,20 @@ export const saboteur: GameModule<SaboteurState> = {
       turnId: state.phase === "playing" ? current(state)?.id ?? null : null,
       step: state.step,
       tunnels: Object.entries(state.tunnels).map(([cell, sides]) => ({ cell: Number(cell), sides })),
-      goals: state.goals.map((goal, index) => ({
-        index, cell: goal.cell,
-        // Public once revealed (or when the game is over); otherwise only what this dwarf has learned.
-        type: goal.revealed || showRoles ? goal.type : me?.knownGoals[index] ?? null,
-        revealed: goal.revealed
-      })),
+      goals: state.goals.map((goal, index) => {
+        const knownType = me?.knownGoals[index];
+        const visible = goal.revealed || showRoles || knownType !== undefined;
+        return {
+          index, cell: goal.cell,
+          // Public once revealed (or when the game is over); otherwise only what this dwarf has learned.
+          type: goal.revealed || showRoles ? goal.type : knownType ?? null,
+          monsterType: visible && goal.type === "monster" ? goal.monsterType : null,
+          revealed: goal.revealed
+        };
+      }),
       gems: state.gems,
       monsters: state.monsters,
+      monsterTypes: state.monsterTypes,
       lastTurn: state.lastTurn ?? [],
       monsterNext: state.phase === "playing" ? state.monsters.flatMap(from => monsterOptions(state, from).map(to => ({ from, to }))) : [],
       row: state.row,
