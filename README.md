@@ -27,7 +27,7 @@ npx.cmd wrangler d1 migrations list voedgoem --remote
 npm.cmd run db:migrate:remote
 
 deployment:
-npx wranger deploy
+npx wrangler deploy
 
 compile src:
 npm run build
