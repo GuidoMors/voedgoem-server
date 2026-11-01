@@ -53,5 +53,14 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "cultistRate", label: "Win rate as cultist", format: "percent", sql: rate(`"role" IN ('cultist', 'saboteur')`, `"role" IN ('cultist', 'saboteur')`) },
     { key: "explorerRate", label: "Win rate as explorer", format: "percent", sql: rate(`"role" = 'explorer'`, `"role" = 'explorer'`) },
     { key: "cultistGames", label: "Games as cultist", format: "number", sql: `SUM("role" IN ('cultist', 'saboteur'))` }
+  ],
+  werewolves: [
+    games,
+    winRate,
+    { key: "werewolfRate", label: "Win rate as Werewolf", format: "percent", sql: rate(`"role" IN ('big-bad-wolf', 'cloaked-wolf', 'wise-wolf', 'throatcutter', 'sniffer')`, `"role" IN ('big-bad-wolf', 'cloaked-wolf', 'wise-wolf', 'throatcutter', 'sniffer')`) },
+    { key: "villagerRate", label: "Win rate as Villager", format: "percent", sql: rate(`"role" IN ('cupido', 'elder', 'hunter', 'alchemist', 'old-knight', 'judge', 'little-girl', 'guard', 'bearman', 'seer')`, `"role" IN ('cupido', 'elder', 'hunter', 'alchemist', 'old-knight', 'judge', 'little-girl', 'guard', 'bearman', 'seer')`) },
+    { key: "wolfchildRate", label: "Win rate as Wolfchild", format: "percent", sql: rate(`"role" = 'wolfchild'`, `"role" = 'wolfchild'`) },
+    { key: "foolRate", label: "Win rate as Fool", format: "percent", sql: rate(`"role" = 'fool'`, `"role" = 'fool'`) },
+    { key: "foolWins", label: "Wins as Fool", format: "number", sql: `SUM(CASE WHEN "role" = 'fool' THEN "won" ELSE 0 END)` }
   ]
 };
