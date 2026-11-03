@@ -1,7 +1,7 @@
 :root {
-  --themegreen:rgb(94, 255, 0);
-  --themegreenneon: rgb(94, 255, 0);
-  --themesubgreen:rgb(67, 155, 17);
+  --thememain:rgb(94, 255, 0);
+  --thememainneon: rgb(94, 255, 0);
+  --themesubmain:rgb(67, 155, 17);
   --themeblack:rgb(1, 4, 1);
   --themegrey: rgb(18, 19, 18);
   --themedisabled: rgb(44, 49, 119);
@@ -42,13 +42,13 @@ input {
 option {
   background: var(--themeblack);
   color: white;
-  border: 1px var(--themegreen) solid;
+  border: 1px var(--thememain) solid;
 }
 
 button, select {
   font-family: 'smallfont';
   background-color: transparent;
-  color: var(--themegreen);
+  color: var(--thememain);
   -moz-appearance: none;
   text-overflow: hidden;
 }
@@ -90,26 +90,26 @@ button, select {
 }
 
 .neongreen.neonbutton:hover{
-  background: var(--themegreenneon) !important;
+  background: var(--thememainneon) !important;
 }
 
 .neongreen.neonborder::after {
-  box-shadow: 0 0 2em 1em var(--themegreenneon), inset 0 0 2em 1em var(--themegreenneon);
+  box-shadow: 0 0 2em 1em var(--thememainneon), inset 0 0 2em 1em var(--thememainneon);
 }
 
 .neongreen.neonborder {
-  box-shadow: 0 0 1em 0 var(--themegreenneon), inset 0 0 1em 0 var(--themegreenneon);
-  border: 4px var(--themegreenneon) solid;
+  box-shadow: 0 0 1em 0 var(--thememainneon), inset 0 0 1em 0 var(--thememainneon);
+  border: 4px var(--thememainneon) solid;
 }
 
 .neongreen {
-  color: var(--themegreenneon);
+  color: var(--thememainneon);
   text-shadow: 0 0 0.125em hsl( 0 0% 100%/ 0.5),
-  0 0 0.45em var(--themegreenneon);
+  0 0 0.45em var(--thememainneon);
 }
 
 .neongreen::before{
-  background: var(--themegreenneon);
+  background: var(--thememainneon);
   
 }
 
@@ -151,8 +151,8 @@ button, select {
 }
 
 .BigButton {
-  border: 3px var(--themegreen) solid;
-  color: var(--themegreen) ;
+  border: 3px var(--thememain) solid;
+  color: var(--thememain) ;
   background-color:transparent;
   font-size: 12px;
 }
@@ -219,7 +219,7 @@ body {
   right: -320px;
   z-index: 1200;
   transition: right 0.5s ease-out;
-  border-left: 1px var(--themegreen) solid;
+  border-left: 1px var(--thememain) solid;
   box-sizing: border-box;
   height: 100%;
 }
@@ -245,7 +245,7 @@ body {
   font-size: 14.7vw;
   font-family: 'bigfont';
   text-align: left;
-  color: var(--themegreen);
+  color: var(--thememain);
   line-height: 50%;
   padding-left: 1%; 
 }

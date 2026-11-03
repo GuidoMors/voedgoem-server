@@ -73,7 +73,7 @@
   height: 4%;
   width: 100%;
   float:right;
-  border-top:solid var(--themegreen) 1px;
+  border-top:solid var(--thememain) 1px;
 }
 
 .messageButton{
@@ -93,7 +93,7 @@
 }
 
 .inputMessage:focus-visible{
-  border-bottom: solid var(--themegreen) 1px;
+  border-bottom: solid var(--thememain) 1px;
   outline: none !important;
 }
 
@@ -360,12 +360,12 @@ select {
   height: 25px;
   border-radius: 100px;
   padding-left: 8px;
-  border-left: 1px var(--themegreen) solid;
+  border-left: 1px var(--thememain) solid;
 }
 
 #chevron {
   font-size: 25px;
-  -webkit-text-stroke: 1px var(--themegreen);
+  -webkit-text-stroke: 1px var(--thememain);
 }
 
 .notneon {
