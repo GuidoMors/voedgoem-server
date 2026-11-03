@@ -677,6 +677,11 @@ export const dworf: GameModule<DworfState> = {
     }
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.seats[userId] || Object.keys(state.seats).length >= MAX_PLAYERS) return [];
+    return [{ type: "seat" }];
+  },
+
   disconnect(state, userId) {
     // Once the game is running every player keeps their seat so they can come back.
     if (state.phase !== "lobby" || !state.seats[userId]) return false;

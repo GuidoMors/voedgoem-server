@@ -42,7 +42,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 function validateCredentials(username: string, password: string) {
   if (!/^[A-Za-z0-9_]{2,20}$/.test(username)) throw new HttpError(400, "Username must be 2-20 letters, numbers or underscores.");
-  if (password.length < 8 || password.length > 128) throw new HttpError(400, "Password must be 8-128 characters.");
+  if (password.length < 3 || password.length > 128) throw new HttpError(400, "Password must be 3-128 characters.");
 }
 
 async function register(request: Request, env: Env) {
@@ -71,7 +71,7 @@ async function login(request: Request, env: Env) {
 async function resetPassword(request: Request, env: Env) {
   const body = await readBody(request);
   const password = text(body.password);
-  if (password.length < 8 || password.length > 128) throw new HttpError(400, "Password must be 8-128 characters.");
+  if (password.length < 3 || password.length > 128) throw new HttpError(400, "Password must be 3-128 characters.");
   const invalid = new HttpError(400, "Username or recovery key is invalid.");
   const user = await env.DB.prepare(`SELECT "id", "recoveryKeyHash" FROM "users" WHERE "username" = ?1`)
     .bind(text(body.username).trim()).first<{ id: string; recoveryKeyHash: string | null }>();

@@ -245,6 +245,11 @@ export class Lobby extends DurableObject<Env> {
     }
 
     const isDisplay = request.headers.get("x-is-display") === "1";
+    const maxUsers = this.module().info.maxUsers;
+    if (maxUsers && !isDisplay) {
+      const present = this.connectedUserIds();
+      if (!present.has(userId) && present.size >= maxUsers) return new Response("This lobby is full.", { status: 409 });
+    }
     const avatar = isDisplay ? null : parseStoredAvatar(request.headers.get("x-avatar"));
     const passwordHash = request.headers.get("x-lobby-password-hash") ?? undefined;
 
@@ -333,7 +338,7 @@ export class Lobby extends DurableObject<Env> {
     const context = () => ({ connected: this.connectedUserIds() });
 
     // Admin-only testing tools: manage bots and act on their behalf.
-    if (message.type === "bot:add" || message.type === "bot:remove" || message.type === "bot:act") {
+    if (message.type === "bot:add" || message.type === "bot:remove" || message.type === "bot:act" || message.type === "bot:join") {
       if (!who.isAdmin) return;
       const bots = (state.bots ??= []);
       if (message.type === "bot:add") {
@@ -343,6 +348,16 @@ export class Lobby extends DurableObject<Env> {
         }
         const number = (state.nextBot = (state.nextBot ?? 0) + 1);
         bots.push({ id: `bot-${number}`, username: `Bot ${number}` });
+      } else if (message.type === "bot:join") {
+        // Every spectating bot takes a random open spot, as if it had pressed a join button itself.
+        const connected = new Map(context().connected);
+        for (const bot of bots) connected.set(bot.id, bot.username);
+        for (const bot of [...bots].sort(() => Math.random() - 0.5)) {
+          const spots = game.openSpots?.(state.data, bot.id) ?? [];
+          if (!spots.length) continue;
+          const spot = spots[Math.floor(Math.random() * spots.length)];
+          game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false, isAdmin: false }, spot, { connected });
+        }
       } else {
         const bot = bots.find(item => item.id === message.botId);
         if (!bot) return;

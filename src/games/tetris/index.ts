@@ -236,6 +236,12 @@ export const tetris: GameModule<TetrisState> = {
     return "save";
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.players[userId] || Object.keys(state.players).length >= tetris.info.maxPlayers) return [];
+    if (state.teamCount === 0) return [{ type: "join" }];
+    return Array.from({ length: state.teamCount }, (_, team) => ({ type: "join", team }));
+  },
+
   disconnect(state, userId) {
     const player = state.players[userId];
     if (!player) return false;

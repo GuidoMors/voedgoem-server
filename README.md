@@ -32,6 +32,7 @@ npx wrangler deploy
 compile src:
 npm run build
 
+
 ## Making a user an admin
 
 Admins are set from the console only:

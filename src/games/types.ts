@@ -18,6 +18,8 @@ export interface GameInfo {
   name: string;
   description: string;
   maxPlayers: number;
+  // Most users (players and spectators) allowed in the lobby at once; unlimited when omitted.
+  maxUsers?: number;
 }
 
 export interface GameModule<S> {
@@ -32,6 +34,8 @@ export interface GameModule<S> {
   handle(state: S, actor: Actor, message: Record<string, unknown>, context: Context): Outcome;
   // Called when a user's last socket closed. Returns true if the state changed.
   disconnect(state: S, userId: string): boolean;
+  // Join messages (one per open spot) that would seat this user right now; empty when they can't join. Used by admin test bots.
+  openSpots?(state: S, userId: string): Record<string, unknown>[];
   participants(state: S): Set<string>;
   // Optional real-time loop: ms until the next tick, or null when nothing needs ticking right now.
   tickMs?(state: S): number | null;
