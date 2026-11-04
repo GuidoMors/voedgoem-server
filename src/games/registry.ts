@@ -1,6 +1,7 @@
 import { codenames } from "./codenames";
 import { blokus } from "./blokus";
 import { dworf } from "./dworf";
+import { kin } from "./kin";
 import { tetris } from "./tetris";
 import { thirtyone } from "./thirtyone";
 import { werewolves } from "./werewolves";
@@ -15,6 +16,7 @@ export const MODULES: Record<string, GameModule<any>> = {
   [thirtyone.info.id]: thirtyone,
   [dworf.info.id]: dworf,
   [werewolves.info.id]: werewolves,
+  [kin.info.id]: kin,
   [passTime.info.id]: passTime
 };
 

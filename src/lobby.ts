@@ -8,6 +8,7 @@ import { MODULES } from "./games/registry";
 interface Bot {
   id: string;
   username: string;
+  forcePass?: boolean;
 }
 
 interface State {
@@ -18,6 +19,8 @@ interface State {
   data: unknown;
   bots?: Bot[];
   nextBot?: number;
+  // Admin test bots take their own moves when the game supports it.
+  autoBots?: boolean;
   // Avatars of people who connected, so players keep theirs while temporarily offline.
   avatars?: Record<string, Avatar>;
 }
@@ -245,6 +248,11 @@ export class Lobby extends DurableObject<Env> {
     }
 
     const isDisplay = request.headers.get("x-is-display") === "1";
+    const maxUsers = this.module().info.maxUsers;
+    if (maxUsers && !isDisplay) {
+      const present = this.connectedUserIds();
+      if (!present.has(userId) && present.size >= maxUsers) return new Response("This lobby is full.", { status: 409 });
+    }
     const avatar = isDisplay ? null : parseStoredAvatar(request.headers.get("x-avatar"));
     const passwordHash = request.headers.get("x-lobby-password-hash") ?? undefined;
 
@@ -333,7 +341,7 @@ export class Lobby extends DurableObject<Env> {
     const context = () => ({ connected: this.connectedUserIds() });
 
     // Admin-only testing tools: manage bots and act on their behalf.
-    if (message.type === "bot:add" || message.type === "bot:remove" || message.type === "bot:act") {
+    if (message.type === "bot:add" || message.type === "bot:remove" || message.type === "bot:act" || message.type === "bot:join" || message.type === "bot:auto" || message.type === "bot:forcePass") {
       if (!who.isAdmin) return;
       const bots = (state.bots ??= []);
       if (message.type === "bot:add") {
@@ -342,11 +350,44 @@ export class Lobby extends DurableObject<Env> {
           return;
         }
         const number = (state.nextBot = (state.nextBot ?? 0) + 1);
-        bots.push({ id: `bot-${number}`, username: `Bot ${number}` });
+        bots.push({ id: `bot-${number}`, username: `Bot ${number}`, forcePass: true });
+      } else if (message.type === "bot:auto") {
+        state.autoBots = message.enabled === true;
+      } else if (message.type === "bot:join") {
+        if (game.snapshot(state.data, who.userId, new Set(context().connected.keys())).phase !== "lobby") {
+          ws.send(JSON.stringify({ type: "error", message: "Bots can only join before the game starts." }));
+          return;
+        }
+        // Every spectating bot takes a random open spot, as if it had pressed a join button itself.
+        const connected = new Map(context().connected);
+        for (const bot of bots) connected.set(bot.id, bot.username);
+        for (const bot of [...bots].sort(() => Math.random() - 0.5)) {
+          const spots = game.openSpots?.(state.data, bot.id) ?? [];
+          if (!spots.length) continue;
+          const spot = spots[Math.floor(Math.random() * spots.length)];
+          game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false, isAdmin: false }, spot, { connected });
+        }
       } else {
         const bot = bots.find(item => item.id === message.botId);
         if (!bot) return;
-        if (message.type === "bot:remove") {
+        if (message.type === "bot:forcePass") {
+          if (state.game !== "kin" || typeof message.enabled !== "boolean") {
+            ws.send(JSON.stringify({ type: "error", message: "Choose a valid Kin bot play mode." }));
+            return;
+          }
+          if (message.enabled) {
+            const snapshot = game.snapshot(state.data, bot.id, new Set(context().connected.keys()));
+            const world = snapshot.world as { play?: { turn: string } } | undefined;
+            if (world?.play?.turn === bot.id) {
+              const outcome = game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false, isAdmin: false }, { type: "pass" }, context());
+              if (typeof outcome === "object") {
+                ws.send(JSON.stringify({ type: "error", message: `${bot.username}: ${outcome.error}` }));
+                return;
+              }
+            }
+          }
+          bot.forcePass = message.enabled;
+        } else if (message.type === "bot:remove") {
           state.bots = bots.filter(item => item.id !== bot.id);
           game.disconnect(state.data, bot.id);
         } else {
@@ -382,8 +423,28 @@ export class Lobby extends DurableObject<Env> {
   }
 
   // Saves, stores a just-finished game's results for statistics (humans only), then broadcasts.
+  // Lets autopiloted bots keep moving until none of them has anything left to do.
+  private runAutoBots(state: State) {
+    const game = this.module();
+    const bots = state.bots ?? [];
+    if (!state.autoBots || !game.botMove || !bots.length) return;
+    const connected = new Map(this.connectedUserIds());
+    for (const bot of bots) connected.set(bot.id, bot.username);
+    for (let step = 0; step < 500; step++) {
+      let moved = false;
+      for (const bot of bots) {
+        const move = game.botMove(state.data, bot.id, { forcePass: bot.forcePass !== false });
+        if (!move) continue;
+        const outcome = game.handle(state.data, { userId: bot.id, username: bot.username, isHost: false, isAdmin: false }, move, { connected });
+        if (outcome === "save" || outcome === "volatile") moved = true;
+      }
+      if (!moved) return;
+    }
+  }
+
   private async commit() {
     const state = this.state;
+    if (state) this.runAutoBots(state);
     const result = state ? this.module().takeResult?.(state.data) : null;
     await this.save();
     if (state && result) {
@@ -464,7 +525,8 @@ export class Lobby extends DurableObject<Env> {
       host: { id: state.hostId, name: state.hostName },
       maxPlayers: game.info.maxPlayers,
       spectators,
-      bots: state.bots ?? []
+      bots: (state.bots ?? []).map(bot => ({ ...bot, forcePass: bot.forcePass !== false })),
+      autoBots: !!state.autoBots
     };
 
     let cached: string | null = null;

@@ -47,6 +47,10 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "playerRate", label: "Win rate as player", format: "percent", sql: rate(`"role" = 'player'`, `"role" = 'player'`) },
     { key: "avgPoints", label: "Average team points", format: "number", sql: `ROUND(AVG("score"))` }
   ],
+  kin: [
+    games,
+    winRate
+  ],
   dworf: [
     games,
     winRate,

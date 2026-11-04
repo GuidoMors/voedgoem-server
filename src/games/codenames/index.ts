@@ -414,6 +414,15 @@ export const codenames: GameModule<CodenamesState> = {
     }
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.seats[userId] || Object.keys(state.seats).length >= codenames.info.maxPlayers) return [];
+    const seats = Object.values(state.seats);
+    return (["red", "blue"] as const).flatMap(team => [
+      { type: "seat", team, role: "operative" },
+      ...(seats.some(seat => seat.team === team && seat.role === "spymaster") ? [] : [{ type: "seat", team, role: "spymaster" }])
+    ]);
+  },
+
   disconnect(state, userId) {
     const seat = state.seats[userId];
     if (!seat) return false;

@@ -289,6 +289,12 @@ export const blokus: GameModule<BlokusState> = {
     }
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.players[userId] || Object.keys(state.players).length >= blokus.info.maxPlayers) return [];
+    const taken = new Set(Object.values(state.players).map(player => player.color));
+    return COLORS.filter(color => !taken.has(color)).map(color => ({ type: "join", color }));
+  },
+
   disconnect(state, userId) {
     const player = state.players[userId];
     if (!player) return false;

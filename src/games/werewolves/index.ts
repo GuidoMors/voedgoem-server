@@ -1467,6 +1467,13 @@ export const werewolves: GameModule<WerewolvesState> = {
     }
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.seats[userId] || userId === state.gmId) return [];
+    if (Object.keys(state.seats).length + (state.gmId ? 1 : 0) >= werewolves.info.maxPlayers) return [];
+    if (Object.keys(state.seats).length >= state.settings.rolePool.length) return [];
+    return [{ type: "join" }];
+  },
+
   disconnect(state, userId) {
     return state.phase === "lobby" && !!state.seats[userId] ? (delete state.seats[userId], true) : false;
   },

@@ -359,6 +359,15 @@ export const thirtyone: GameModule<ThirtyOneState> = {
     }
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.seats[userId] || Object.keys(state.seats).length >= thirtyone.info.maxPlayers) return [];
+    const seats = Object.values(state.seats);
+    return (["red", "blue"] as const).flatMap(team => [
+      { type: "seat", team, role: "player" },
+      ...(seats.some(seat => seat.team === team && seat.role === "captain") ? [] : [{ type: "seat", team, role: "captain" }])
+    ]);
+  },
+
   disconnect(state, userId) {
     const seat = state.seats[userId];
     if (!seat) return false;

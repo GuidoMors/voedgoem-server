@@ -4,7 +4,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 
 ## Accounts and access
 
-- Users register with a unique 2-20 character username containing only letters, digits, and underscores, and a password of 8-128 characters.
+- Users register with a unique 2-20 character username containing only letters, digits, and underscores, and a password of 3-128 characters.
 - Passwords are stored as PBKDF2 hashes. Session tokens are random bearer credentials; only their SHA-256 hashes are stored, and sessions expire after 30 days.
 - A user may reset their password using their recovery key. Resetting invalidates that recovery key and deletes the user's active sessions.
 - Admin privileges are assigned through the operator script (`npm run admin:grant -- <username>`); they are not self-service.
