@@ -89,6 +89,7 @@ This document records agreed behavior for the Voedgoem backend and important cro
 ## Cross-game UI and interaction requirements
 
 - The hub lists active lobbies with game/name/host and join action. Admins create lobbies and may close them; hosts may close their own lobby.
+- Every new game receives a game-themed hub bar and its supplied favicon. Check `content/favicons/`, copy the matching asset to the frontend's `public/favicons/`, and register it in `src/gameFavicon.ts` there. Verify the hub image and in-lobby browser icon. Hub Join/Show actions stay green with game-appropriate styling.
 - Everyone can spectate; seated users join the relevant game's roles/team.
 - A host-only kick control is available next to seated positions in the lobby/draft phases allowed by each game's server rules. Kicking returns the user to spectator; there is no ban and they can re-seat.
 - Admins can add/remove/control up to 20 test bots in a lobby. Bot snapshots must not be substituted for a real user's view.
@@ -116,6 +117,9 @@ This document records agreed behavior for the Voedgoem backend and important cro
 - Finished games record per-player role, win/loss, and game-specific result fields.
 - `GET /api/stats/:game` returns the supported statistic definitions, each player's aggregates, and the authenticated player's own row when available.
 - Statistics are defined in `src/stats.ts`; new game results must keep their meaning consistent with those aggregate definitions.
+- Register each game's aggregates and verify its authenticated endpoint, including IDs containing hyphens such as `pass-time`. A game without results returns valid definitions and an empty player list, not a missing-route error.
+- Give each statistics tab its own game's normal/hover/selected theme, regardless of the currently selected game. Theme the selected game's statistics modal, tables, and controls as well as its hub bar; follow the [frontend checklist](../voedgoem/README.md#adding-a-game).
+- Frontend tab changes clear previous errors and ignore superseded requests, so an earlier failure cannot remain visible over another game's statistics.
 
 ## API contract
 

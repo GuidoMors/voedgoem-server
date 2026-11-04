@@ -24,6 +24,8 @@ Admins can grant the separate Hoster role to non-admin, non-display accounts. Ad
 
 ## Key rules for contributors
 
+For every new game, follow the complete [cross-repository integration checklist](../voedgoem/README.md#adding-a-game). Registration is not sufficient: check supplied favicons, apply the hub and browser icon, style the hub bar and statistics tab/modal, wire result aggregates, and verify authenticated statistics including hyphenated game IDs.
+
 - Preserve the `GameModule` contract in `src/games/types.ts`; game modules should not take over generic lobby transport or persistence.
 - Keep authoritative game rules and permission checks on the server. A disabled or hidden frontend control is not a permission check.
 - Treat snapshots as audience-specific where a game has hidden information. `GameModule.perViewer` controls snapshot caching; `Lobby.broadcast()` selects the appropriate viewer identity.
@@ -33,6 +35,7 @@ Admins can grant the separate Hoster role to non-admin, non-display accounts. Ad
 - Keep credentials, session tokens, and recovery keys out of source control and logs. Only password and recovery-key hashes are stored.
 - `npm run typecheck`, `npm run build`, and `npm run deploy` run word-list generation first.
 - Do not deploy unless the task asks for deployment or deployment is otherwise explicitly agreed.
+- A request to migrate locally means `npm run db:migrate:local`; it does not authorize remote migrations or deployment.
 
 ## Quick start
 
