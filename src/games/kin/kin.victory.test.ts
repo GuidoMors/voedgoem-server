@@ -26,7 +26,7 @@ function playing(): KinState {
   dispatch(state, act("pickKin", "p1", { kin: "hammers" }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -80,6 +80,37 @@ test("ties do not count as the most", () => {
   assert.equal(newDawnWinner(state), null);
 });
 
+test("treaties count for both their court and their giver, whether tapped or untapped", () => {
+  const state = board(0);
+  addItem(state, "trade-treaty", "court:p1", "p1", "p2");
+  addItem(state, "access-treaty", "court:p2", "p2", "p1").tapped = true;
+  addItem(state, "peace-treaty", "court:p2", "p2", "p1");
+  const returned = addItem(state, "promise-treaty", "court:p1", "p1", "p1");
+  addItem(state, "faction-treaty", "board:public", null, "p1");
+  addItem(state, "trade-ban", "court:p1", "p1");
+  addItem(state, "trade-diplomacy", "court:p2", "p2", "p1");
+  assert.equal(standings(state).p1.treaties, 4);
+  assert.equal(standings(state).p2.treaties, 3);
+
+  state.items = state.items.filter(item => item.id !== returned.id);
+  assert.equal(standings(state).p1.treaties, 3);
+  assert.equal(areaLeaders(state).treaties, null);
+});
+
+test("given treaties contribute to the treaty leader and New Dawn winner", () => {
+  const state = board(4);
+  addItem(state, "access-treaty", "court:p2", "p2");
+  assert.equal(areaLeaders(state).treaties, null);
+  assert.equal(newDawnWinner(state), null);
+  addItem(state, "trade-treaty", "court:p2", "p2", "p1");
+  addItem(state, "peace-treaty", "court:p2", "p2", "p1");
+  addItem(state, "promise-treaty", "court:p1", "p1");
+  assert.equal(standings(state).p1.treaties, 4);
+  assert.equal(standings(state).p2.treaties, 3);
+  assert.equal(areaLeaders(state).treaties, "p1");
+  assert.equal(newDawnWinner(state), "p1");
+});
+
 test("a vassal's pieces count for their lord and a vassal cannot win", () => {
   const state = board(0);
   state.players.p2.resources = { mana: 3, relic: 1 };
@@ -88,6 +119,7 @@ test("a vassal's pieces count for their lord and a vassal cannot win", () => {
   assert.deepEqual(Object.keys(table), ["p1"]);
   assert.equal(table.p1.mana, 3);
   assert.equal(table.p1.relics, 1);
+  assert.equal(table.p1.treaties, 2);
 });
 
 test("vassal chains count for the ultimate lord, while cycles have no eligible winner", () => {
@@ -129,11 +161,18 @@ test("a short game ends when the New Dawn is won", () => {
   assert.equal(dispatch(state, act("pass", "p2")), "The game is over.");
 });
 
-test("a long and a campaign game end because no other chapter exists yet", () => {
+test("long and campaign games offer implemented chapters after New Dawn instead of ending", () => {
   for (const mode of ["long", "campaign"] as const) {
     const state = board(4, mode);
     endControl(state);
-    assert.equal(state.phase, "results");
-    assert.equal(state.result!.points.p1, 1);
+    assert.equal(state.result, undefined);
+    assert.equal(state.chapter!.points.p1, 1);
+    assert.deepEqual(state.chapter!.pending, { player: "p1", choices: ["commonwealth", "kingdom", "exploration"] });
+    assert.match(dispatch(state, act("pass", "p1")) ?? "", /choose the next chapter/);
+    assert.match(dispatch(state, act("chooseChapter", "p2", { chapter: "commonwealth" })) ?? "", /winner/);
+    assert.equal(dispatch(state, act("chooseChapter", "p1", { chapter: "commonwealth" })), null);
+    assert.equal(state.chapter!.current, "commonwealth");
+    assert.equal(state.commonwealth!.leader, "p1");
+    assert.equal(state.round, 2);
   }
 });

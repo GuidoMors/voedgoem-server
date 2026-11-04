@@ -1,4 +1,6 @@
 import { shuffle } from "./rng";
+import { hasCard } from "./cards";
+import { COMMONWEALTH_LAWS } from "./cards.data";
 import type { KinState } from "./types";
 
 // The law cards of 25-laws.md. A law is active from the Council event that enacts it until the next Council event or a Revoke,
@@ -7,6 +9,8 @@ export interface Law {
   id: string;
   name: string;
   forbids: string[];
+  rewards?: string[];
+  text?: string;
 }
 
 export const LAWS: readonly Law[] = [
@@ -19,13 +23,21 @@ export const LAWS: readonly Law[] = [
   { id: "disarmements", name: "Disarmements", forbids: ["deploy", "recruit"] },
   { id: "cultural-sites", name: "Cultural Sites", forbids: ["demolish"] },
   { id: "cargo-enforcement", name: "Cargo Enforcement", forbids: ["reclaim"] },
+  { id: "protect-ancestry", name: "Protect Ancestry", forbids: ["explore"] },
   { id: "peace-resolution", name: "Peace Resolution", forbids: ["battle"] },
   { id: "quarantine", name: "Quarantine", forbids: ["reinforce"] },
   { id: "stockpiles", name: "Stockpiles", forbids: ["harvest"] },
   { id: "naval-blockade", name: "Naval Blockade", forbids: ["embark"] }
 ];
 
-export const lawById = (id: string | null | undefined) => LAWS.find(law => law.id === id);
+export const lawById = (id: string | null | undefined): Law | undefined => [...LAWS, ...COMMONWEALTH_LAWS].find(law => law.id === id);
+const LAW_TECH: Record<string, string> = {
+  "naval-blockade": "harbor-construction",
+  "cargo-enforcement": "archeology-science",
+  "protect-ancestry": "archeology-science"
+};
+export const availableLaws = (state: KinState): readonly Law[] => state.commonwealth ? COMMONWEALTH_LAWS : LAWS.filter(law =>
+  !LAW_TECH[law.id] || state.order.some(player => hasCard(state, player, LAW_TECH[law.id])));
 
 // The law deck, its discard pile and the enacted law; created when the first Council event is held.
 export interface LawBoard {
@@ -35,15 +47,44 @@ export interface LawBoard {
 }
 
 export function lawBoard(state: KinState): LawBoard {
-  return state.laws ??= { deck: shuffle(state.rng, LAWS.map(law => law.id)), discard: [], enacted: null };
+  const eligible = availableLaws(state).map(law => law.id);
+  if (!state.laws) return state.laws = { deck: shuffle(state.rng, eligible), discard: [], enacted: null };
+  const board = state.laws;
+  if (state.commonwealth) return board;
+  board.deck = board.deck.filter(id => !LAW_TECH[id] || eligible.includes(id));
+  board.discard = board.discard.filter(id => !LAW_TECH[id] || eligible.includes(id));
+  const present = new Set([...board.deck, ...board.discard, ...(state.play?.council?.laws ?? []), ...activeLaws(state)]);
+  const added = eligible.filter(id => LAW_TECH[id] && !present.has(id));
+  if (added.length) board.deck = shuffle(state.rng, [...board.deck, ...added]);
+  return board;
 }
 
 export const enactedLaw = (state: KinState) => lawById(state.laws?.enacted);
 
+export const activeLaws = (state: KinState): string[] => state.kingdom
+  ? [...state.kingdom.rebel, ...state.kingdom.kingdom]
+  : state.laws?.enacted ? [state.laws.enacted] : [];
+
+export function lawsFor(state: KinState, player: string): Law[] {
+  const kingdom = state.kingdom;
+  const immune = kingdom && (player === kingdom.king || state.items.some(item =>
+    item.def === "vassal-treaty" && item.giver === player && item.zone === `court:${kingdom.king}`));
+  const ids = kingdom && immune ? kingdom.kingdom : activeLaws(state);
+  return ids.flatMap(id => { const law = lawById(id); return law ? [law] : []; });
+}
+
 // The enacted law that forbids this action card, if any.
-export function forbiddenBy(state: KinState, def: string): Law | undefined {
-  const law = enactedLaw(state);
-  return law?.forbids.includes(def) ? law : undefined;
+export function forbiddenBy(state: KinState, def: string, player = state.play?.turn ?? ""): Law | undefined {
+  return lawsFor(state, player).find(law => law.forbids.includes(def));
+}
+
+export function discardLaw(state: KinState, id: string) {
+  const board = lawBoard(state);
+  if (state.kingdom) {
+    state.kingdom.rebel = state.kingdom.rebel.filter(law => law !== id);
+    state.kingdom.kingdom = state.kingdom.kingdom.filter(law => law !== id);
+  } else board.enacted = null;
+  board.discard.push(id);
 }
 
 // Draws from the law deck; when it is empty the discard pile is shuffled into it.

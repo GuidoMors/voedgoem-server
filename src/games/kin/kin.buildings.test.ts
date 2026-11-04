@@ -28,7 +28,7 @@ function playing(): KinState {
   dispatch(state, act("pickKin", "p1", { kin: "hammers" }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -149,10 +149,11 @@ test("Market and Harbor need rivers or ocean, and there is one per tile building
   assert.match(placementError(state, "p1", "harbor", { tile: HOME, side: side(HOME, c) }) ?? "", /only one Harbor/);
 });
 
-test("University and Mage College must be built in a city, one of each per city", () => {
+test("University can be built in a village; Mage College still requires a city", () => {
   const state = blank();
   const home = village(state);
-  assert.match(placementError(state, "p1", "university", { tile: HOME, side: 0 }) ?? "", /city/);
+  assert.equal(placementError(state, "p1", "university", { tile: HOME, side: 0 }), null);
+  assert.match(placementError(state, "p1", "mage-college", { tile: HOME, side: 0 }) ?? "", /city/);
   home.def = "city";
   assert.equal(placementError(state, "p1", "university", { tile: HOME, side: 0 }), null);
   placeBuilding(state, "p1", "university", { tile: HOME, side: 0 });

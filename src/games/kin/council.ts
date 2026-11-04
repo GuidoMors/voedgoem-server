@@ -6,6 +6,7 @@ import { subterfugeBoard } from "./tactics";
 import { population } from "./buildings";
 import { discardEnacted, drawLaws, lawBoard } from "./laws";
 import { endTurn } from "./play";
+import { eventOrder } from "./commonwealth";
 import type { KinState } from "./types";
 
 // The Council event: the enacted law is discarded, three laws are drawn and the voters vote for one each, in natural order.
@@ -39,7 +40,18 @@ export function startCouncil(state: KinState, activator: string) {
 
 function beginVote(state: KinState, activator: string, laws: string[]) {
   const play = state.play!;
-  const voters = councilVoters(state);
+  if (state.kingdom) {
+    const king = state.kingdom.king;
+    play.council = { activator, laws, voters: [], votes: {}, king };
+    if (!laws.length) {
+      play.council = null;
+      play.turn = activator;
+      return endTurn(state);
+    }
+    play.turn = king;
+    return;
+  }
+  const voters = eventOrder(state, councilVoters(state));
   play.council = { activator, laws, voters, votes: {} };
   if (laws.length === 0 || voters.length === 0) return resolveCouncil(state);
   play.turn = voters[0];
@@ -78,12 +90,34 @@ export function quantum(state: KinState, player: string, action: Record<string, 
 export function validateVote(state: KinState, player: string, action: Record<string, unknown>): string | null {
   const council = state.play?.council;
   if (!council) return "No council is being held.";
+  if (council.king) return "The King chooses a law instead of holding a vote.";
   if (state.play!.turn !== player) return "It is not your turn to vote.";
   if (action.grand === true) {
     if (!hasChar(state, player, "yamanano")) return "Grand Works needs Yamanano in your court.";
     if (influence(state, player) < 1) return "Grand Works costs 1 influence.";
   }
   return council.laws.includes(String(action.law)) ? null : "Vote for one of the three laws that were drawn.";
+}
+
+export function validateRoyalEnact(state: KinState, player: string, action: Record<string, unknown>): string | null {
+  const council = state.play?.council;
+  if (!state.kingdom || !council?.king) return "No royal Council decision is in progress.";
+  if (council.king !== player) return "Only the King chooses the law and track.";
+  if (!council.laws.includes(String(action.law))) return "Choose one of the drawn laws.";
+  return action.track === "rebel" || action.track === "kingdom" ? null : "Choose the rebel or kingdom track.";
+}
+
+export function royalEnact(state: KinState, action: Record<string, unknown>) {
+  const play = state.play!;
+  const council = play.council!;
+  const law = String(action.law);
+  const track = action.track as "rebel" | "kingdom";
+  state.kingdom![track].push(law);
+  lawBoard(state).discard.push(...council.laws.filter(id => id !== law));
+  play.councilResult = { id: (play.councilResult?.id ?? 0) + 1, laws: council.laws, tally: {}, enacted: law, track };
+  play.council = null;
+  play.turn = council.activator;
+  endTurn(state);
 }
 
 export function vote(state: KinState, player: string, action: Record<string, unknown>) {

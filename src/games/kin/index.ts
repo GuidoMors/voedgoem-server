@@ -1,12 +1,14 @@
 import type { GameModule } from "../types";
 import { armyLimit, population, production } from "./buildings";
-import { AREAS_NEEDED, areaLeaders, standings } from "./victory";
+import { AREAS_NEEDED, areaLeaders, standings, victoryGold } from "./victory";
 import { relicTapError, tappedRelics } from "./relics";
-import { choosesRuins, exploreOptions, reclaimOptions } from "./archeology";
+import { choosesRuins, exploreOptions, reclaimOptions, ruinsSpots } from "./archeology";
+import { explorationPlacer } from "./exploration";
 import { oxyliumTiles } from "./ark";
 import { eventOptions } from "./events";
 import { isDeepOnes, thrallTargets, whisperOptions } from "./deepones";
-import { enactedLaw, LAWS } from "./laws";
+import { activeLaws, availableLaws, enactedLaw, lawsFor, LAWS, lawBoard } from "./laws";
+import { canRebel, ironGripOptions, personalStrength } from "./kingdom";
 import { SUBTERFUGE, TACTICS, subterfugeOf, tacticOptions } from "./tactics";
 import { buildOptions, observatoryChoices, demolishOptions, deployOptions } from "./expansion";
 import { canYuguan, embarkOptions, harvestOptions, recruitCost, recruitOptions, recruitPayment, reinforceOptions } from "./control";
@@ -25,9 +27,10 @@ import { setupChoices } from "./setup";
 import { hasActionCard, moveTargets, movableArmies, sourcesFor, startPlay } from "./play";
 import { publicizeOptions, researchOptions } from "./tech";
 import { barterInfo, dissolvable } from "./treaties";
-import { RIVER_COUNT, riverNext, riverStarts } from "./world";
+import { RIVER_COUNT, edgeId, riverNext, riverShouldStop, riverStarts } from "./world";
 import { kinBotMove } from "./bots";
 import { MAX_PLAYERS, MAX_USERS, MIN_PLAYERS, type Action, type KinState } from "./types";
+import { COMMONWEALTH_LAWS } from "./cards.data";
 
 const DESCRIPTION = "An asymmetric strategy game for up to 10 players. Pick a Kin, build, trade, fight and win the chapter.";
 
@@ -97,6 +100,8 @@ export const kin: GameModule<KinState> = {
 
   snapshot(state, viewerId, connected) {
     const viewer = state.players[viewerId];
+    const chapterDecision = !!(state.chapter?.pending || state.exploration?.placing || state.play?.schemer || state.play?.donation || state.play?.oppose);
+    const board = state.kingdom ? lawBoard(state) : state.laws;
     return {
       phase: state.phase,
       options: state.options,
@@ -138,14 +143,37 @@ export const kin: GameModule<KinState> = {
           : state.world.step === "done" ? state.play?.turn ?? null
           : characterPicker(state),
         kinPicks: state.world.kinPicks,
+        retiredKins: state.chapter?.retiredKins ?? [],
         kins: KINS,
+        exploration: state.exploration ? {
+          ...state.exploration,
+          player: explorationPlacer(state),
+          tiles: state.exploration.placing ? ruinsSpots(state) : [],
+          ruins: (state.blocks ?? []).filter(block => block.kind === "ruins").length
+        } : null,
+        kingdom: state.kingdom ? {
+          ...state.kingdom,
+          strength: Object.fromEntries(Object.entries(standings(state)).map(([player, scores]) => [player, scores.strength])),
+          personalStrength: Object.fromEntries(state.order.map(player => [player, personalStrength(state, player)])),
+          directVassals: state.items.filter(item => item.def === "vassal-treaty" && item.zone === `court:${state.kingdom!.king}`).map(item => item.giver).filter((player): player is string => !!player)
+        } : null,
+        commonwealth: state.commonwealth ? {
+          members: state.commonwealth.members,
+          leader: state.commonwealth.leader,
+          oppositionLeader: state.commonwealth.oppositionLeader,
+          step: state.commonwealth.step,
+          value: state.commonwealth.value,
+          gold: victoryGold(state)
+        } : null,
         // Starting setup: what the player on turn has to place and where they may click.
         setup: state.world.step === "setup" ? setupChoices(state) : null,
         buildings: state.buildings,
         blocks: state.blocks ?? [],
         law: enactedLaw(state) ?? null,
-        lawList: LAWS,
-        lawDeck: { deck: state.laws?.deck.length ?? LAWS.length, discard: state.laws?.discard.length ?? 0 },
+        activeLaws: activeLaws(state),
+        forbiddenActions: Object.fromEntries(state.order.map(player => [player, [...new Set(lawsFor(state, player).flatMap(law => law.forbids))]])),
+        lawList: [...LAWS, ...COMMONWEALTH_LAWS],
+        lawDeck: { deck: board?.deck.length ?? availableLaws(state).length, discard: board?.discard.length ?? 0 },
         // Tactics cards lie open in courts; subterfuge cards are hidden: you only see your own and how many the others hold.
         tacticsList: TACTICS,
         subterfugeList: SUBTERFUGE,
@@ -169,12 +197,17 @@ export const kin: GameModule<KinState> = {
           selectionStep: state.play.selectionStep ?? null,
           passes: state.play.passes,
           forcePass: state.play.forcePass ?? [],
-          autoEventPass: state.play.phase === "event" && eventOptions(state, viewerId).length === 0,
+          donation: state.play.donation ?? null,
+          schemer: state.play.schemer ? { player: state.play.schemer.player, activator: state.play.schemer.activator, event: state.play.schemer.event } : null,
+          oppose: state.play.oppose ?? null,
+          autoEventPass: !chapterDecision && state.play.phase === "event" && eventOptions(state, viewerId).length === 0,
           move: state.play.move && { ...state.play.move, targets: moveTargets(state, state.play.move) },
           // What the player on turn can tap, which armies could go somewhere with a Move, and the technologies they can Research or Publicize.
-          options: state.play.phase === "control" && !state.play.move
+          options: state.play.phase === "control" && !state.play.move && !chapterDecision
             ? {
               sources: sourcesFor(state, state.play.turn, "control"),
+              rebel: canRebel(state, state.play.turn),
+              ironGrip: ironGripOptions(state, state.play.turn),
               armies: [],
               research: [],
               publicize: [],
@@ -198,7 +231,7 @@ export const kin: GameModule<KinState> = {
               recruitCost: recruitCost(state, state.play.turn),
               dice: unlockedDice(state, state.play.turn)
             }
-            : state.play.phase === "expansion" && !state.play.move
+            : state.play.phase === "expansion" && !state.play.move && !chapterDecision
             ? {
               sources: sourcesFor(state, state.play.turn, "expansion"),
               armies: [],
@@ -211,10 +244,11 @@ export const kin: GameModule<KinState> = {
               deploy: deployOptions(state, state.play.turn),
               demolish: demolishOptions(state, state.play.turn),
               reclaim: reclaimOptions(state, state.play.turn),
-              revoke: !!state.laws?.enacted,
+              revoke: activeLaws(state).length > 0,
+              revokeLaws: activeLaws(state),
               craft: canCraft(state, state.play.turn)
             }
-            : state.play.phase === "discovery" && !state.play.move
+            : state.play.phase === "discovery" && !state.play.move && !chapterDecision
             ? {
               sources: sourcesFor(state, state.play.turn, "discovery"),
               armies: movableArmies(state, state.play.turn).map(army => army.id),
@@ -244,27 +278,27 @@ export const kin: GameModule<KinState> = {
           reaction: state.play.reactions?.[0] ?? null,
           report: state.play.report ?? null,
           found: state.play.found ?? null,
-          council: state.play.council ? { ...state.play.council, grand: undefined, canGrand: hasChar(state, viewerId, "yamanano") && influence(state, viewerId) >= 1, grandBy: state.play.council.grand ?? [] } : null,
+          council: state.play.council ? { ...state.play.council, grand: undefined, canGrand: !state.play.council.king && hasChar(state, viewerId, "yamanano") && influence(state, viewerId) >= 1, grandBy: state.play.council.grand ?? [] } : null,
           councilResult: state.play.councilResult ?? null,
           auction: state.play.auction ?? null,
           auctionResult: state.play.auctionResult ?? null,
           notice: state.play.notice ?? null,
           quantum: state.play.quantum && state.play.quantum.player === viewerId ? state.play.quantum : state.play.quantum ? { player: state.play.quantum.player, kind: state.play.quantum.kind, options: [], pick: state.play.quantum.pick, activator: state.play.quantum.activator } : null,
-          abilities: !state.play.battle && !state.play.move && !state.play.barter && !state.play.council && !state.play.auction && !state.play.quantum && !state.play.consent
+          abilities: !chapterDecision && !state.play.battle && !state.play.move && !state.play.barter && !state.play.council && !state.play.auction && !state.play.quantum && !state.play.consent
             ? abilityOptions(state, state.play.turn)
             : [],
-          tacticOptions: ["discovery", "expansion", "control"].includes(state.play.phase) && !state.play.move && !state.play.barter && !state.play.battle && !state.play.council && !state.play.auction && !state.play.quantum && !state.play.consent
+          tacticOptions: !chapterDecision && ["discovery", "expansion", "control"].includes(state.play.phase) && !state.play.move && !state.play.barter && !state.play.battle && !state.play.council && !state.play.auction && !state.play.quantum && !state.play.consent
             ? tacticOptions(state, state.play.turn)
             : [],
-          events: state.play.phase === "event" ? eventOptions(state, state.play.turn) : [],
+          events: state.play.phase === "event" && !chapterDecision ? eventOptions(state, state.play.turn) : [],
           // Deep Ones: Chosen Thrall (your secret choice) and the targets of Chosen Thrall and Whispered Gifts.
           thrall: state.thralls?.[viewerId] ?? null,
-          thrallTargets: state.play.phase === "event" && isDeepOnes(state, state.play.turn) ? thrallTargets(state, state.play.turn) : [],
-          whisper: state.play.phase === "event" && isDeepOnes(state, state.play.turn) ? whisperOptions(state, state.play.turn) : null,
+          thrallTargets: !chapterDecision && state.play.phase === "event" && isDeepOnes(state, state.play.turn) ? thrallTargets(state, state.play.turn) : [],
+          whisper: !chapterDecision && state.play.phase === "event" && isDeepOnes(state, state.play.turn) ? whisperOptions(state, state.play.turn) : null,
           consent: state.play.consent ? { ...state.play.consent, plea: state.play.consent.plea ? true : undefined } : null,
           // Calculators: the prediction is secret; each player only sees their own.
           predictions: (state.predictions ?? []).filter(entry => entry.player === viewerId),
-          calculators: state.play.phase === "event" && isArkPlayer(state, state.play.turn) ? calculatorOptions(state, state.play.turn) : null,
+          calculators: !chapterDecision && state.play.phase === "event" && isArkPlayer(state, state.play.turn) ? calculatorOptions(state, state.play.turn) : null,
           massHarvest: massHarvestYield(state, state.play.turn),
           sabotaged: state.sabotaged ?? [],
           verdicts: state.play.verdicts.filter(entry => state.items.some(item => item.id === entry.treaty))
@@ -276,7 +310,13 @@ export const kin: GameModule<KinState> = {
         charPool: Object.values(state.cards).map(card => card.id),
         charRound: state.world.step === "characters" ? characterRound(state) : null,
         charEligible: state.world.step === "characters" ? eligibleCharacters(state, characterPicker(state)!, characterRound(state)).map(c => c.id) : [],
-        riverChoices: state.world.step !== "rivers" ? [] : state.world.freeEnd ? riverNext(state.world, state.world.freeEnd) : riverStarts(state.world, state.tiles.map(tile => tile.terrain))
+        riverChoices: state.world.step !== "rivers" ? [] : state.world.freeEnd ? riverNext(state.world, state.world.freeEnd) : riverStarts(state.world, state.tiles.map(tile => tile.terrain)),
+        riverEndChoices: state.world.step === "rivers" && state.world.freeEnd
+          ? riverNext(state.world, state.world.freeEnd).filter(vertex => riverShouldStop({
+            ...state.world!,
+            rivers: { ...state.world!.rivers, [edgeId(state.world!.freeEnd!, vertex)]: state.world!.riversDone }
+          }, state.tiles.map(tile => tile.terrain), vertex))
+          : []
       },
       eventCount: state.log.length,
       victory: state.order.length > 0 && state.phase !== "lobby" ? {
@@ -286,6 +326,8 @@ export const kin: GameModule<KinState> = {
         standings: standings(state),
         leaders: areaLeaders(state),
         points: state.chapter?.points ?? {},
+        pending: state.chapter?.pending ?? null,
+        history: state.chapter?.history ?? [],
         result: state.result ?? null
       } : null
     };

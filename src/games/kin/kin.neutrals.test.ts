@@ -32,7 +32,7 @@ function playing(): KinState {
   dispatch(state, act("pickKin", "p1", { kin: "hammers" }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -136,10 +136,11 @@ test("Horus has gold power as attacker, none as defender", () => {
 
 test("Doropolopolos gives a gear for the first trade to each receiver", () => {
   const state = playing();
+  const before = state.players.p1.resources.gear ?? 0;
   give(state, "doropolopolos");
   onTradeGiven(state, "p1", "p2");
   onTradeGiven(state, "p1", "p2");
-  assert.equal(state.players.p1.resources.gear, 1);
+  assert.equal(state.players.p1.resources.gear, before + 1);
 });
 
 test("Izz'Ether's detailed trigger still lapses disconnected Trade Treaties", () => {

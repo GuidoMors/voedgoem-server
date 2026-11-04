@@ -1,8 +1,9 @@
-import { CARDS, START_TECHS, cardById } from "./cards.data";
+import { CARDS, START_SETUPS, START_TECHS, cardById } from "./cards.data";
 import type { Item, KinState } from "./types";
 
 export function addItem(state: KinState, def: string, zone: string, owner: string | null = null, giver?: string): Item {
-  const item: Item = { id: `i${state.items.length + 1}`, def, zone, owner, tapped: false, ...(giver ? { giver } : {}) };
+  const next = Math.max(0, ...state.items.map(item => Number(item.id.slice(1)) || 0)) + 1;
+  const item: Item = { id: `i${next}`, def, zone, owner, tapped: false, ...(giver ? { giver } : {}) };
   state.items.push(item);
   return item;
 }
@@ -60,8 +61,7 @@ export function claimStartingCards(state: KinState, player: string) {
     onTrack.owner = player;
     for (const grant of cardById(tech)?.grants ?? []) claimCard(state, player, grant);
   }
-  // The Ethereal hold the Faction Treaty of every other Kin, even without the technology.
-  if (kin === "ethereal") {
+  if (START_SETUPS[kin].otherFactionTreaties) {
     for (const other of state.order) if (other !== player) addItem(state, "faction-treaty", `court:${player}`, player, other);
   }
 }

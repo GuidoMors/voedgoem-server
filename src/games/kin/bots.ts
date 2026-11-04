@@ -3,6 +3,8 @@ import { characterPicker, characterRound, eligibleCharacters } from "./draft";
 import { DEDICATIONS } from "./deepones";
 import { kinPicker, lastTilePlacer, riverMaker, tilePlacer } from "./engine";
 import { KINS } from "./kins";
+import { ruinsSpots } from "./archeology";
+import { explorationPlacer } from "./exploration";
 import { setupChoices } from "./setup";
 import type { KinState } from "./types";
 import { CLIMATES, LAND, climateSpots, riverNext, riverStarts } from "./world";
@@ -11,6 +13,8 @@ const pick = <T>(items: readonly T[]): T => items[Math.floor(Math.random() * ite
 
 export function kinBotMove(state: KinState, id: string, options: { forcePass: boolean } = { forcePass: true }): Record<string, unknown> | null {
   if (state.result) return null;
+  if (state.chapter?.pending) return state.chapter.pending.player === id ? { type: "chooseChapter", chapter: state.chapter.pending.choices[0] } : null;
+  if (state.exploration?.placing) return explorationPlacer(state) === id ? { type: "placeExplorationRuins", tile: pick(ruinsSpots(state)) } : null;
   if (state.phase === "draft" && state.world && state.world.step !== "done") {
     const world = state.world;
     const board = state.tiles.map(tile => tile.terrain);
@@ -36,12 +40,12 @@ export function kinBotMove(state: KinState, id: string, options: { forcePass: bo
       case "kin": {
         if (kinPicker(state, world) !== id) return null;
         const taken = Object.values(world.kinPicks);
-        return { type: "pickKin", kin: pick(KINS.filter(kin => !taken.includes(kin.id))).id };
+        return { type: "pickKin", kin: pick(KINS.filter(kin => !taken.includes(kin.id) && !state.chapter?.retiredKins?.includes(kin.id))).id };
       }
       case "setup": {
         const choices = setupChoices(state);
         if (!choices || choices.player !== id) return null;
-        if (choices.task === "worksite") return choices.sides.length ? { type: "setupPlace", side: pick(choices.sides) } : null;
+        if (choices.tile !== null) return choices.sides.length ? { type: "setupPlace", side: pick(choices.sides) } : null;
         return choices.tiles.length ? { type: "setupPlace", tile: pick(choices.tiles), ...(choices.dedicate ? { dedication: pick(DEDICATIONS) } : {}) } : null;
       }
       case "characters": {
@@ -52,5 +56,12 @@ export function kinBotMove(state: KinState, id: string, options: { forcePass: bo
     }
     return null;
   }
-  return options.forcePass && state.play?.turn === id ? { type: "pass" } : null;
+  if (!options.forcePass || state.play?.turn !== id) return null;
+  if (state.play.council?.king === id) return { type: "royalEnact", law: state.play.council.laws[0], track: "rebel" };
+  if (state.kingdom && state.play.quantum?.player === id)
+    return { type: "quantum", cards: state.play.quantum.options.slice(0, state.play.quantum.pick) };
+  if (state.play.schemer) return { type: "schemerRespond", last: false };
+  if (state.play.donation) return { type: "donate", gold: 0 };
+  if (state.play.oppose) return { type: "opposeRespond", accept: false };
+  return { type: "pass" };
 }

@@ -7,10 +7,77 @@ import { legalSteps, sourcesFor } from "./play";
 import { createRng, nextInt } from "./rng";
 import { setupChoices } from "./setup";
 import { barterInfo, breakOnAttack, connected, lapsedTreaties, seasonsChangeTreaties } from "./treaties";
-import { neighbors, sideEdge, tileIndex } from "./world";
+import { edgeId, neighbors, sideCorners, sideEdge, tileIndex, vertexNeighbors } from "./world";
 import type { Action, KinState } from "./types";
 
 const act = (type: string, id: string, extra: Record<string, unknown> = {}): Action => ({ type, actor: { id, username: id, isHost: id === "p1" }, ...extra });
+
+function waterRouteState() {
+  const state = createState(1);
+  for (const id of ["p1", "p2"]) dispatch(state, act("join", id));
+  dispatch(state, act("start", "p1"));
+  for (const tile of state.tiles) tile.terrain = "plains";
+  const home = tileIndex(6, 1), target = tileIndex(6, 9);
+  state.buildings = [
+    { id: "home", def: "village", kind: "tile", owner: "p1", tile: home },
+    { id: "harbor", def: "harbor", kind: "slice", owner: "p1", tile: home, side: 1 },
+    { id: "target", def: "village", kind: "tile", owner: "p2", tile: target }
+  ];
+  return { state, home, target };
+}
+
+function riverRoute(state: KinState, from: string, to: string) {
+  const queue = [from], previous = new Map<string, string | null>([[from, null]]);
+  for (let index = 0; index < queue.length && !previous.has(to); index++) {
+    for (const next of vertexNeighbors(queue[index])) if (!previous.has(next)) {
+      previous.set(next, queue[index]);
+      queue.push(next);
+    }
+  }
+  assert.ok(previous.has(to));
+  for (let node = to; previous.get(node) !== null;) {
+    const parent = previous.get(node)!;
+    state.world!.rivers[edgeId(node, parent)] = true;
+    node = parent;
+  }
+}
+
+test("one Harbor connects through oceans to another player's tile building without a destination Harbor", () => {
+  const { state } = waterRouteState();
+  for (let col = 2; col <= 8; col++) state.tiles[tileIndex(6, col)].terrain = "ocean";
+  assert.equal(connected(state, "p1", "p2"), true);
+  assert.equal(connected(state, "p2", "p1"), true);
+  addItem(state, "trade-diplomacy", "court:p1", "p1");
+  assert.ok(barterInfo(state, "p1").targets[0].giveMintable.includes("trade"));
+  state.tiles[tileIndex(6, 5)].terrain = "plains";
+  assert.equal(connected(state, "p1", "p2"), false);
+  state.tiles[tileIndex(6, 5)].terrain = "ocean";
+  state.buildings[2].kind = "center";
+  assert.equal(connected(state, "p1", "p2"), false, "water destinations must be tile buildings");
+  state.buildings[2].kind = "tile";
+  state.buildings = state.buildings.filter(building => building.def !== "harbor");
+  assert.equal(connected(state, "p1", "p2"), false, "a water route needs a Harbor at one end");
+});
+
+test("one Harbor connects through a river, including a river on an adjacent edge", () => {
+  const { state, home, target } = waterRouteState();
+  riverRoute(state, sideCorners(home, 1)[0], sideCorners(target, 4)[0]);
+  assert.equal(connected(state, "p1", "p2"), true);
+  assert.equal(connected(state, "p2", "p1"), true);
+  state.world!.rivers = {};
+  assert.equal(connected(state, "p1", "p2"), false);
+});
+
+test("Harbor routes can travel from river to ocean and back into another river", () => {
+  const { state, home, target } = waterRouteState();
+  const water = tileIndex(6, 5);
+  state.tiles[water].terrain = "ocean";
+  riverRoute(state, sideCorners(home, 1)[0], sideCorners(water, 4)[0]);
+  riverRoute(state, sideCorners(water, 1)[0], sideCorners(target, 4)[0]);
+  assert.equal(connected(state, "p1", "p2"), true);
+  state.tiles[water].terrain = "plains";
+  assert.equal(connected(state, "p1", "p2"), false, "land cannot bridge separate rivers");
+});
 
 test("barter lists eligible treaties separately for each giver", () => {
   const state = createState(1);
@@ -44,7 +111,7 @@ function playing(kinId: string): KinState {
   dispatch(state, act("pickKin", "p1", { kin: kinId }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -77,6 +144,27 @@ test("an accepted Barter moves resources, and a declined one only taps the card"
   assert.equal(dispatch(state, act("barter", "p1", { ...tap(state), to: "p2", give: { resources: { gold: 1 } }, take: {} })), null);
   assert.equal(dispatch(state, act("barterRespond", "p2", { accept: false })), null);
   assert.equal(state.players.p1.resources.gold, 6);
+});
+
+test("declining Barter transfers nothing, keeps its source tapped and ends the offering player's turn", () => {
+  for (const kind of ["character", "item"] as const) {
+    const state = playing("hammers");
+    const character = sourcesFor(state, "p1", "discovery").find(source => source.kind === "character")!;
+    const activation = give(state, "p1", "activation-discovery");
+    const source = kind === "character" ? { kind, card: character.id } : { kind, card: activation.id };
+    give(state, "p2", "activation-discovery");
+    give(state, "p2", "trade-treaty", "p1");
+    state.players.p2.resources.gold = 2;
+    const before = structuredClone({ p1: state.players.p1.resources, p2: state.players.p2.resources });
+    assert.equal(dispatch(state, act("barter", "p1", { ...source, to: "p2", give: { resources: { gold: 3 } }, take: { resources: { gold: 1 } } })), null);
+    assert.equal(dispatch(state, act("barterRespond", "p2", { accept: false })), null);
+    assert.equal(state.play!.barter, null);
+    assert.equal(state.play!.turn, "p2");
+    assert.equal(state.play!.phase, "discovery");
+    assert.deepEqual(state.players.p1.resources, before.p1);
+    assert.deepEqual(state.players.p2.resources, before.p2);
+    assert.equal(kind === "character" ? state.cards[source.card].tapped : activation.tapped, true);
+  }
 });
 
 test("a Barter checks what each side really has", () => {
@@ -172,7 +260,10 @@ test("Harbor Treaty connections follow the Harbor edge through a connected river
   const state = playing("hammers");
   const first = tileIndex(2, 2);
   const second = tileIndex(8, 10);
+  for (const tile of state.tiles) tile.terrain = "plains";
   state.buildings = [
+    { id: "v1", def: "village", owner: "p1", kind: "tile", tile: first },
+    { id: "v2", def: "village", owner: "p2", kind: "tile", tile: second },
     { id: "h1", def: "harbor", owner: "p1", kind: "slice", tile: first, side: 0 },
     { id: "h2", def: "harbor", owner: "p2", kind: "slice", tile: second, side: 0 }
   ];

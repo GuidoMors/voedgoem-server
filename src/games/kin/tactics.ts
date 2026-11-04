@@ -3,6 +3,7 @@ import { cardById } from "./cards.data";
 import { characterAbilityHolder } from "./neutrals";
 import { characterById, naturalOrder } from "./draft";
 import { endTurn } from "./play";
+import { eventOrder } from "./commonwealth";
 import { nextInt, shuffle } from "./rng";
 import { SUBTERFUGE_CARDS, TACTICS_CARDS } from "./tactics.data";
 import { PUBLIC_ZONE, RESEARCH_ZONE, makePublic } from "./tech";
@@ -152,9 +153,19 @@ export function counterfuge(state: KinState, accept: boolean) {
 }
 
 function beginAuction(state: KinState, activator: string, card: string) {
+  const owner = bidders(state, card).find(player => gold(state, player) >= 1 && hasCard(state, player, "cautious-schemer"));
+  if (owner) {
+    state.play!.schemer = { player: owner, activator, event: "tactician", card };
+    state.play!.turn = owner;
+    return;
+  }
+  resumeAuction(state, activator, card);
+}
+
+export function resumeAuction(state: KinState, activator: string, card: string) {
   const play = state.play!;
   const board = tacticsBoard(state);
-  const order = bidders(state, card).filter(player => gold(state, player) >= 1);
+  const order = eventOrder(state, bidders(state, card).filter(player => gold(state, player) >= 1));
   if (order.length === 0) {
     board.discard.push(card);
     play.auctionResult = { id: (play.auctionResult?.id ?? 0) + 1, card, winner: null, bid: 0 };

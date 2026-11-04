@@ -2,6 +2,9 @@ import { hasCard } from "./cards";
 import { produce, roadBetween, sideBetween, wallBlocks } from "./buildings";
 import { canExpand } from "./expansion";
 import { forbiddenBy } from "./laws";
+import { rewardCommonwealthAction, startCommonwealth } from "./commonwealth";
+import { startKingdom } from "./kingdom";
+import { startExploration } from "./exploration";
 import { canControl } from "./control";
 import { checkVictory } from "./victory";
 import { cardById } from "./cards.data";
@@ -214,14 +217,30 @@ function settlePlay(state: KinState) {
 }
 
 export function startPlay(state: KinState) {
-  state.round = 1;
+  const starting = state.chapter?.starting;
+  state.round = starting ? state.round + 1 : 1;
+  state.phase = "playing";
+  if (state.world) delete state.world.redraftPlayer;
+  if (starting) {
+    delete state.chapter!.starting;
+    if (state.chapter!.current === "commonwealth") startCommonwealth(state, state.chapter!.leader!);
+    if (state.chapter!.current === "kingdom") startKingdom(state, state.chapter!.leader!);
+    if (state.chapter!.current === "exploration") startExploration(state);
+  }
   state.play = { phase: "event", turn: naturalOrder(state)[0], passes: 0, move: null, barter: null, verdicts: [] };
+  if (state.exploration?.placing) return;
+  beginChapterPlay(state);
+}
+
+export function beginChapterPlay(state: KinState) {
+  state.play!.turn = naturalOrder(state)[0];
   seasonsChange(state);
   settlePlay(state);
 }
 
 export function endTurn(state: KinState) {
   const play = state.play!;
+  delete play.eventLast;
   play.turn = nextPlayer(state, play.turn);
   settlePlay(state);
 }
@@ -237,7 +256,7 @@ export function pass(state: KinState) {
 
 // An action card can be activated when it is public on the phase board or lies in your court.
 export const hasActionCard = (state: KinState, player: string, def: string) =>
-  !forbiddenBy(state, def) && state.items.some(item => item.def === def && (item.zone === "board:phase" || item.zone === `court:${player}`));
+  !forbiddenBy(state, def, player) && state.items.some(item => item.def === def && (item.zone === "board:phase" || item.zone === `court:${player}`));
 
 // What every Discovery action has in common: your turn, the Discovery phase, nothing in progress, the action card is available
 // and the chosen character or activation card is untapped. Returns the error or the card to tap.
@@ -254,7 +273,7 @@ export function activationError(state: KinState, player: string, action: Record<
   if (play.quantum) return "Quantum Collapse: choose your cards first.";
   if (play.consent) return "Wait for the answer of the other player.";
   if (play.phase !== phase) return `${cardById(def)?.name ?? def} can only be activated in the ${label} phase.`;
-  const forbidding = forbiddenBy(state, def);
+  const forbidding = forbiddenBy(state, def, player);
   if (forbidding) return `${forbidding.name} is enacted: ${cardById(def)?.name ?? def} is forbidden.`;
   if (!hasActionCard(state, player, def)) return `You do not have the ${cardById(def)?.name ?? def} action card.`;
   return findSource(state, player, phase, String(action.kind), String(action.card)) ?? `Choose one of your untapped ${label} characters or activation cards.`;
@@ -354,6 +373,8 @@ export function resumeMove(state: KinState) {
 }
 
 function finishMove(state: KinState) {
+  const move = state.play!.move!;
+  if (move.moved) rewardCommonwealthAction(state, move.player, "move");
   state.play!.move = null;
   endTurn(state);
 }

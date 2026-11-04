@@ -7,7 +7,7 @@ import { hasChar, onTradeGiven } from "./neutrals";
 import { diplomatGift } from "./lumon";
 import { BASIC, TRADEGOOD, tradespeople } from "./streams";
 import type { Action, BarterGoods, BarterOffer, BarterTreaty, Building, Item, KinState } from "./types";
-import { neighbors, sideEdge, sideNeighbor } from "./world";
+import { neighbors, sideCorners, sideNeighbor, vertexTiles } from "./world";
 
 export const TREATY_TYPES = ["trade", "access", "peace", "faction", "promise", "vassal"] as const;
 export type TreatyType = typeof TREATY_TYPES[number];
@@ -33,51 +33,53 @@ export const hasTech = (state: KinState, player: string, def: string) => state.i
 
 const footprint = (building: Building) => building.tile < 0 ? [] : building.to !== undefined ? [building.tile, building.to] : [building.tile];
 
-// Players are connected when their buildings touch, or when their Harbors are joined over ocean or river.
+// Water routes can start at either player's Harbor and end at the other's tile building.
 export function connected(state: KinState, a: string, b: string): boolean {
   const tilesOf = (player: string) => state.buildings.filter(building => building.owner === player).flatMap(footprint);
   const theirs = new Set(tilesOf(b));
   for (const tile of tilesOf(a)) if (theirs.has(tile) || neighbors(tile).some(next => theirs.has(next))) return true;
-  const harbors = (player: string) => state.buildings.filter(building => building.owner === player && building.def === "harbor" && building.tile >= 0);
-  const oceanSides = (player: string) => harbors(player).flatMap(harbor => {
-    const adjacent = sideNeighbor(harbor.tile, harbor.side ?? -1);
-    return adjacent !== null && state.tiles[adjacent]?.terrain === "ocean" ? [adjacent] : [];
-  });
-  const targets = new Set(oceanSides(b));
-  const seen = new Set<number>();
-  const queue = oceanSides(a);
-  while (queue.length > 0) {
-    const tile = queue.pop()!;
-    if (targets.has(tile)) return true;
-    if (seen.has(tile)) continue;
-    seen.add(tile);
-    for (const next of neighbors(tile)) if (state.tiles[next]?.terrain === "ocean") queue.push(next);
-  }
-  const riverEdges = Object.keys(state.world?.rivers ?? {});
-  const harborRiverEdges = (player: string) => harbors(player)
-    .filter(harbor => Number.isInteger(harbor.side))
-    .map(harbor => sideEdge(harbor.tile, harbor.side!))
-    .filter(edge => riverEdges.includes(edge));
-  const riverGraph = new Map<string, Set<string>>();
-  for (const edge of riverEdges) {
+  const occupied = new Set(state.buildings.filter(building => building.kind === "tile" && building.tile >= 0).map(building => building.tile));
+  const ocean = (tile: number) => state.tiles[tile]?.terrain === "ocean" && !occupied.has(tile);
+  const graph = new Map<string, Set<string>>();
+  const link = (first: string, second: string) => {
+    if (!graph.has(first)) graph.set(first, new Set());
+    if (!graph.has(second)) graph.set(second, new Set());
+    graph.get(first)!.add(second);
+    graph.get(second)!.add(first);
+  };
+  for (const edge of Object.keys(state.world?.rivers ?? {})) {
     const [first, second] = edge.split("|");
-    for (const vertex of [first, second]) {
-      if (!riverGraph.has(vertex)) riverGraph.set(vertex, new Set());
-      riverGraph.get(vertex)!.add(edge);
+    link(first, second);
+  }
+  for (const vertex of [...graph.keys()]) for (const tile of vertexTiles(vertex)) if (ocean(tile)) link(vertex, `ocean:${tile}`);
+  for (let tile = 0; tile < state.tiles.length; tile++) if (ocean(tile))
+    for (const next of neighbors(tile)) if (ocean(next)) link(`ocean:${tile}`, `ocean:${next}`);
+
+  const reaches = (from: string, to: string) => {
+    const destinations = state.buildings.filter(building => building.owner === to && building.kind === "tile" && building.tile >= 0);
+    const goals = new Set(destinations.flatMap(building => [
+      ...neighbors(building.tile).filter(ocean).map(tile => `ocean:${tile}`),
+      ...Array.from({ length: 6 }, (_, side) => sideCorners(building.tile, side)).flat()
+    ]));
+    const queue = state.buildings.filter(building => building.owner === from && building.def === "harbor" && building.tile >= 0 && Number.isInteger(building.side))
+      .flatMap(harbor => {
+        const adjacent = sideNeighbor(harbor.tile, harbor.side!);
+        return [
+          ...sideCorners(harbor.tile, harbor.side!).filter(vertex => graph.has(vertex)),
+          ...(adjacent !== null && ocean(adjacent) ? [`ocean:${adjacent}`] : [])
+        ];
+      });
+    const seen = new Set<string>();
+    while (queue.length > 0) {
+      const node = queue.pop()!;
+      if (seen.has(node)) continue;
+      if (goals.has(node)) return true;
+      seen.add(node);
+      for (const next of graph.get(node) ?? []) queue.push(next);
     }
-  }
-  const starts = harborRiverEdges(a);
-  const goals = new Set(harborRiverEdges(b));
-  const riverQueue = [...starts];
-  const riverSeen = new Set<string>();
-  while (riverQueue.length > 0) {
-    const edge = riverQueue.pop()!;
-    if (riverSeen.has(edge)) continue;
-    if (goals.has(edge)) return true;
-    riverSeen.add(edge);
-    for (const vertex of edge.split("|")) for (const next of riverGraph.get(vertex) ?? []) riverQueue.push(next);
-  }
-  return false;
+    return false;
+  };
+  return reaches(a, b) || reaches(b, a);
 }
 
 // What a player could put in a Barter, for the UI.

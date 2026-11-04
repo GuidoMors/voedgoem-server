@@ -4,7 +4,8 @@ import { createState, dispatch, tilePlacer } from "./engine";
 import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { addItem } from "./cards";
 import { placementError } from "./buildings";
-import { recruitCost } from "./control";
+import { canRecruitOn, recruitCost } from "./control";
+import { deployOptions } from "./expansion";
 import { grogOptions, trampleTargets } from "./beastmen";
 import { createRng, nextInt } from "./rng";
 import { addBuilding, setupChoices } from "./setup";
@@ -29,7 +30,7 @@ function playing(): KinState {
   dispatch(state, act("pickKin", "p1", { kin: "hammers" }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -54,6 +55,31 @@ test("Honorless makes recruiting cost 1 food", () => {
   assert.equal(recruitCost(state, "p1"), 2);
   addItem(state, "honorless", "court:p1", "p1");
   assert.equal(recruitCost(state, "p1"), 1);
+});
+
+test("Warband Camps allow Deploy and Recruit like Barracks, respecting ownership and army limits", () => {
+  const state = playing();
+  const tile = tileIndex(6, 10);
+  state.buildings = [];
+  state.armies = [];
+  state.play!.phase = "expansion";
+  const camp = addBuilding(state, { def: "warband-camp", owner: "p1", kind: "center", tile });
+  const enemyCamp = addBuilding(state, { def: "warband-camp", owner: "p2", kind: "center", tile: tileIndex(6, 11) });
+  addItem(state, "deploy", "court:p1", "p1");
+  const source = addItem(state, "activation-expansion", "court:p1", "p1");
+  assert.deepEqual(deployOptions(state, "p1"), [camp.id]);
+  assert.match(dispatch(state, act("deploy", "p1", { kind: "item", card: source.id, building: enemyCamp.id })) ?? "", /Choose one of your buildings/);
+  assert.equal(dispatch(state, act("deploy", "p1", { kind: "item", card: source.id, building: camp.id })), null);
+  const army = state.armies.find(army => army.owner === "p1")!;
+  assert.equal(army.tile, tile);
+  assert.equal(army.strength, 1);
+  assert.equal(source.tapped, true);
+  assert.equal(canRecruitOn(state, army), true);
+  camp.owner = "p2";
+  assert.equal(canRecruitOn(state, army), false);
+  camp.owner = "p1";
+  for (let count = 0; count < 10; count++) state.armies.push({ id: `extra-${count}`, owner: "p1", tile, strength: 1 });
+  assert.deepEqual(deployOptions(state, "p1"), []);
 });
 
 test("Salvage returns the building type's printed resource cost", () => {

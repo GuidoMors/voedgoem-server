@@ -228,6 +228,10 @@ export interface BattleReport {
 
 // The round loop: which phase it is, whose turn, how many players passed in a row, and a Move in progress.
 export interface PlayState {
+  donation?: { activator: string; order: string[]; donations: Record<string, number> } | null;
+  schemer?: { player: string; activator: string; event: string; card?: string } | null;
+  eventLast?: string;
+  oppose?: { player: string; leader: string } | null;
   selectionStep?: string;
   phase: PlayPhase;
   turn: string;
@@ -317,6 +321,7 @@ export interface SubterfugeBoard {
 
 // A Council in progress: the three laws drawn and the votes so far. The voters vote one by one in natural order.
 export interface CouncilState {
+  king?: string;
   activator: string;
   laws: string[];
   voters: string[];
@@ -326,6 +331,7 @@ export interface CouncilState {
 }
 
 export interface CouncilResult {
+  track?: "rebel" | "kingdom";
   id: number;
   laws: string[];
   tally: Record<string, number>;
@@ -356,6 +362,31 @@ export interface ChapterState {
   history: { chapter: string; winner: string; round: number }[];
   // Campaign points per player.
   points: Record<string, number>;
+  pending?: { player: string; choices: string[] } | null;
+  collapse?: string | null;
+  retiredKins?: string[];
+  starting?: boolean;
+}
+
+export interface CommonwealthState {
+  members: string[];
+  leader: string;
+  oppositionLeader: string | null;
+  step: number;
+  value: number;
+  regularLaws: { deck: string[]; discard: string[]; enacted: string | null };
+}
+
+export interface KingdomState {
+  king: string;
+  rebel: string[];
+  kingdom: string[];
+}
+
+export interface ExplorationState {
+  placed: number;
+  target: number;
+  placing: boolean;
 }
 
 export interface GameResult {
@@ -412,6 +443,9 @@ export interface KinState {
   play: PlayState | null;
   // The chapter being played and the chapters that were won; the result is set once the game is won.
   chapter?: ChapterState;
+  commonwealth?: CommonwealthState;
+  kingdom?: KingdomState;
+  exploration?: ExplorationState;
   result?: GameResult | null;
   log: LogEntry[];
   recorded: boolean;

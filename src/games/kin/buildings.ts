@@ -130,6 +130,11 @@ function riverNear(state: KinState, tile: number, side: number): boolean {
   return sideCorners(tile, side).some(vertex => vertexNeighbors(vertex).some(other => edgeId(vertex, other) in rivers));
 }
 
+export function harborWaterAccess(state: KinState, tile: number, side: number): boolean {
+  const adjacent = sideNeighbor(tile, side);
+  return adjacent !== null && (isOcean(state, adjacent) || riverNear(state, tile, side));
+}
+
 // Build: "on a tile with an army, or on a tile adjacent to another building". Roads belong to nobody but connect to your buildings.
 function reachTiles(state: KinState, player: string): Set<number> {
   const linked = new Set(state.buildings.filter(building => building.owner === player).flatMap(footprint));
@@ -220,7 +225,7 @@ export function placementError(state: KinState, player: string, def: string, pla
     if (slicesAt(state, tile).some(slice => slice.side === side)) return "That side of the tile building is already built.";
     const here = slicesAt(state, tile);
     // The Great Tree: Mage Colleges only, any number of them.
-    if (host!.def === GREAT_TREE) return def === "mage-college" ? null : `Only Mage Colleges can be built inside the ${buildingById(GREAT_TREE)!.name}.`;
+    if (host!.def === GREAT_TREE && def !== "university") return def === "mage-college" ? null : `Only Mage Colleges and a University can be built inside the ${buildingById(GREAT_TREE)!.name}.`;
     switch (def) {
       case "worksite": {
         // Underwater Cult (Deep Ones): in a village or city on ocean the adjacent tile does not matter.
@@ -244,11 +249,13 @@ export function placementError(state: KinState, player: string, def: string, pla
       case "divine-sanctum":
         return state.buildings.some(building => building.def === def) ? `There is only one ${info.name} per game.` : null;
       case "harbor":
-        if (!isOcean(state, adjacent) && !riverNear(state, tile, side!)) return "A Harbor needs an adjacent ocean tile or an adjacent river.";
+        if (!harborWaterAccess(state, tile, side!)) return "A Harbor needs an adjacent ocean tile or an adjacent river.";
         return here.some(slice => slice.def === "harbor") ? "There is only one Harbor per tile building." : null;
       case "grand-observatory":
         return state.buildings.some(building => building.def === def) ? `There is only one ${info.name} per game.` : host!.def === "city" ? null : `A ${info.name} must be built in a city.`;
       case "university":
+        if (!["village", "city", GREAT_TREE].includes(host!.def)) return "A University must be built in a village or city.";
+        return here.some(slice => slice.def === def) ? "There is only one University per tile building." : null;
       case "mage-college":
       case "guild-hall":
         if (host!.def !== "city") return `A ${info.name} must be built in a city.`;

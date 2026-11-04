@@ -7,6 +7,7 @@ import { DEPLOY_ON } from "./expansion";
 import { activationError, embarkTiles, endTurn, hasActionCard, setTapped, sourcesFor, type Source } from "./play";
 import type { Army, KinState } from "./types";
 import { neighbors } from "./world";
+import { canRebel, ironGripOptions } from "./kingdom";
 
 // Control actions: Recruit, Reinforce, Harvest and Embark. Each taps one Control character or activation card.
 
@@ -38,7 +39,7 @@ export function recruitPayment(state: KinState, player: string, chosen: boolean 
 const chosenPayment = (action: Record<string, unknown>): "gold" | "mana" | false => action.mana === true ? "mana" : action.gold === true ? "gold" : false;
 
 export const canRecruitOn = (state: KinState, a: Army) =>
-  state.buildings.some(building => building.owner === a.owner && building.tile === a.tile && (DEPLOY_ON.includes(building.def) || building.def === "warband-camp"));
+  state.buildings.some(building => building.owner === a.owner && building.tile === a.tile && DEPLOY_ON.includes(building.def));
 
 export const recruitOptions = (state: KinState, player: string, free = false): string[] =>
   !free && recruitPayment(state, player) === null ? []
@@ -72,6 +73,8 @@ export function canControl(state: KinState, player: string): boolean {
     || (has("harvest") && harvestOptions(state, player).length > 0)
     || (has("embark") && embarkOptions(state, player).length > 0)
     || (has("explore") && exploreOptions(state, player).length > 0)
+    || canRebel(state, player)
+    || ((ironGripOptions(state, player)?.laws.length ?? 0) > 0 && sourcesFor(state, player, "control").reduce((sum, source) => sum + source.power, 0) >= state.kingdom!.rebel.length)
     || (has("battle") && canBattle(state, player));
 }
 

@@ -9,13 +9,17 @@ import { build, craftdwarves, demolish, deploy, revoke, validateBuild, validateC
 import { nomads, validateNomads } from "./wanderers";
 import { ruthless, validateRuthless } from "./streams";
 import { consentRespond, drift, resolvePredictions, validateConsent, validateDrift } from "./ark";
-import { quantum, validateQuantum, validateVote, vote } from "./council";
+import { quantum, royalEnact, validateQuantum, validateRoyalEnact, validateVote, vote } from "./council";
+import { ironGrip, rebel, validateIronGrip, validateRebel } from "./kingdom";
+import { placeExplorationRuins, validateExplorationRuins } from "./exploration";
 import { bid, fold, playTactic, validateBid, validateFold, validatePlayTactic } from "./tactics";
 import { embark, harvest, recruit, reinforce, validateEmbark, validateHarvest, validateRecruit, validateReinforce } from "./control";
 import { battle, battleRespond, reactionRespond, validateBattle, validateBattleRespond, validateReaction } from "./battle";
 import { activateAbility, flee, validateAbility, validateFlee } from "./neutrals";
 import { explore, reclaim, validateExplore, validateReclaim } from "./archeology";
-import { activateEvent, eventOptions, validateEvent } from "./events";
+import { activateEvent, eventOptions, schemerRespond, validateEvent, validateSchemer } from "./events";
+import { donate, opposeRespond, partyAction, rewardCommonwealthAction, validateDonation, validateOpposeResponse, validatePartyAction } from "./commonwealth";
+import { chooseChapter, validateChapter } from "./victory";
 import { barter, dissolve, respond, validateBarter, validateDissolve, validateRespond, validateVerdict, verdict } from "./treaties";
 import { applySetup, settleSetup, validateSetup } from "./setup";
 import {
@@ -76,7 +80,7 @@ function settleLastTiles(state: KinState) {
   if (lastPileTotal(world) === 0) world.step = "rivers";
 }
 // Kin are drafted in turn order, host first; nobody picks twice.
-export const kinPicker = (state: KinState, world: WorldState) => state.order[Object.keys(world.kinPicks).length];
+export const kinPicker = (state: KinState, world: WorldState) => world.redraftPlayer ?? state.order[Object.keys(world.kinPicks).length];
 
 const inLobby = (state: KinState) => state.phase === "lobby" ? null : "The game has already started.";
 const hostOnly = (action: Action) => action.actor.isHost ? null : "Only the host can do that.";
@@ -88,6 +92,16 @@ function removePlayer(state: KinState, id: string) {
 }
 
 const HANDLERS: Record<string, ActionHandler> = {
+  placeExplorationRuins: { validate: (state, action) => validateExplorationRuins(state, action.actor.id, action), apply: (state, action) => placeExplorationRuins(state, action) },
+  royalEnact: { validate: (state, action) => validateRoyalEnact(state, action.actor.id, action), apply: (state, action) => royalEnact(state, action) },
+  ironGrip: { validate: (state, action) => validateIronGrip(state, action.actor.id, action), apply: (state, action) => ironGrip(state, action.actor.id, action) },
+  rebel: { validate: (state, action) => validateRebel(state, action.actor.id, action), apply: (state, action) => rebel(state, action.actor.id, action) },
+  chooseChapter: { validate: (state, action) => validateChapter(state, action.actor.id, action), apply: (state, action) => chooseChapter(state, action.actor.id, action) },
+  donate: { validate: (state, action) => validateDonation(state, action.actor.id, action), apply: (state, action) => donate(state, action.actor.id, action) },
+  schemerRespond: { validate: (state, action) => validateSchemer(state, action.actor.id, action), apply: (state, action) => schemerRespond(state, action.last === true) },
+  oppose: { validate: (state, action) => validatePartyAction(state, action.actor.id, action, "oppose"), apply: (state, action) => partyAction(state, action.actor.id, action, "oppose") },
+  overthrow: { validate: (state, action) => validatePartyAction(state, action.actor.id, action, "overthrow"), apply: (state, action) => partyAction(state, action.actor.id, action, "overthrow") },
+  opposeRespond: { validate: (state, action) => validateOpposeResponse(state, action.actor.id, action), apply: (state, action) => opposeRespond(state, action.accept === true) },
   join: {
     validate(state, action) {
       const error = inLobby(state);
@@ -224,6 +238,7 @@ const HANDLERS: Record<string, ActionHandler> = {
       if (typeof world === "string") return world;
       if (action.actor.id !== kinPicker(state, world)) return "It is not your turn.";
       if (!kinById(action.kin)) return "Choose one of the ten Kin.";
+      if (state.chapter?.retiredKins?.includes(String(action.kin))) return "That Kin has already collapsed.";
       return Object.values(world.kinPicks).includes(action.kin as string) ? "Another player already picked that Kin." : null;
     },
     apply(state, action) {
@@ -231,7 +246,7 @@ const HANDLERS: Record<string, ActionHandler> = {
       world.kinPicks[action.actor.id] = action.kin as string;
       if (Object.keys(world.kinPicks).length < state.order.length) return;
       world.step = "setup";
-      dealBoardCards(state);
+      if (!world.redraftPlayer) dealBoardCards(state);
       settleSetup(state);
     }
   },
@@ -453,6 +468,9 @@ const HANDLERS: Record<string, ActionHandler> = {
       delete state.predictions;
       delete state.sabotaged;
       delete state.chapterUsed;
+      delete state.commonwealth;
+      delete state.kingdom;
+      delete state.exploration;
       delete state.result;
       state.rng = createRng(seed);
       state.recorded = false;
@@ -465,6 +483,10 @@ export function dispatch(state: KinState, action: Action): string | null {
   const handler = HANDLERS[action.type];
   if (!handler) return "Unknown action.";
   if (state.result && action.type !== "abort") return "The game is over.";
+  if (state.chapter?.pending && !["chooseChapter", "abort"].includes(action.type)) return "The chapter winner must choose the next chapter.";
+  if (state.exploration?.placing && !["placeExplorationRuins", "abort"].includes(action.type)) return "Finish placing the Exploration ruins first.";
+  const pending = state.play?.schemer ? "schemerRespond" : state.play?.donation ? "donate" : state.play?.oppose ? "opposeRespond" : null;
+  if (pending && ![pending, "forcePass", "abort"].includes(action.type)) return "Finish the Commonwealth decision first.";
   if (state.play?.reactions?.length && action.type !== "reactionRespond" && action.type !== "forcePass") return "A reaction is waiting for an answer.";
   const error = handler.validate(state, action);
   if (error) return error;
@@ -476,10 +498,12 @@ export function dispatch(state: KinState, action: Action): string | null {
   if (state.play && action.type !== "forcePass") delete state.play.selectionStep;
   resolvePredictions(state, action);
   handler.apply(state, action);
+  if (["research", "publicize", "dissolve", "build", "reclaim", "harvest", "embark"].includes(action.type))
+    rewardCommonwealthAction(state, action.actor.id, action.type);
   for (const player of Object.values(state.players)) {
     if (player.relicsTapped !== undefined) player.relicsTapped = tappedRelics(player);
   }
-  while (!state.result && state.play && (state.play.forcePass?.includes(state.play.turn) || (state.play.phase === "event" && eventOptions(state, state.play.turn).length === 0))) {
+  while (!state.result && !state.chapter?.pending && !state.exploration?.placing && state.play && !state.play.schemer && !state.play.donation && !state.play.oppose && (state.play.forcePass?.includes(state.play.turn) || (state.play.phase === "event" && eventOptions(state, state.play.turn).length === 0))) {
     const autoPass: Action = { type: "pass", actor: { id: state.play.turn, username: state.players[state.play.turn].username, isHost: false } };
     if (state.play.reactions?.length || HANDLERS.pass.validate(state, autoPass)) break;
     pass(state);

@@ -31,7 +31,7 @@ function playing(): KinState {
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
     assert.equal(choices.dedicate ?? false, choices.task === "village");
-    const result = dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1], dedication: "stone" }));
+    const result = dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1], dedication: "stone" }));
     assert.equal(result, null);
   }
   while (state.world!.step === "characters") {

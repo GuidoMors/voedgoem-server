@@ -149,7 +149,11 @@ test("rivers: six are drawn in turn order and obey the edge rules", () => {
       const next = riverNext(world, world.freeEnd!);
       assert.ok(next.length > 0);
       const edgesBefore = Object.keys(world.rivers).length;
-      assert.equal(dispatch(state, act("riverExtend", maker, { vertex: next[nextInt(rng, next.length)] })), null);
+      const vertex = next[nextInt(rng, next.length)];
+      const endings = kin.snapshot(state, maker, new Set()).world!.riverEndChoices;
+      assert.equal(Object.keys(world.rivers).length, edgesBefore);
+      assert.equal(dispatch(state, act("riverExtend", maker, { vertex })), null);
+      assert.equal(world.riversDone > before, endings.includes(vertex));
       assert.equal(Object.keys(world.rivers).length, edgesBefore + 1);
     }
   }

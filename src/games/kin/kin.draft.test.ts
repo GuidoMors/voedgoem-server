@@ -63,7 +63,7 @@ function atCharacters(picks: Record<string, string>): KinState {
   // The empty test board has no valid village spots to speak of, so run the starting setup with whatever it offers.
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    assert.equal(dispatch(state, act("setupPlace", choices.player, choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[0] })), null);
+    assert.equal(dispatch(state, act("setupPlace", choices.player, choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[0] })), null);
   }
   return state;
 }

@@ -2,8 +2,10 @@ import { hasCard } from "./cards";
 import { cardById } from "./cards.data";
 import { placeRuins, ruinsSpots, isUnbuiltTile } from "./archeology";
 import { endTurn } from "./play";
-import { startCouncil } from "./council";
-import { canAuction, startAuction } from "./tactics";
+import { councilVoters, startCouncil } from "./council";
+import { canAuction, resumeAuction, startAuction } from "./tactics";
+import { donationOrder, startDonation } from "./commonwealth";
+import { taxation } from "./kingdom";
 import { calculatorError, calculatorOptions, isArkPlayer, massHarvest, massHarvestYield, predict } from "./ark";
 import { canLapse, lapsedTreaties } from "./treaties";
 import { isDeepOnes, thrallError, thrallTargets, whisper, whisperError, whisperOptions } from "./deepones";
@@ -29,8 +31,10 @@ const CONDITIONS: Record<string, (state: KinState, player: string) => boolean> =
   attrition: state => attritionTargets(state).length > 0,
   "lapsed-treaties": state => canLapse(state),
   archeology: state => ruinsSpots(state).length > 0,
-  council: () => true,
+  council: state => !state.kingdom || state.order.some(player => hasCard(state, player, "council-science")),
   tactician: state => canAuction(state),
+  "commonwealth-donation": state => !!state.commonwealth,
+  taxation: state => !!state.kingdom,
   // Archive Ark: only the Ark's player can use these.
   calculators: (state, player) => isArkPlayer(state, player) && calculatorOptions(state, player).players.length > 0,
   "mass-harvest": (state, player) => massHarvestYield(state, player) !== null,
@@ -67,10 +71,39 @@ export function activateEvent(state: KinState, action: Record<string, unknown>) 
   else if (def === "calculators") predict(state, player, action);
   else if (def === "chosen-thrall") (state.thralls ??= {})[player] = String(action.character);
   else if (def === "whispered-gifts") whisper(state, player, action);
+  else if (def === "taxation") taxation(state);
   const card = state.items.find(item => item.def === def && item.zone === "board:phase")!;
   card.tapped = true;
   state.play!.passes = 0;
+  const participants = def === "council" ? councilVoters(state) : def === "commonwealth-donation" ? donationOrder(state) : [];
+  const schemer = participants.find(participant => hasCard(state, participant, "cautious-schemer"));
+  if (schemer) {
+    state.play!.schemer = { player: schemer, activator: player, event: def };
+    state.play!.turn = schemer;
+    return;
+  }
+  resolveOrderedEvent(state, def, player);
+}
+
+function resolveOrderedEvent(state: KinState, def: string, player: string) {
+  if (def === "commonwealth-donation") return startDonation(state, player);
   if (def === "council") return startCouncil(state, state.play!.turn);
   if (def === "tactician") return startAuction(state, state.play!.turn);
   endTurn(state);
+}
+
+export function validateSchemer(state: KinState, player: string, action: Record<string, unknown>): string | null {
+  if (!state.play?.schemer) return "Cautious Schemer is not waiting for a choice.";
+  if (state.play.schemer.player !== player) return "Only the owner of Cautious Schemer chooses.";
+  return typeof action.last === "boolean" ? null : "Choose whether to act last.";
+}
+
+export function schemerRespond(state: KinState, last: boolean) {
+  const play = state.play!;
+  const choice = play.schemer!;
+  play.schemer = null;
+  if (last) play.eventLast = choice.player;
+  play.turn = choice.activator;
+  if (choice.card) return resumeAuction(state, choice.activator, choice.card);
+  resolveOrderedEvent(state, choice.event, choice.activator);
 }

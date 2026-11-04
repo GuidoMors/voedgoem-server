@@ -5,14 +5,14 @@ import { KINS } from "./kins";
 import { canReclaim } from "./archeology";
 import { ARK_BOARD, armyLimit, arkBoardOf, blueprintInfo, buildPower, canAfford, costError, costOf, footprint, freeBuild, payCost, placeBuilding, placementError, placements, smithDiscount, type Cost, type Placement } from "./buildings";
 import { activationError, endTurn, hasActionCard, setTapped, sourcesFor, type Source } from "./play";
-import { discardEnacted, forbiddenBy } from "./laws";
+import { activeLaws, discardLaw, forbiddenBy } from "./laws";
 import { breakOnAttack } from "./treaties";
 import { canCraft, craft, craftError } from "./hammers";
 import { claimTactic } from "./tactics";
 import { DEDICATIONS } from "./deepones";
 import { guildHallConvert, guildHallError } from "./streams";
 import { GREAT_TREE } from "./tree";
-import type { Building, KinState, SourceKind } from "./types";
+import type { Building, KinState, PlayPhase, SourceKind } from "./types";
 
 // Expansion actions: Build, Deploy and Demolish. Each taps an Expansion character or activation card; Build and Demolish
 // may need more of them to reach the build power.
@@ -21,7 +21,7 @@ export const DEMOLISH_POWER = 3;
 export const WALL_DEMOLISH_POWER = 4;
 
 // Buildings an army can be deployed on. Faction buildings that work like a Barracks join this with their Kin.
-export const DEPLOY_ON = ["barracks", "daimyo-castle", "vault", "the-ark"];
+export const DEPLOY_ON = ["barracks", "daimyo-castle", "vault", "the-ark", "warband-camp"];
 
 type CardRef = { kind: SourceKind; id: string };
 
@@ -88,7 +88,7 @@ export function canExpand(state: KinState, player: string): boolean {
   const sources = sourcesFor(state, player, "expansion");
   if (!sources.length) return false;
   const total = sources.reduce((sum, source) => sum + source.power, 0);
-  const allowed = (def: string) => !forbiddenBy(state, def);
+  const allowed = (def: string) => !forbiddenBy(state, def, player);
   if ((allowed("deploy") && deployOptions(state, player).length) || canReclaim(state, player) || canRevoke(state, player, total) || (allowed("craftdwarves") && canCraft(state, player))) return true;
   return (allowed("demolish") && demolishOptions(state, player).some(option => option.power <= total)) || (allowed("build") && buildOptions(state, player).some(option => option.places.some(place => place.power <= total)));
 }
@@ -98,7 +98,7 @@ export function canExpand(state: KinState, player: string): boolean {
 export const REVOKE_POWER = 5;
 
 export const canRevoke = (state: KinState, player: string, total: number) =>
-  !!state.laws?.enacted && (total >= REVOKE_POWER || (hasCard(state, player, "influential") && influence(state, player) >= 1)) && hasActionCard(state, player, "revoke");
+  activeLaws(state).length > 0 && (total >= REVOKE_POWER || (hasCard(state, player, "influential") && influence(state, player) >= 1)) && hasActionCard(state, player, "revoke");
 
 // Influential: pay 1 influence instead of tapping extra sources for build power.
 const withInfluence = (state: KinState, player: string, action: Record<string, unknown>) => action.influence === true && hasCard(state, player, "influential") && influence(state, player) >= 1;
@@ -106,8 +106,10 @@ const withInfluence = (state: KinState, player: string, action: Record<string, u
 export function validateRevoke(state: KinState, player: string, action: Record<string, unknown>): string | null {
   const source = activationError(state, player, action, "revoke", "expansion");
   if (typeof source === "string") return source;
-  if (!state.laws?.enacted) return "There is no enacted law.";
-  if (action.law !== undefined && action.law !== state.laws.enacted) return "That law is not enacted.";
+  const laws = activeLaws(state);
+  if (!laws.length) return "There is no enacted law.";
+  if (action.law !== undefined && !laws.includes(String(action.law))) return "That law is not enacted.";
+  if (laws.length > 1 && action.law === undefined) return "Choose an enacted law.";
   if (action.influence === true) return withInfluence(state, player, action) ? null : "Influential and 1 influence are needed to revoke with influence.";
   const paid = payment(state, player, source, action, REVOKE_POWER);
   return typeof paid === "string" ? paid : null;
@@ -120,25 +122,25 @@ export function revoke(state: KinState, player: string, action: Record<string, u
     spendInfluence(state, player, 1);
     cards = [{ kind: source.kind, id: source.id }];
   } else cards = payment(state, player, source, action, REVOKE_POWER) as CardRef[];
-  discardEnacted(state);
+  discardLaw(state, action.law === undefined ? activeLaws(state)[0] : String(action.law));
   // Influential: another player revoking a law gives influence.
   for (const other of state.order) if (other !== player && hasCard(state, other, "influential")) gainInfluence(state, other);
   tap(state, cards);
 }
 
 // The activating card plus the extra cards must reach the power, without any card being left over that was not needed.
-function payment(state: KinState, player: string, source: Source, action: Record<string, unknown>, power: number): CardRef[] | string {
+export function payment(state: KinState, player: string, source: Source, action: Record<string, unknown>, power: number, phase: PlayPhase = "expansion"): CardRef[] | string {
   const extra = action.extra ?? [];
   if (!Array.isArray(extra)) return "Choose the cards to tap.";
-  const available = sourcesFor(state, player, "expansion");
+  const available = sourcesFor(state, player, phase);
   const cards: Source[] = [source];
   for (const ref of extra as CardRef[]) {
     const found = available.find(candidate => candidate.kind === ref?.kind && candidate.id === ref?.id);
-    if (!found || cards.some(card => card.kind === found.kind && card.id === found.id)) return "Choose each of your untapped Expansion characters or activation cards only once.";
+    if (!found || cards.some(card => card.kind === found.kind && card.id === found.id)) return `Choose each of your untapped ${phase === "control" ? "Control" : "Expansion"} characters or activation cards only once.`;
     cards.push(found);
   }
   const total = cards.reduce((sum, card) => sum + card.power, 0);
-  if (total < power) return `You need ${power} build power; the cards you chose have ${total}.`;
+  if (total < power) return `You need ${power} ${phase === "control" ? "" : "build "}power; the cards you chose have ${total}.`;
   if (cards.length > 1 && total - Math.min(...cards.map(card => card.power)) >= power) return "You chose more cards than needed.";
   return cards.map(card => ({ kind: card.kind, id: card.id }));
 }

@@ -5,7 +5,7 @@ import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { addItem } from "./cards";
 import { councilVoters } from "./council";
 import { eventOptions } from "./events";
-import { LAWS } from "./laws";
+import { LAWS, lawBoard } from "./laws";
 import { sourcesFor } from "./play";
 import { createRng, nextInt } from "./rng";
 import { addBuilding, setupChoices } from "./setup";
@@ -31,7 +31,7 @@ function playing(): KinState {
   dispatch(state, act("pickKin", "p1", { kin: "hammers" }));
   for (let guard = 0; state.world!.step === "setup" && guard < 50; guard++) {
     const choices = setupChoices(state)!;
-    dispatch(state, act("setupPlace", "p1", choices.task === "worksite" ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
+    dispatch(state, act("setupPlace", "p1", choices.tile !== null ? { side: choices.sides[0] } : { tile: choices.tiles[choices.tiles.length - 1] }));
   }
   while (state.world!.step === "characters") {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
@@ -52,6 +52,7 @@ function council(p1Villages: number, p2Villages: number, tech: string = PUBLIC_Z
   for (let index = 0; index < p1Villages; index++) addBuilding(state, { def: "village", owner: "p1", kind: "tile", tile: tileIndex(2, 2 + index) });
   for (let index = 0; index < p2Villages; index++) addBuilding(state, { def: "village", owner: "p2", kind: "tile", tile: tileIndex(8, 2 + index) });
   const science = state.items.find(item => item.def === "council-science") ?? addItem(state, "council-science", tech);
+  addItem(state, "harbor-construction", PUBLIC_ZONE);
   science.zone = tech;
   addItem(state, "council", "board:phase");
   state.laws = { deck: ["quarantine", "stockpiles", "naval-blockade", "general-blockade", "block-inquiry", "zone-districts"], discard: [], enacted: null };
@@ -128,9 +129,33 @@ test("an enacted law forbids its action cards", () => {
   addItem(state, "move", "court:p1", "p1");
   state.armies = [{ id: "a1", owner: "p1", tile: tileIndex(5, 5), strength: 1 }];
   assert.match(dispatch(state, act("activateMove", "p1", { kind: sourceNow.kind, card: sourceNow.id, army: "a1" })) ?? "", /General Blockade is enacted/);
+  state.laws!.enacted = "protect-ancestry";
+  state.play!.phase = "control";
+  addItem(state, "explore", "court:p1", "p1");
+  assert.match(dispatch(state, act("explore", "p1", { kind: sourceNow.kind, card: sourceNow.id, army: "a1" })) ?? "", /Protect Ancestry is enacted/);
   state.laws!.enacted = "disarmements";
   state.play!.phase = "expansion";
   assert.match(dispatch(state, act("deploy", "p1", { kind: "item", card: "x", building: "x" })) ?? "", /Disarmements is enacted/);
+});
+
+test("technology-gated laws enter the deck once their technology is known", () => {
+  const state = playing();
+  state.items = state.items.filter(item => !["harbor-construction", "archeology-science"].includes(item.def));
+  state.laws = undefined;
+  const gated = ["naval-blockade", "cargo-enforcement", "protect-ancestry"];
+  assert.ok(gated.every(id => !lawBoard(state).deck.includes(id)));
+  addItem(state, "harbor-construction", "board:research");
+  assert.ok(!lawBoard(state).deck.includes("naval-blockade"));
+  addItem(state, "harbor-construction", "court:p2", "p2");
+  assert.ok(lawBoard(state).deck.includes("naval-blockade"));
+  assert.ok(!lawBoard(state).deck.includes("cargo-enforcement"));
+  addItem(state, "archeology-science", PUBLIC_ZONE);
+  const board = lawBoard(state);
+  for (const id of gated) assert.equal(board.deck.filter(card => card === id).length, 1);
+  assert.deepEqual(lawBoard(state).deck, board.deck);
+  board.deck.splice(board.deck.indexOf("protect-ancestry"), 1);
+  board.discard.push("protect-ancestry");
+  assert.ok(!lawBoard(state).deck.includes("protect-ancestry"));
 });
 
 test("Revoke taps 5 power of Expansion cards to discard the enacted law", () => {

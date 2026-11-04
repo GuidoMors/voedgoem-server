@@ -17,11 +17,17 @@ export function naturalOrder(state: KinState): string[] {
   return [...state.order].sort((a, b) => place(a) - place(b));
 }
 
+export const draftOrder = (state: KinState) => state.world?.redraftPlayer ? [state.world.redraftPlayer] : naturalOrder(state);
+
 // The neutral characters and the characters of every picked Kin go on the stack.
 export function dealCharacters(state: KinState) {
   const picked = new Set(Object.values(state.world!.kinPicks));
   for (const def of CHARACTERS) {
     if (def.kin !== null && !picked.has(def.kin)) continue;
+    if (state.world!.redraftPlayer && state.cards[def.id]) {
+      if (state.cards[def.id].zone === "deck:character") state.cards[def.id].zone = "pool";
+      continue;
+    }
     state.cards[def.id] = { id: def.id, def: def.id, zone: "pool", owner: null, tapped: false };
   }
 }
@@ -38,16 +44,16 @@ export function eligibleCharacters(state: KinState, playerId: string, round: num
   return pool.filter(c => c.archetypes.includes(wanted) || c.archetypes.includes("universal"));
 }
 
-export const draftDone = (state: KinState) => state.world!.charPicks.length >= CHARACTER_ROUNDS.length * state.order.length;
+export const draftDone = (state: KinState) => state.world!.charPicks.length >= CHARACTER_ROUNDS.length * draftOrder(state).length;
 
 export function characterPicker(state: KinState): string | null {
   const world = state.world;
   if (!world || world.step !== "characters" || draftDone(state)) return null;
-  const order = naturalOrder(state);
+  const order = draftOrder(state);
   return order[world.charPicks.length % order.length];
 }
 
-export const characterRound = (state: KinState) => Math.floor(state.world!.charPicks.length / state.order.length);
+export const characterRound = (state: KinState) => Math.floor(state.world!.charPicks.length / draftOrder(state).length);
 
 // A turn with nothing to pick is skipped; when every turn is over the leftovers form the character deck.
 export function settleCharacters(state: KinState) {

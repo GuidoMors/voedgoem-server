@@ -39,8 +39,11 @@ export interface WorldState {
   charPicks: string[];
   // Player id -> number of starting setup steps completed (see setup.ts).
   setup: Record<string, number>;
+  // Player -> Markdown setup step -> placed building id. Missing on older saved games.
+  setupBuildings?: Record<string, Record<string, string>>;
   // Players whose Kin cards (technologies, faction effects, ...) have been claimed in the starting setup.
   claimed: string[];
+  redraftPlayer?: string;
 }
 
 export function createWorld(): WorldState {
