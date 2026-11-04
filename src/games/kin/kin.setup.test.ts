@@ -73,6 +73,37 @@ test("Hanshu get a second village at distance 3 joined by roads", () => {
   assert.equal(state.armies.length, 1);
 });
 
+test("Hanshu can place both starting villages on farmland", () => {
+  const state = atKin(["hanshu"], 4);
+  for (const tile of state.tiles) tile.terrain = "farmland";
+  pickAll(state, ["hanshu"]);
+  const first = setupChoices(state)!;
+  assert.equal(first.task, "village");
+  assert.ok(first.tiles.length > 0);
+  const firstTile = first.tiles[0];
+  assert.equal(dispatch(state, act("setupPlace", "p1", { tile: firstTile })), null);
+  const second = setupChoices(state)!;
+  assert.equal(second.task, "village2");
+  assert.ok(second.tiles.length > 0);
+  assert.ok(second.tiles.every(tile => tileDistance(firstTile, tile) === 3));
+  assert.equal(dispatch(state, act("setupPlace", "p1", { tile: second.tiles[0] })), null);
+  const villages = state.buildings.filter(building => building.def === "village");
+  assert.equal(villages.length, 2);
+  assert.ok(villages.every(building => state.tiles[building.tile].terrain === "farmland"));
+  assert.equal(state.buildings.filter(building => building.def === "road").length, 3);
+  assert.equal(state.armies.length, 1);
+  assert.equal(state.world!.step, "characters");
+});
+
+test("other Kin do not gain Hanshu's farmland starting placement", () => {
+  const state = atKin(["lumon"], 4);
+  for (const tile of state.tiles) tile.terrain = "plains";
+  state.tiles[0].terrain = "farmland";
+  pickAll(state, ["lumon"]);
+  assert.ok(!setupChoices(state)!.tiles.includes(0));
+  assert.match(dispatch(state, act("setupPlace", "p1", { tile: 0 })) ?? "", /cannot place/);
+});
+
 test("the Ark and the Great Tree set up their special buildings", () => {
   const picks = ["ark", "tree"];
   const state = atKin(picks, 2);

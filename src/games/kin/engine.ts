@@ -1,4 +1,5 @@
 import { createRng, nextFloat, randomSeed } from "./rng";
+import { relicTapError, tappedRelics, untappedRelics } from "./relics";
 import { kinById } from "./kins";
 import { characterPicker, characterRound, eligibleCharacters, settleCharacters } from "./draft";
 import { addItem, dealBoardCards } from "./cards";
@@ -14,7 +15,7 @@ import { embark, harvest, recruit, reinforce, validateEmbark, validateHarvest, v
 import { battle, battleRespond, reactionRespond, validateBattle, validateBattleRespond, validateReaction } from "./battle";
 import { activateAbility, flee, validateAbility, validateFlee } from "./neutrals";
 import { explore, reclaim, validateExplore, validateReclaim } from "./archeology";
-import { activateEvent, validateEvent } from "./events";
+import { activateEvent, eventOptions, validateEvent } from "./events";
 import { barter, dissolve, respond, validateBarter, validateDissolve, validateRespond, validateVerdict, verdict } from "./treaties";
 import { applySetup, settleSetup, validateSetup } from "./setup";
 import {
@@ -261,6 +262,41 @@ const HANDLERS: Record<string, ActionHandler> = {
     }
   },
   // The round loop: in natural order each player activates a card of the current phase or passes.
+  selectionStep: {
+    validate(state, action) {
+      if (!state.play || state.play.turn !== action.actor.id) return "Only the current player can share their selection step.";
+      if (action.round !== state.round || action.phase !== state.play.phase) return "The turn has changed.";
+      return ["default", "activation", "army", "tile", "building", "blueprint", "technology", "treaty", "dialog"].includes(String(action.step)) ? null : "Unknown selection step.";
+    },
+    apply(state, action) {
+      state.play!.selectionStep = String(action.step);
+    }
+  },
+  tapRelics: {
+    validate(state, action) {
+      const error = relicTapError(state, action.actor.id);
+      if (error) return error;
+      if (!Number.isInteger(action.amount) || (action.amount as number) < 1 || (action.amount as number) > untappedRelics(state.players[action.actor.id])) return "Choose a whole number of untapped relics.";
+      return ["gold", "lumber", "stone", "food"].includes(String(action.resource)) ? null : "Choose a basic resource.";
+    },
+    apply(state, action) {
+      const player = state.players[action.actor.id];
+      player.relicsTapped = tappedRelics(player) + (action.amount as number);
+      const resource = String(action.resource);
+      player.resources[resource] = (player.resources[resource] ?? 0) + (action.amount as number);
+    }
+  },
+  forcePass: {
+    validate(state, action) {
+      if (!state.play) return "The game is not being played yet.";
+      if (!state.order.includes(action.actor.id)) return "Only players can force pass.";
+      return state.play.turn === action.actor.id ? "Use Pass on your own turn." : null;
+    },
+    apply(state, action) {
+      const players = state.play!.forcePass ??= [];
+      if (!players.includes(action.actor.id)) players.push(action.actor.id);
+    }
+  },
   pass: {
     validate(state, action) {
       if (!state.play) return "The game is not being played yet.";
@@ -429,11 +465,25 @@ export function dispatch(state: KinState, action: Action): string | null {
   const handler = HANDLERS[action.type];
   if (!handler) return "Unknown action.";
   if (state.result && action.type !== "abort") return "The game is over.";
-  if (state.play?.reactions?.length && action.type !== "reactionRespond") return "A reaction is waiting for an answer.";
+  if (state.play?.reactions?.length && action.type !== "reactionRespond" && action.type !== "forcePass") return "A reaction is waiting for an answer.";
   const error = handler.validate(state, action);
   if (error) return error;
+  if (action.type === "selectionStep") {
+    handler.apply(state, action);
+    state.log.push({ seq: state.log.length + 1, action });
+    return null;
+  }
+  if (state.play && action.type !== "forcePass") delete state.play.selectionStep;
   resolvePredictions(state, action);
   handler.apply(state, action);
+  for (const player of Object.values(state.players)) {
+    if (player.relicsTapped !== undefined) player.relicsTapped = tappedRelics(player);
+  }
+  while (!state.result && state.play && (state.play.forcePass?.includes(state.play.turn) || (state.play.phase === "event" && eventOptions(state, state.play.turn).length === 0))) {
+    const autoPass: Action = { type: "pass", actor: { id: state.play.turn, username: state.players[state.play.turn].username, isHost: false } };
+    if (state.play.reactions?.length || HANDLERS.pass.validate(state, autoPass)) break;
+    pass(state);
+  }
   state.log.push({ seq: state.log.length + 1, action });
   return null;
 }

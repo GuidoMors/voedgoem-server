@@ -86,6 +86,7 @@ test("Tradegoods: harbors and held Trade Treaties produce 1 each at Seasons Chan
 
 test("Tradegoods are bartered as a chosen basic resource; Tradespeople gain gold for a received Trade Treaty", () => {
   const state = blank();
+  addItem(state, "tradegoods", "court:p1", "p1");
   state.players.p1.resources.tradegood = 3;
   own(state, "anvatsio");
   const base = { kind: "character", card: "anvatsio", to: "p2" };

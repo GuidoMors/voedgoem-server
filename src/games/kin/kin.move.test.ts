@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createState, dispatch, tilePlacer } from "./engine";
+import { createState, deserialize, dispatch, serialize, tilePlacer } from "./engine";
 import { addItem } from "./cards";
 import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { kin } from "./index";
+import { kinBotMove } from "./bots";
 import { legalSteps, sourcesFor } from "./play";
 import { sideBetween } from "./buildings";
 import { neighbors, sideEdge } from "./world";
@@ -14,7 +15,7 @@ import type { Action, KinState } from "./types";
 const act = (type: string, id: string, extra: Record<string, unknown> = {}): Action => ({ type, actor: { id, username: id, isHost: id === "p1" }, ...extra });
 
 // A solo game played through the whole setup, ending at the first Discovery phase.
-function playing(kinId: string, testing = false, skipEvent = true): KinState {
+function playing(kinId: string, testing = false): KinState {
   const state = createState(1);
   dispatch(state, act("join", "p1"));
   if (testing) dispatch(state, act("setOptions", "p1", { testing: true }));
@@ -37,21 +38,134 @@ function playing(kinId: string, testing = false, skipEvent = true): KinState {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
     assert.equal(dispatch(state, act("pickCharacter", "p1", { character: pick.id })), null);
   }
-  // The game starts in the Event phase; unless a test wants to see it, the only player passes it.
-  assert.equal(state.play!.phase, "event");
-  if (skipEvent) assert.equal(dispatch(state, act("pass", "p1")), null);
+  if (state.play!.phase === "event") assert.equal(dispatch(state, act("pass", "p1")), null);
   return state;
 }
 
-test("the round loop starts in the Event phase and moves on to Discovery when everybody passes", () => {
-  const state = playing("hammers", false, false);
+test("selection steps are public, validated, persisted and cleared by gameplay", () => {
+  const state = playing("hammers");
+  const round = state.round;
+  const phase = state.play!.phase;
+  assert.match(dispatch(state, act("selectionStep", "spectator", { step: "dialog", round, phase })) ?? "", /current player/);
+  assert.match(dispatch(state, act("selectionStep", "p1", { step: "arbitrary text", round, phase })) ?? "", /Unknown selection/);
+  assert.match(dispatch(state, act("selectionStep", "p1", { step: "dialog", round: round - 1, phase })) ?? "", /turn has changed/);
+  const passes = state.play!.passes;
+  assert.equal(dispatch(state, act("selectionStep", "p1", { step: "dialog", round, phase })), null);
+  assert.equal(state.play!.passes, passes);
+  assert.equal(state.play!.phase, phase);
+  const publicView = kin.snapshot(state, "spectator", new Set());
+  assert.equal(publicView.world!.play!.selectionStep, "dialog");
+  assert.equal(deserialize(serialize(state)).play!.selectionStep, "dialog");
+  assert.equal(dispatch(state, act("pass", "p1")), null);
+  assert.equal(state.play!.selectionStep, undefined);
+});
+
+test("the round loop automatically skips an Event phase with no playable events", () => {
+  const state = playing("hammers");
   assert.equal(state.world!.step, "done");
-  assert.equal(state.play!.phase, "event");
+  assert.equal(state.play!.phase, "discovery");
   assert.equal(state.play!.turn, "p1");
   assert.equal(state.round, 1);
   assert.equal(state.items.find(item => item.def === "seasons-change")!.tapped, true);
+});
+
+test("force pass skips every turn in this phase and expires at the next phase", () => {
+  let state = playing("hammers");
+  state.order.push("p2");
+  state.players.p2 = { id: "p2", username: "p2", connected: true, resources: {} };
+  state.world!.kinPicks.p2 = "tree";
+  addItem(state, "activation-discovery", "court:p1", "p1");
+  addItem(state, "activation-discovery", "court:p1", "p1");
+  assert.match(dispatch(state, act("forcePass", "spectator")) ?? "", /Only players/);
+  assert.match(dispatch(state, act("forcePass", "p1")) ?? "", /own turn/);
+  assert.equal(dispatch(state, act("forcePass", "p2")), null);
+  assert.equal(dispatch(state, act("forcePass", "p2")), null);
+  assert.deepEqual(state.play!.forcePass, ["p2"]);
+  state = deserialize(serialize(state));
+  const snap = kin.snapshot(state, "p2", new Set(["p1", "p2"])) as { world: { play: { forcePass: string[] } } };
+  assert.deepEqual(snap.world.play.forcePass, ["p2"]);
+  for (let turn = 0; turn < 2; turn++) {
+    const source = sourcesFor(state, "p1", "discovery")[0];
+    const army = state.armies.find(candidate => candidate.owner === "p1")!;
+    assert.equal(dispatch(state, act("activateMove", "p1", { kind: source.kind, card: source.id, army: army.id })), null);
+    assert.equal(dispatch(state, act("moveStop", "p1")), null);
+    assert.equal(state.play!.turn, "p1");
+    assert.equal(state.play!.passes, 1);
+    assert.equal(state.play!.phase, "discovery");
+  }
   assert.equal(dispatch(state, act("pass", "p1")), null);
-  assert.equal(state.play!.phase, "discovery");
+  assert.notEqual(state.play!.phase, "discovery");
+  assert.deepEqual(state.play!.forcePass, []);
+  assert.equal(dispatch(state, act("pass", "p1")), null);
+  assert.equal(state.play!.turn, "p2");
+});
+
+test("a human force pass and enabling force pass for every bot advances the phase", () => {
+  const state = playing("hammers");
+  const bots = ["bot-1", "bot-2", "bot-3"];
+  for (const [index, id] of bots.entries()) {
+    state.order.push(id);
+    state.players[id] = { id, username: id, connected: true, resources: {} };
+    state.world!.kinPicks[id] = ["hanshu", "wanderers", "beastmen"][index];
+  }
+  state.play!.turn = bots[0];
+  assert.equal(dispatch(state, act("forcePass", "p1")), null);
+  const enabled = new Set<string>();
+  for (const id of bots) {
+    assert.equal(state.play!.phase, "discovery");
+    assert.equal(state.play!.turn, id);
+    assert.equal(kinBotMove(state, id, { forcePass: false }), null);
+    // Host controls immediately pass an enabled bot if it is currently on turn.
+    assert.equal(dispatch(state, act("pass", id)), null);
+    enabled.add(id);
+    for (const bot of bots) {
+      const move = kinBotMove(state, bot, { forcePass: enabled.has(bot) });
+      if (move) assert.equal(dispatch(state, act(String(move.type), bot, move)), null);
+    }
+  }
+  assert.notEqual(state.play!.phase, "discovery");
+  assert.deepEqual(state.play!.forcePass, []);
+});
+
+test("relics tap for one basic resource in any phase without ending the turn", () => {
+  for (const phase of ["event", "discovery", "expansion", "control"] as const) {
+    let state = playing("hammers");
+    state.players.p1.resources.relic = 4;
+    state.play!.phase = phase;
+    state.play!.turn = "p1";
+    if (phase === "event") {
+      state.order.push("p2");
+      state.players.p2 = { id: "p2", username: "p2", connected: true, resources: {} };
+      state.world!.kinPicks.p2 = "tree";
+      addItem(state, "archeology", "board:phase");
+    }
+    const gold = state.players.p1.resources.gold ?? 0;
+    assert.match(dispatch(state, act("tapRelics", "spectator", { amount: 1, resource: "gold" })) ?? "", /not your turn/);
+    for (const amount of [0, -1, 1.5, 5]) assert.match(dispatch(state, act("tapRelics", "p1", { amount, resource: "gold" })) ?? "", /whole number/);
+    assert.match(dispatch(state, act("tapRelics", "p1", { amount: 1, resource: "mana" })) ?? "", /basic resource/);
+    assert.equal(dispatch(state, act("tapRelics", "p1", { amount: 3, resource: "gold" })), null);
+    assert.equal(state.players.p1.relicsTapped, 3);
+    assert.equal(state.players.p1.resources.relic, 4);
+    assert.equal(state.players.p1.resources.gold, gold + 3);
+    assert.equal(state.play!.turn, "p1");
+    assert.equal(state.play!.phase, phase);
+    state = deserialize(serialize(state));
+    assert.equal(state.players.p1.relicsTapped, 3);
+    assert.match(dispatch(state, act("tapRelics", "p1", { amount: 2, resource: "food" })) ?? "", /untapped relics/);
+    assert.equal(dispatch(state, act("tapRelics", "p1", { amount: 1, resource: "food" })), null);
+    assert.match(dispatch(state, act("tapRelics", "p1", { amount: 1, resource: "food" })) ?? "", /no untapped/);
+  }
+});
+
+test("Seasons Change untaps relics", () => {
+  const state = playing("hammers");
+  state.armies = [];
+  state.players.p1.resources.relic = 3;
+  state.players.p1.relicsTapped = 2;
+  state.play!.phase = "control";
+  assert.equal(dispatch(state, act("pass", "p1")), null);
+  assert.equal(state.players.p1.relicsTapped, 0);
+  assert.equal(state.players.p1.resources.relic, 3);
 });
 
 test("a Move taps the card, spends its power as speed and ends the turn when stopped", () => {

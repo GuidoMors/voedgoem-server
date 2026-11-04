@@ -64,7 +64,7 @@ const armyOnTile = (state: KinState, player: string, tile: number) => state.armi
 export function demolishPower(state: KinState, building: Building): number {
   const base = building.kind === "edge" ? WALL_DEMOLISH_POWER : DEMOLISH_POWER;
   const tiles = building.tile === ARK_BOARD ? [ARK_BOARD] : footprint(building);
-  return Math.max(0, base - smithDiscount(state, tiles));
+  return Math.max(0, base - smithDiscount(state, tiles, building.side));
 }
 
 // Your own buildings with an army of yours on their tile, and any wall next to an army of yours.

@@ -11,9 +11,9 @@ const outputs = [
   join(here, "..", "..", "voedgoem", "src", "games", "kin", "characters.data.ts")
 ];
 
-// Rulebook file -> Kin id (see kins.ts). 09-characters.md holds the neutral characters.
+// Rulebook file -> Kin id (see kins.ts). 10-1-neutral-characters.md holds the neutral characters.
 const FILES = {
-  "09-characters.md": null,
+  "10-1-neutral-characters.md": null,
   "12-1-kin-the-ethereal.md": "ethereal",
   "12-2-kin-dynasty-of-hanshu.md": "hanshu",
   "12-3-kin-wanderers.md": "wanderers",
@@ -34,6 +34,7 @@ for (const [file, kin] of Object.entries(FILES)) {
   const lines = readFileSync(join(source, file), "utf8").replace(/\r/g, "").split("\n");
   let current = null;
   let ability = null;
+  let inShort = false;
   for (const line of lines) {
     const head = /^## ([^|]+)\|([^|]+)\|([^|]+)\|\s*(\d+) power\s*$/.exec(line);
     if (head) {
@@ -54,7 +55,14 @@ for (const [file, kin] of Object.entries(FILES)) {
     } else if (/^No ability|^Has no ability/i.test(text)) {
       ability = null;
     } else if (ability && /^Short description:/i.test(text)) {
-      ability.text = plain(text.replace(/^Short description:\s*/i, ""));
+      ability.text = text.replace(/^Short description:\s*/i, "").trim();
+      inShort = true;
+    } else if (ability && inShort && text.startsWith("- ")) {
+      ability.text += `\n${text.replace(/,\s*$/, "")}`;
+    } else if (ability) {
+      inShort = false;
+      const detail = /^([A-Za-z][A-Za-z ]*):\s*(.+)$/.exec(text);
+      if (detail) (current.notes ??= []).push(`${detail[1].trim()}: ${detail[2].trim()}`);
     }
   }
 }
@@ -79,6 +87,8 @@ export interface CharacterDef {
   // Kin id, or null for a neutral character.
   kin: string | null;
   abilities: CharacterAbility[];
+  // Trigger, effect and extra rules of the abilities, shown behind the info icon.
+  notes?: string[];
 }
 
 export const CHARACTERS: readonly CharacterDef[] = ${JSON.stringify(characters, null, 2)};

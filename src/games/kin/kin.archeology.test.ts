@@ -6,6 +6,7 @@ import { addItem } from "./cards";
 import { placementError } from "./buildings";
 import { blocksAt, exploreOptions, isUnbuiltTile, reclaimOptions, ruinsSpots } from "./archeology";
 import { eventOptions } from "./events";
+import { kin } from "./index";
 import { sourcesFor } from "./play";
 import { createRng, nextInt } from "./rng";
 import { addBuilding, setupChoices } from "./setup";
@@ -62,15 +63,49 @@ function empty(phase: "event" | "expansion" | "control"): KinState {
 
 const onBoard = (state: KinState, def: string) => state.items.find(item => item.def === def && item.zone === "board:phase") ?? addItem(state, def, "board:phase");
 
-test("the game starts in the Event phase with Seasons Change already activated", () => {
+test("an empty Event phase is skipped with Seasons Change already activated", () => {
   const state = playing();
-  assert.equal(state.play!.phase, "event");
+  assert.equal(state.play!.phase, "discovery");
   assert.equal(state.round, 1);
   assert.equal(state.items.find(item => item.def === "seasons-change")!.tapped, true);
   assert.deepEqual(eventOptions(state), []);
-  assert.equal(dispatch(state, act("pass", "p1")), null);
-  assert.equal(dispatch(state, act("pass", "p2")), null);
+});
+
+test("Event turns without playable cards skip to a player with a faction event", () => {
+  const state = empty("event");
+  state.world!.kinPicks.p2 = "ark";
+  addItem(state, "the-eternal-ark", "court:p2", "p2");
+  onBoard(state, "calculators");
+  assert.deepEqual(eventOptions(state, "p1"), []);
+  assert.deepEqual(eventOptions(state, "p2"), ["calculators"]);
+  const snap = kin.snapshot(state, "p1", new Set(["p1", "p2"])) as { world: { play: { autoEventPass: boolean } } };
+  assert.equal(snap.world.play.autoEventPass, true);
+  assert.equal(dispatch(state, act("forcePass", "p2")), null);
   assert.equal(state.play!.phase, "discovery");
+  assert.deepEqual(state.play!.forcePass, []);
+});
+
+test("automatic Event passes leave a playable player's turn available", () => {
+  const state = empty("event");
+  state.world!.kinPicks.p1 = "ark";
+  addItem(state, "the-eternal-ark", "court:p1", "p1");
+  state.cards["other-character"] = { id: "other-character", def: "steen", owner: "p2", zone: "court:p2", tapped: false };
+  onBoard(state, "calculators");
+  onBoard(state, "archeology");
+  assert.equal(dispatch(state, act("activateEvent", "p1", { def: "archeology" })), null);
+  assert.equal(state.play!.phase, "event");
+  assert.equal(state.play!.turn, "p1");
+  assert.equal(state.play!.passes, 1);
+  assert.deepEqual(eventOptions(state, "p1"), ["calculators"]);
+});
+
+test("automatic Event passes wait for pending council votes", () => {
+  const state = empty("event");
+  onBoard(state, "council");
+  assert.equal(dispatch(state, act("activateEvent", "p1", { def: "council" })), null);
+  assert.ok(state.play!.council);
+  assert.equal(state.play!.phase, "event");
+  assert.equal(state.play!.passes, 0);
 });
 
 test("after the Control phase the Event phase starts again, and Seasons Change untaps the other event cards", () => {

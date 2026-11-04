@@ -1,6 +1,7 @@
 import type { GameModule } from "../types";
 import { armyLimit, population, production } from "./buildings";
 import { AREAS_NEEDED, areaLeaders, standings } from "./victory";
+import { relicTapError, tappedRelics } from "./relics";
 import { choosesRuins, exploreOptions, reclaimOptions } from "./archeology";
 import { oxyliumTiles } from "./ark";
 import { eventOptions } from "./events";
@@ -25,6 +26,7 @@ import { hasActionCard, moveTargets, movableArmies, sourcesFor, startPlay } from
 import { publicizeOptions, researchOptions } from "./tech";
 import { barterInfo, dissolvable } from "./treaties";
 import { RIVER_COUNT, riverNext, riverStarts } from "./world";
+import { kinBotMove } from "./bots";
 import { MAX_PLAYERS, MAX_USERS, MIN_PLAYERS, type Action, type KinState } from "./types";
 
 const DESCRIPTION = "An asymmetric strategy game for up to 10 players. Pick a Kin, build, trade, fight and win the chapter.";
@@ -72,6 +74,8 @@ export const kin: GameModule<KinState> = {
     return error ? { error } : "save";
   },
 
+  botMove: kinBotMove,
+
   openSpots(state, userId) {
     if (state.phase !== "lobby" || state.players[userId] || state.seats.length >= MAX_PLAYERS) return [];
     return [{ type: "join" }];
@@ -104,6 +108,8 @@ export const kin: GameModule<KinState> = {
         username: state.players[id].username,
         connected: connected.has(id),
         resources: shownResources(state, id),
+        relicsTapped: tappedRelics(state.players[id]),
+        relicTapReason: state.result ? "The game is over." : relicTapError(state, id),
         characters: Object.values(state.cards).filter(card => card.owner === id).length,
         population: population(state, id),
         armies: state.armies.filter(army => army.owner === id).length,
@@ -160,7 +166,10 @@ export const kin: GameModule<KinState> = {
         play: state.play && {
           phase: state.play.phase,
           turn: state.play.turn,
+          selectionStep: state.play.selectionStep ?? null,
           passes: state.play.passes,
+          forcePass: state.play.forcePass ?? [],
+          autoEventPass: state.play.phase === "event" && eventOptions(state, viewerId).length === 0,
           move: state.play.move && { ...state.play.move, targets: moveTargets(state, state.play.move) },
           // What the player on turn can tap, which armies could go somewhere with a Move, and the technologies they can Research or Publicize.
           options: state.play.phase === "control" && !state.play.move

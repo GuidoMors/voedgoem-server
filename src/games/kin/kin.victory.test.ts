@@ -117,7 +117,7 @@ test("nothing happens before the end of the Control phase, and no winner means p
   const none = board(3);
   endControl(none);
   assert.equal(none.result, undefined);
-  assert.equal(none.play!.phase, "event");
+  assert.equal(none.play!.phase, "discovery");
   assert.equal(none.round, 2);
 });
 

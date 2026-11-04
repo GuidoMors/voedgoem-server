@@ -38,9 +38,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
     "name": "Worksite",
     "kind": "slice",
     "icons": [
+      "🪚",
       "⛏️",
-      "🪏",
-      "🪚"
+      "🪏"
     ],
     "kin": null,
     "garrison": 0
@@ -129,7 +129,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
       "♜"
     ],
     "kin": null,
-    "garrison": 4
+    "garrison": 6
   },
   {
     "id": "grand-observatory",

@@ -18,6 +18,8 @@ export interface CharacterDef {
   // Kin id, or null for a neutral character.
   kin: string | null;
   abilities: CharacterAbility[];
+  // Trigger, effect and extra rules of the abilities, shown behind the info icon.
+  notes?: string[];
 }
 
 export const CHARACTERS: readonly CharacterDef[] = [
@@ -35,8 +37,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Ether Trading",
-        "text": "You are unaffected by the event Lapsed Treaties."
+        "text": "You are unaffected by the event [[Lapsed Treaties]]."
       }
+    ],
+    "notes": [
+      "Trigger: Lapsed Treaties event is activated.",
+      "Effect: Trade Treaties you hold, and Trade Treaties of yours held by others, will automatically be dissolved in the Lapsed Treaties event due to not being connected.",
+      "Extra Rules: You still need to be connected to another player to barter a trade treaty."
     ]
   },
   {
@@ -53,8 +60,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Marching Orders",
-        "text": "The power of this character is equal the amount of access treaties in your court, to a maximum of 5."
+        "text": "The [[power]] of this character is equal the amount of [[access treaty|access treaties]] in your [[court]], to a maximum of 5."
       }
+    ],
+    "notes": [
+      "Trigger: Seasons Change event is activated",
+      "Effect: It sets the power of this character to the number of access treaties in your court, up to a maximum of 5 power."
     ]
   },
   {
@@ -71,8 +82,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Passive Learning",
-        "text": "When someone receives your trade treaty, gain 1 gear."
+        "text": "When someone receives your [[trade treaty]], gain 1 [[gear]]."
       }
+    ],
+    "notes": [
+      "Condition: Barter involves a trade treaty of the owner of this character whose receiver never has received a trade treaty from the owner of this character before.",
+      "Trigger: Barter is accepted.",
+      "Effect: Gain 1 gear."
     ]
   },
   {
@@ -89,8 +105,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Mad Science",
-        "text": "(Requires 4 technologies): Gain 1 gear."
+        "text": "(Requires 4 [[technology|technologies]]): Gain 1 [[gear]]."
       }
+    ],
+    "notes": [
+      "Condition: Discovery Phase. Have at least 4 technologies in your court.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Tap this character.",
+      "Effect: Gain 1 gear."
     ]
   },
   {
@@ -107,8 +129,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Cowardly",
-        "text": "In reaction to Battle being declared against your army, you can move it to an adjacent plains."
+        "text": "In reaction to [[Battle]] being declared against your [[army]], you can move it to an adjacent [[plains]]."
       }
+    ],
+    "notes": [
+      "Condition: Battle is declared on an army you own with an unbuilt plains adjacent.",
+      "Trigger: Battle, before the Payment step",
+      "On trigger: select an unbuilt plains adjacent to the army on which battle is declared or decline.",
+      "Payment: Tap this character.",
+      "Effect: Move your army to an adjacent plains. The Battle is cancelled."
     ]
   },
   {
@@ -125,8 +154,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "High Alchemy",
-        "text": "[1 mana]: Gain 1 basic resource."
+        "text": "[1 [[mana]]]: Gain 1 [[basic resource]]."
       }
+    ],
+    "notes": [
+      "Condition: Discovery Phase. has 1 mana.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select a basic resource type of their choice.",
+      "Payment: 1 mana. Tap this character.",
+      "Effect: Gain 1 basic resource of the selected choice."
     ]
   },
   {
@@ -154,8 +190,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Webbings",
-        "text": "[3 mana]: Web an army adjacent to your army. They are exhausted: they cannot Move, Reinforce, Harvest or Battle this round."
+        "text": "[3 [[mana]]]: Web an [[army]] adjacent to your army. They are [[exhausted]]: they cannot [[Move]], [[Reinforce]], [[Harvest]] or [[Battle]] this [[round]]."
       }
+    ],
+    "notes": [
+      "Condition: You own an army that is adjacent to an army owned by another player. Expansion Phase. Have 3 mana.",
+      "Trigger: Click this ability ruletext.",
+      "On trigger: Select an army owned by another player that is adjacent to an army owned by you.",
+      "Payment: Tap this character. 3 mana.",
+      "Effect: The army gains the exhaust status."
     ]
   },
   {
@@ -172,8 +215,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Stonemasonry",
-        "text": "Gain 1 stone."
+        "text": "Gain 1 [[stone]]."
       }
+    ],
+    "notes": [
+      "Condition: Expansion Phase.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Tap this character.",
+      "Effect: Gain 1 Stone."
     ]
   },
   {
@@ -201,8 +250,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Traveller",
-        "text": "You may Harvest on plains to gain 1 food."
+        "text": "You may [[Harvest]] on [[plains]] to gain 1 [[food]]."
       }
+    ],
+    "notes": [
+      "Trigger: Harvest, before on trigger step.",
+      "Effect: Add armies on plains tiles to the allowed options of the on trigger step of this Harvest. If that option is chosen, gain 1 food."
     ]
   },
   {
@@ -219,8 +272,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Dogs of War",
-        "text": "You may Recruit with gold instead of food."
+        "text": "You may [[Recruit]] with [[gold]] instead of [[food]]."
       }
+    ],
+    "notes": [
+      "Condition: have gold equal to the food cost of the recruit.",
+      "Trigger: Recruit, before payment step",
+      "On trigger: accept the trigger or decline",
+      "Effect: This Recruit action costs gold instead of food.",
+      "Extra Rules: The gold cost is equal to the same number that it would have cost in food."
     ]
   },
   {
@@ -237,8 +297,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Reinforcer",
-        "text": "You may Reinforce armies from a distance of two tiles, instead of adjacent."
+        "text": "You may [[Reinforce]] [[army|armies]] from a [[distance]] of two tiles, instead of adjacent."
       }
+    ],
+    "notes": [
+      "Trigger: Reinforce, before choosing the",
+      "Effect: For this reinforce action, add armies with a distance of 2 tiles away to the options for this player."
     ]
   },
   {
@@ -255,8 +319,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Infiltrate",
-        "text": "An army you own may leaps over an adjacent building."
+        "text": "An [[army]] you own may leaps over an adjacent building."
       }
+    ],
+    "notes": [
+      "Condition: Control Phase. You own an army adjacent to a building, and the tile with that building on it has an unbuilt tile without an army adjacent.",
+      "On trigger: select an army adjacent to a building owned by another player. Then select a building owned by another player adjacent to the selected army. Then select an unbuilt tile without an army on it adjacent to the selected building.",
+      "Payment: Tap this character",
+      "Effect: Move the army to the selected tile."
     ]
   },
   {
@@ -273,8 +343,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Greed of Horus",
-        "text": "As an attacking general, the power of this character is equal to the gold you own, to a maximum of 5."
+        "text": "As an [[attacking general]], the [[power]] of this character is equal to the [[gold]] you own, to a maximum of 5."
       }
+    ],
+    "notes": [
+      "Reaction to: Battle being declared with this character as the attacking general",
+      "Triggers before: Effect",
+      "Effect: The power of this character is equal the amount of gold you own, to a maximum of 5."
     ]
   },
   {
@@ -291,8 +366,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Smite",
-        "text": "[2 mana]: Add 2 strength to a Battle with this character as its general."
+        "text": "[2 [[mana]]]: Add 2 [[strength]] to a [[Battle]] with this character as its [[general]]."
       }
+    ],
+    "notes": [
+      "Condition: has 2 mana",
+      "Reaction to: Battle being declared with this character as a general",
+      "Trigger: Battle, before the effect step",
+      "On trigger: decline trigger or continue",
+      "Payment: 2 mana",
+      "Effect: Add 2 strength to your strength pool this Battle."
     ]
   },
   {
@@ -320,8 +403,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Foresight",
-        "text": "Claim a character from the character deck, then put another character from your court into the character deck."
+        "text": "[[Claim]] a [[character]] from the [[character deck]], then put another character from your [[court]] into the character deck."
       }
+    ],
+    "notes": [
+      "Condition: Discovery Phase.",
+      "On trigger: Select a character from the character deck, then select a character from your court. You cannot select the Ethereal. You cannot select a hostage in your court.",
+      "Effect: Tap this character. Put the selected character from your court into the character deck. Claim the selected character from the character deck."
     ]
   },
   {
@@ -338,8 +426,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Grand Works",
-        "text": "You may pay an authority to increase your votes during Council by 3."
+        "text": "You may pay an [[authority]] to increase your votes during [[Council]] by 3."
       }
+    ],
+    "notes": [
+      "Condition: Have 1 or more influence.",
+      "Trigger: Council, before the effect step.",
+      "On trigger: Accept or decline.",
+      "Payment: 1 influence.",
+      "Effect: Your votes for that council are increased by 3."
     ]
   },
   {
@@ -356,8 +451,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Beard of the Ages",
-        "text": "You may Recruit for 1 authority."
+        "text": "You may [[Recruit]] for 1 [[authority]]."
       }
+    ],
+    "notes": [
+      "Condition: Have 1 or more influence.",
+      "Trigger: Recruit, before on trigger.",
+      "On trigger: Decline trigger or continue.",
+      "Payment: 1 influence.",
+      "Effect: Skip selecting a character to tap for Recruit. Skip default payment of Recruit."
     ]
   },
   {
@@ -375,8 +477,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Strategic Influence",
-        "text": "[1 authority]: Predict the number of hits the opponent will roll in a Battle where this character is a general. If correct, block all hits dealt by the opponent."
+        "text": "[1 [[authority]]]: Predict the number of [[hit]]s the opponent will roll in a [[Battle]] where this [[character]] is a [[general]]. If correct, [[block]] all hits dealt by the opponent."
       }
+    ],
+    "notes": [
+      "Condition: this character is used as a general, attacking or defending.",
+      "Trigger: Battle, before the effect step",
+      "On trigger: you write down a number, or decline the ability.",
+      "Payment: 1 influence.",
+      "Effect: if at the Battle step Resolve Dice the amount of hits is equal to the predicted number this Battle, block all hits of the enemy."
     ]
   },
   {
@@ -393,8 +502,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Heavenly Virtues",
-        "text": "[4 authority]: Convert a hostage in your court into a useable character."
+        "text": "[4 [[authority]]]: Convert a [[hostage]] in your [[court]] into a useable [[character]]."
       }
+    ],
+    "notes": [
+      "Condition: Expansion Phase. You have a hostage in your court. You have at least 4 influence.",
+      "Trigger: Click this ability ruletext.",
+      "On trigger: Select a hostage in your court.",
+      "Payment: Tap this character. 4 influence.",
+      "Effect: The selected character is no longer a hostage. You can freely use them as your own character."
     ]
   },
   {
@@ -411,8 +527,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Disloyal",
-        "text": "If unblocked hits are dealt to your army in combat with this character as its general, you must pay 1 authority, or Bulu joins the opponent's court."
+        "text": "If unblocked hits are dealt to your [[army]] in combat with this [[character]] as its general, you must pay 1 [[authority]], or Bulu joins the opponent's [[court]]."
       }
+    ],
+    "notes": [
+      "Condition: This character is used as a general, and the opponent deals unblocked hits to your army.",
+      "Trigger: Battle, before Ambush.",
+      "On trigger: Accept or decline. Accept can only be chosen if you have at least 1 influence.",
+      "Payment: Pay 1 influence.",
+      "Effect: Bulu remains in your court.",
+      "On decline: Bulu leaves your court and joins the opposing player's court. Bulu becomes fully owned by the opposing Kin and retains this ability."
     ]
   },
   {
@@ -429,8 +553,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Long Reach",
-        "text": "When you Move using this character, you may spend 1 authority to set this character's power to 6 for the Move."
+        "text": "When you [[Move]] using this [[character]], you may spend 1 [[authority]] to set this character's [[power]] to 6 for the Move."
       }
+    ],
+    "notes": [
+      "Condition: This character is used for a Move, and you have at least 1 influence.",
+      "Trigger: Move, before the Effect step.",
+      "On trigger: Accept or decline.",
+      "Payment: Pay 1 influence.",
+      "Effect: Set this character's power to 6 for the Move."
     ]
   },
   {
@@ -447,8 +578,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Seafarer",
-        "text": "Embarked armies Move onto oceans at a tile speed cost of ⅓ instead of ½."
+        "text": "[[Embarked]] [[army|armies]] [[Move]] onto [[ocean]]s at a [[tile speed cost]] of ⅓ instead of ½."
       }
+    ],
+    "notes": [
+      "Condition: Army used in the Move is embarked.",
+      "Trigger: Move, before effect step.",
+      "Effect: the embarked Army has an ocean tiles at a cost of ⅓ instead of ½ as long as they remain embarked."
     ]
   },
   {
@@ -465,8 +601,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Expert Hunter",
-        "text": "(3 relics) - When you use this character to Harvest on a forest, gain 2 food."
+        "text": "(3 [[relics]]) - When you use this [[character]] to [[Harvest]] on a [[forest]], gain 2 [[food]]."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 3 [[relics]]. The Harvesting army is on a forest.",
+      "Trigger: Harvest, after on trigger step.",
+      "Effect: gain 2 [[food]] instead of the 1 resource of that tile's type."
     ]
   },
   {
@@ -483,8 +624,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Blizzard",
-        "text": "[4 mana] - All armies on unbuilt snow suffer Attrition."
+        "text": "[4 [[mana]]] - All armies on unbuilt snow suffer [[Attrition]]."
       }
+    ],
+    "notes": [
+      "Condition: Expansion Phase. You have at least 4 [[mana]].",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Pay 4 [[mana]]. Tap this [[character]].",
+      "Effect: Activate the Attrition event again, even though its tapped."
     ]
   },
   {
@@ -501,8 +648,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Winterhoard",
-        "text": "When you Reclaim using thischaracter to gain 1 mana."
+        "text": "When you [[Reclaim]] using this[[character]] to gain 1 [[mana]]."
       }
+    ],
+    "notes": [
+      "Condition: You are performing a Reclaim action with this character",
+      "Trigger: Reclaim, after it fully resolves",
+      "Effect: Gain 1 mana."
     ]
   },
   {
@@ -519,8 +671,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "The Great Fortifier",
-        "text": "This character's power is equal to the number of Forts you have, to a maximum of 5."
+        "text": "This [[character]]'s [[power]] is equal to the number of [[Fort]]s you have, to a maximum of 5."
       }
+    ],
+    "notes": [
+      "Trigger: [[Seasons Change]]",
+      "Effect: Set this character's power to to the number of forts owned by this player, up to a maximum of 5 strength."
     ]
   },
   {
@@ -548,8 +704,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "The White Wave",
-        "text": "[4 mana]  - (4 virtue): Force a player to accept a barter of a selected treaty."
+        "text": "[4 [[mana]]]  - (4 [[virtue]]): Force a player to accept a barter of a selected [[treaty]]."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 4 virtue and 4 mana. Can barter at least 1 treaty type.",
+      "Trigger: Click this ability ruletext.",
+      "On trigger: Select a player. Select a Treaty Type from a list of options of all treaties that you can barter to that player.",
+      "Payment: Pay 4 mana. Tap this character.",
+      "Effect: The selected player gains a treaty of the selected type."
     ]
   },
   {
@@ -566,8 +729,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Turning of Hearts",
-        "text": "[2 mana] - (6 virtue): Transfer command of a lesser strength army adjacent to an army you own, if they hold at least 3 of your treaties."
+        "text": "[2 [[mana]]] - (6 [[virtue]]): Transfer command of a lesser [[strength]] [[army]] adjacent to an army you own, if they hold at least 3 of your [[treaty|treaties]]."
       }
+    ],
+    "notes": [
+      "Condition: Discovery Phase. You have at least 6 virtue. You own an army with greater strength than an adjacent army on an unbuilt tile owned by another player who holds at least 3 of your treaties.",
+      "Trigger: Click this ability ruletext.",
+      "On trigger: Select an army of lesser strength of another player that is adjacent to an army of greater strength that you own.",
+      "Payment: Pay 2 mana. Tap this character.",
+      "Effect: Transfer the selected army to you.",
+      "Extra Rules: This does not break any treaties."
     ]
   },
   {
@@ -584,8 +755,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Worldly Transfusion",
-        "text": "(3 virtue): Pay 1 of each basic resource to gain 2 mana."
+        "text": "(3 virtue): Pay 1 of each [[basic resource]] to gain 2 [[mana]]."
       }
+    ],
+    "notes": [
+      "Condition: Expansion Phase. You have at least 3 virtue.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Pay 1 lumber, 1 gold, 1 stone, and 1 food. Tap this character.",
+      "Effect: Gain 2 mana."
     ]
   },
   {
@@ -602,8 +779,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Redemption",
-        "text": "(7 virtue): While this character is in your court, no character you own can be held hostage or moved to another court."
+        "text": "(7 virtue): While this character is in your [[court]], no [[character]] you own can be held [[hostage]] or moved to another court."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 7 virtue.",
+      "Trigger: Someone has to take a hostage from your court.",
+      "Effect: They cannot choose your characters as hostage options."
     ]
   },
   {
@@ -620,8 +802,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "The Great Hunt",
-        "text": "(2 virtue): When you cause an army to disband with this character as a general, untap this character and Move the army to an adjacent non-ocean tile."
+        "text": "(2 virtue): When you cause an [[army]] to [[disband]] with this [[character]] as a [[general]], untap this [[character]] and [[Move]] the army to an adjacent non-ocean tile."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 2 virtue. attacked tile has no more army. there is a non-ocean tile adjacent to the army.",
+      "Trigger: Battle, after the entire action has resolved",
+      "On trigger: Select a non-ocean tile adjacent to the attacking army, or decline.",
+      "Payment: None.",
+      "Effect: Untap this character. Move the attacking army to selected tile."
     ]
   },
   {
@@ -638,8 +827,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Intimidating Presence",
-        "text": "(5 virtue): armies with less than 3 strength cannot be used to declare Battle against you."
+        "text": "(5 virtue): [[army|armies]] with less than 3 [[strength]] cannot be used to declare [[Battle]] against you."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 5 virtue. attacking army is 1 or 2 strength.",
+      "Trigger: Battle, before on trigger",
+      "Effect: Your armies and buidlings are not eligible sources to battle."
     ]
   },
   {
@@ -656,8 +850,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Trampler",
-        "text": "[1 mana]: Choose an army of 1 strength adjacent to an army you own. Deal 1 hit to it."
+        "text": "[1 [[mana]]]: Choose an [[army]] of 1 [[strength]] adjacent to an army you own. Deal 1 [[hit]] to it."
       }
+    ],
+    "notes": [
+      "Condition: There is an army of strength 1 adjacent to an army you own.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Pay 1 mana. Tap this character.",
+      "Effect: Choose an army of strength 1 adjacent to an army you own. Deal 1 hit to it."
     ]
   },
   {
@@ -674,8 +874,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Feast on Slaughter",
-        "text": "When this character is used as an attacking general and your army survives, it gains 1 strength."
+        "text": "When this [[character]] is used as an [[attacking general]] and your [[army]] survives, it gains 1 [[strength]]."
       }
+    ],
+    "notes": [
+      "Condition: This character is used to declare Battle, and the attacking army survives.",
+      "Trigger: Battle, after the action fully resolves.",
+      "Effect: The attacking army gains 1 strength."
     ]
   },
   {
@@ -692,8 +897,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Of Three Minds",
-        "text": "Randomly either:"
+        "text": "Randomly either:\n- gain 1 [[strength]]\n- [[move]] an [[army]] to a [[desert]]\n- [[untap]] another [[character]] in your [[court]]."
       }
+    ],
+    "notes": [
+      "Condition: Expansion Phase.",
+      "Trigger: Click this ability ruletext.",
+      "On trigger: tap this character. roll a d3. on dice result 1: select an army not at maximum strength. on dice result 2: select an army adjacent to a desert, then select an adjacent desert. on dice result 3: select a tapped character in your court. or decline.",
+      "Effect: on dice result 1: gain 1 strength on the selected army. on dice result 2: move the selected army to the selected tile. on dice result 3: untap the tapped character"
     ]
   },
   {
@@ -712,6 +923,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "name": "Out Thinkin’",
         "text": "Choose one:"
       }
+    ],
+    "notes": [
+      "Condition: Discovery Phase. You can pay the resource cost of at least one option.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: select one of the options. You must be able to pay the resource of the option.",
+      "Payment: Tap this character. pay the selected resource to be paid.",
+      "Effect: gain the selected resource to be gained."
     ]
   },
   {
@@ -728,8 +946,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Black Tar Skin",
-        "text": "When this character is used as a general, attacking or defending, add 2 blocks to your combat result."
+        "text": "When this [[character]] is used as a [[general]], attacking or defending, add 2 [[blocks]] to your combat result."
       }
+    ],
+    "notes": [
+      "Condition: This character is used as a general, attacking or defending.",
+      "Trigger: Battle, before the Resolve Dice step.",
+      "Effect: Add 2 blocks to your dice result."
     ]
   },
   {
@@ -746,8 +969,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Troll King Stash",
-        "text": "When this character is the attacking general in Battle, you may reroll up to 3 combat dice after seeing the results."
+        "text": "When this character is the [[attacking general]] in [[Battle]], you may reroll up to 3 [[combat dice]] after seeing the results."
       }
+    ],
+    "notes": [
+      "Condition: This character is the attacking general.",
+      "Trigger: Battle, before the Resolve Dice step.",
+      "On Trigger: accept or decline. Then select 3 of the dice this player rolled this combat.",
+      "Effect: Reroll the selected dice."
     ]
   },
   {
@@ -764,8 +993,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Archeological Research",
-        "text": "(Ark is adjacent to a tile building of another player): With the other player's permission, you both gain 1 gear."
+        "text": "([[Ark]] is adjacent to a [[tile building]] of another player): With the other player's permission, you both gain 1 [[gear]]."
       }
+    ],
+    "notes": [
+      "Condition: The Ark is adjacent to a tile building belonging to another player.",
+      "Trigger: Click this ability ruletext. Select the adjacent tile building.",
+      "On Trigger: The owner of the selected villageor city may choose to agree or decline.",
+      "Payment: Regardless of if the other player agreed: Tap this character.",
+      "Effect: Only if the other player agreed: you gain one gear, the owner of the tile building gains 1 gear."
     ]
   },
   {
@@ -782,8 +1018,11 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Agricultural Dynamics",
-        "text": "When the Ark is on plains, its worksites produce 1 food during Mass Harvest."
+        "text": "When the [[Ark]] is on [[plains]], its worksites [[produce]] 1 [[food]] during [[Mass Harvest]]."
       }
+    ],
+    "notes": [
+      "Effect: Add to the condition of Mass Harvest: plains as as possible tile that The Ark Building can be on in addition to farmland, forest, or mountain. Add tot he effect of Mass Harvest: If The Ark is on a plains, gain 1 food for each worksite on the ark board."
     ]
   },
   {
@@ -800,8 +1039,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Barrage Cannon",
-        "text": "[2 mana]: Reduce the strength of and army adjacent the Ark by 3. (this counts as an attack, and may break treaties)."
+        "text": "[2 [[mana]]]: Reduce the [[strength]] of and [[army]] adjacent the [[Ark]] by 3. (this counts as an attack, and may break [[treaty|treaties]])."
       }
+    ],
+    "notes": [
+      "Condition: There is an army adjacent to the Ark.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: select an army adjacent to the Ark.",
+      "Payment: Pay 2 mana. Tap this character.",
+      "Effect: The selected army loses 3 strength. If that reduces them to 0 or lower, they disband.",
+      "Extra Rules: This counts as an attack for the purpose of breaking treaties."
     ]
   },
   {
@@ -818,8 +1065,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Geofusion",
-        "text": "When the Ark is on a mountain, its garrison is 10."
+        "text": "When the [[Ark]] is on a [[mountain]], its [[garrison]] is 10."
       }
+    ],
+    "notes": [
+      "Condition: The Ark is on a mountain. Battle is declared against the tile the Ark is on.",
+      "Trigger: Battle, before the effects step.",
+      "Effect: Set the Ark's garrison to 10 for this Battle."
     ]
   },
   {
@@ -836,8 +1088,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Sabotage",
-        "text": "[1 mana]: Choose a building next to an army. For the rest of the round, that building's garrison is not added to Battle."
+        "text": "[1 [[mana]]]: Choose a [[building]] next to an [[army]]. For the rest of the [[round]], that building's [[garrison]] is not added to [[Battle]]."
       }
+    ],
+    "notes": [
+      "Condition: There is a building next to an army you own.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select a building next to an army you own.",
+      "Payment: Pay 1 mana. Tap this character.",
+      "Effect: For the rest of the round, the selected building's garrison is not added to Battle.",
+      "Extra Rules: This is not an attack, it does not break any [[treaty|treaties]]."
     ]
   },
   {
@@ -854,8 +1114,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Aero Magnetism",
-        "text": "You may Explore with the Ark instead of an army when the Ark is adjacent, when you do, immediately Reclaim for free if its a treasure block or relic block."
+        "text": "You may [[Explore]] with the [[Ark]] instead of an [[army]] when the Ark is adjacent, when you do, immediately [[Reclaim]] for free if its a [[treasure block]] or [[relic block]]."
       }
+    ],
+    "notes": [
+      "Condition: Your Ark is adjacent to a tile with a ruins on it",
+      "Trigger: For Explore, when decidign whether it is allowed.",
+      "Effect: Add the Ark to the list of options. If it is chosen: immediately [[Reclaim]] without payment on that tile."
     ]
   },
   {
@@ -872,8 +1137,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Bountiful Quarry",
-        "text": "(3 breweries): This character's power is 4."
+        "text": "(3 [[brewery|breweries]]): This character's power is 4."
       }
+    ],
+    "notes": [
+      "Trigger: Seasons Change, after it resolves fully",
+      "Effect: Set this character’s power to 4."
     ]
   },
   {
@@ -890,8 +1159,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Arkenax, the Golden Hammer",
-        "text": "[2 gold] - (2 breweries): Transfer 1 strength from an adjacent army to your army."
+        "text": "[2 [[gold]]] - (2 [[brewery|breweries]]): Transfer 1 [[strength]] from an adjacent [[army]] to your army."
       }
+    ],
+    "notes": [
+      "Condition: Own at least 2 breweries. There is an army adjacent to an army you own.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Pay 2 gold. Tap this character.",
+      "On Trigger: Select an army adjacent to an army you own.",
+      "Effect: Transfer 1 strength from the selected army to your army."
     ]
   },
   {
@@ -908,8 +1184,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Gold Refiner",
-        "text": "Turn up to X stone into X gold, where the maximum of X is the number of breweries you control."
+        "text": "Turn up to X [[stone]] into X [[gold]], where the maximum of X is the number of [[brewery|breweries]] you control."
       }
+    ],
+    "notes": [
+      "Condition: You control at least 1 brewery and have at least 1 stone.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Choose how much stone to turn into gold, up to the number of breweries you control, and up to the maximum of stone in your court.",
+      "Payment: Tap this character. Pay the chosen amount of stone.",
+      "Effect: Gain gold equal to the amount of stone paid."
     ]
   },
   {
@@ -926,8 +1209,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Drunken Conscription",
-        "text": "Gain 1 gold for each Brewery you own."
+        "text": "Gain 1 [[gold]] for each [[Brewery]] you own."
       }
+    ],
+    "notes": [
+      "Condition: own at least one brewery",
+      "Trigger: click the ability ruletext of this ability",
+      "Payment: tapping this character",
+      "Effect: Gain 1 gold for each brewery owned by this player on the world board."
     ]
   },
   {
@@ -944,8 +1233,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Strategic Itinerary",
-        "text": "This character’s power equals the number of breweries you own, up to 5."
+        "text": "This [[character]]’s [[power]] equals the number of [[brewery|breweries]] you own, up to 5."
       }
+    ],
+    "notes": [
+      "Trigger: Seasons Change, after it resolves fully",
+      "Effect: Set this character’s power to the number of breweries you own, up to a maximum of 5."
     ]
   },
   {
@@ -962,8 +1255,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Counterfuge",
-        "text": "When a secret tactics card is drawn during a tactician event, you may discard it and draw a new card for that auction."
+        "text": "When a [[secret tactics card]] is drawn during a [[tactician]] event, you may discard it and draw a new card for that auction."
       }
+    ],
+    "notes": [
+      "Condition: A subterfuge card is drawn in the Tactician event.",
+      "Trigger: Tactician Event, immediately after a card is drawn.",
+      "On Trigger: Accept or decline.",
+      "Payment: Tap this character.",
+      "Effect: Discard the secret tactics card and draw a new card from the tactics deck."
     ]
   },
   {
@@ -980,8 +1280,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "River Toll",
-        "text": "When an army moves across a river attached to a village you own within 3 tile distance, you may demand 1 gold from its owner."
+        "text": "When an [[army]] moves across a [[river]] attached to a [[village]] you own within 3 [[tile distance]], you may demand 1 [[gold]] from its owner."
       }
+    ],
+    "notes": [
+      "Condition: An army is moving across a river attached to a village you own within 3 tiles.",
+      "Trigger: Move, when a speed is spend by an army to move across a river edge.",
+      "On Trigger: You may demand that the army's owner pay 1 gold, or decline. If you demand: They may accept or decline.",
+      "Effect: If they decline, they break all their treaties with you and pay 1 gold per treaty broken. They suffer the consequences as if the treaties were broken through Battle. If they accept: gain 1 gold.",
+      "Extra Rules: If they cannot afford the full amount of gold needing to be paid, they pay all the gold they have in court."
     ]
   },
   {
@@ -998,8 +1305,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Trickle Down Economics",
-        "text": "Choose another player with whom you have a Trade Treaty. They gain 2 gold."
+        "text": "Choose another player with whom you have a [[Trade Treaty]]. They gain 2 [[gold]]."
       }
+    ],
+    "notes": [
+      "Condition: You have a trade treaty with another player.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select another player who holds your trade treaty.",
+      "Payment: Tap this character.",
+      "Effect: The selected player gains 2 gold."
     ]
   },
   {
@@ -1016,8 +1330,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Marketeer",
-        "text": "[1 tradegood]: Gain 2 gold."
+        "text": "[1 [[tradegood]]]: Gain 2 [[gold]]."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 1 tradegood.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Pay 1 tradegood. Tap this character.",
+      "Effect: Gain 2 gold."
     ]
   },
   {
@@ -1034,8 +1354,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "The Great Festival",
-        "text": "(every other player has your trade treaty): You gain 1 relic per trade treaty in your court. (You may only use this ability once per chapter)"
+        "text": "(every other player has your [[trade treaty]]): You gain 1 [[relic]] per [[trade treaty]] in your [[court]]. (You may only use this ability once per [[chapter]])"
       }
+    ],
+    "notes": [
+      "Condition: Every other player holds your trade treaty. You have trade treaties in your court. You have not yet used this ability this chapter.",
+      "Trigger: Click this ability ruletext.",
+      "Payment: Tap this character.",
+      "Effect: Gain 1 [[relic]] per trade treaty in your court."
     ]
   },
   {
@@ -1052,8 +1378,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Merciful Plea",
-        "text": "When an opponent attacks you while this character is chosen as your defending general, they must pay you 2 gold or cancel the attack."
+        "text": "When an opponent attacks you while this [[character]] is chosen as your [[defending general]], they must pay you 2 [[gold]] or cancel the attack."
       }
+    ],
+    "notes": [
+      "Condition: An opponent declares an attack against you, and this character is chosen as your defending general.",
+      "Trigger: Battle, before the pool strength step.",
+      "On Trigger: choose to accept or decline",
+      "Payment: Pay 2 [[mana]].",
+      "Effect: The attacking player gets a popup to accept or decline. If they accept they must pay 2 gold. If they decline the Battle is cancelled.",
+      "Extra rules: If they do not have enough gold in their court to pay, they pay all the gold they have."
     ]
   },
   {
@@ -1070,8 +1404,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Tsunami",
-        "text": "[3 mana]: Destroy a building next to an ocean and within 3 tile distance of an army you own. (This counts as an attack and may break treaties)"
+        "text": "[3 [[mana]]]: Destroy a [[building]] next to an [[ocean]] and within 3 [[tile distance]] of an [[army]] you own. (This counts as an attack and may break [[treaty|treaties]])"
       }
+    ],
+    "notes": [
+      "Condition: There is a building next to an ocean and within 3 tiles of an army you own.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select a building next to an ocean and within 3 tiles of an army you own.",
+      "Payment: Pay 3 mana. Tap this character.",
+      "Effect: Destroy the selected building.",
+      "Extra Rules: This counts as an attack for the purpose of breaking treaties."
     ]
   },
   {
@@ -1088,8 +1430,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Overgrowth",
-        "text": "[2 mana]: Convert X lumber into X gold, stone, or food."
+        "text": "[2 [[mana]]]: Convert X [[lumber]] into X [[gold]], [[stone]], or [[food]]."
       }
+    ],
+    "notes": [
+      "Condition: You have at least 1 lumber.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Choose betweem gold, stone, food. Choose a number.",
+      "Payment: Pay 2 mana. pay x lumber. Tap this character",
+      "Effect: Gain x of the selected resource type."
     ]
   },
   {
@@ -1106,8 +1455,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Rejuvenation",
-        "text": "[2 mana]: Add 1 strength to an army standing on a forest."
+        "text": "[2 [[mana]]]: Add 1 [[strength]] to an [[army]] standing on a [[forest]]."
       }
+    ],
+    "notes": [
+      "Condition: There is an army standing on a forest.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select an army standing on a forest.",
+      "Payment: Pay 2 mana. Tap this character.",
+      "Effect: Add 1 strength to the selected army."
     ]
   },
   {
@@ -1124,8 +1480,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Gathering Bark",
-        "text": "You may pay mana instead of food when recruiting army strength."
+        "text": "You may pay [[mana]] instead of [[food]] when recruiting [[army]] strength."
       }
+    ],
+    "notes": [
+      "Condition: You are recruiting army strength and have enough mana to pay instead of food.",
+      "Trigger: Recruit, before the Payment step.",
+      "On Trigger: Choose whether to pay mana instead of food.",
+      "Effect: You may pay mana instead of food when recruiting army strength. The mana paid is equal to the food that would be paid."
     ]
   },
   {
@@ -1142,8 +1504,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Nature’s Splendour",
-        "text": "[2 mana]: Choose an ability belonging to a character in another player’s court. Until the end of the round, this character loses this ability and gains the ability of the chosen character."
+        "text": "[2 [[mana]]]: Choose an [[ability]] belonging to a [[character]] in another player’s [[court]]. Until the end of the [[round]], this character loses this ability and gains the ability of the chosen character."
       }
+    ],
+    "notes": [
+      "Condition: Another player has a character in their court with an ability.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select a character in another player’s court.",
+      "Payment: Pay 2 mana. Tap this character.",
+      "Effect: Until the end of the round, this character has the chosen ability."
     ]
   },
   {
@@ -1160,8 +1529,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Moving Forest",
-        "text": "[2 mana]: Swap an adjacent unbuilt armiless forest with an adjacent tile."
+        "text": "[2 [[mana]]]: Swap an adjacent [[unbuilt]] armiless forest with an adjacent tile."
       }
+    ],
+    "notes": [
+      "Condition: There are two adjacent unbuilt tiles with no army on them, at least one of which is a forest.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select an unbuilt tile that is a forest. select an adjacent tile that is not an ocean.",
+      "Payment: Pay 2 mana. Tap this character.",
+      "Effect: Swap the selected tiles."
     ]
   },
   {
@@ -1178,8 +1554,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Shield of Thorns",
-        "text": "When declaring Battle with this character, add 3 hits to your dice results."
+        "text": "When declaring [[Battle]] with this [[character]], add 3 [[hits]] to your dice results."
       }
+    ],
+    "notes": [
+      "Condition: This character is used as an attacking general in a Battle",
+      "Trigger: Battle, before the Resolve Dice step.",
+      "Effect: Add 3 hits to your dice results."
     ]
   },
   {
@@ -1196,8 +1577,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Conversion",
-        "text": "[5 mana]: Add 2 ambush dice to the outcome of one side of a Battle. (You may choose either side and don't need to be a parcipant in the Battle)"
+        "text": "[5 [[mana]]]: Add 2 [[ambush]] dice to the outcome of one side of a [[Battle]]. (You may choose either side and don't need to be a parcipant in the Battle)"
       }
+    ],
+    "notes": [
+      "Trigger: Battle, before the ambush step",
+      "On Trigger: Select one side of a Battle.",
+      "Payment: Pay 5 mana. Tap this character.",
+      "Effect: Add 2 ambush dice to the outcome of the selected side of the Battle."
     ]
   },
   {
@@ -1214,8 +1601,16 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Shapeshifter",
-        "text": "[1 mana]: Change the dedication of a village or city to another resource."
+        "text": "[1 [[mana]]]: Change the [[dedication]] of a [[village]] or [[city]] to another resource."
       }
+    ],
+    "notes": [
+      "Condition: You are the Deep Ones. There is a tile building whose dedication can be changed.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select a tile building you own. Then select a resource to which you want to change its dedication.",
+      "Payment: Pay 1 mana. Tap this character.",
+      "Effect: Change the dedication of the selected village to the selected resource.",
+      "Extra Rules: Only usable by the Deep Ones."
     ]
   },
   {
@@ -1232,8 +1627,12 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Depthdelver",
-        "text": "Sleeping Cities cost you 1 less gold to Build."
+        "text": "[[Sleeping City|Sleeping Cities]] cost you 1 less [[gold]] to [[Build]]."
       }
+    ],
+    "notes": [
+      "Trigger: Build, before the Payment step.",
+      "Effect: Reduce the gold cost of Sleeping Cities by 1."
     ]
   },
   {
@@ -1250,8 +1649,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Dominator",
-        "text": "When this character is used as a general, the opposing general's power is set to 0 for this Battle."
+        "text": "When this [[character]] is used as a [[general]], the opposing [[general]]'s [[power]] is set to 0 for this [[Battle]]."
       }
+    ],
+    "notes": [
+      "Condition: This character is used as a general in a Battle.",
+      "Trigger: Battle, before the Pool Strength step.",
+      "Effect: Set the opposing general's power to 0 for this Battle."
     ]
   },
   {
@@ -1268,8 +1672,15 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "tap",
         "icon": "↷",
         "name": "Shadowmelder",
-        "text": "Move an army on a city, village, or Sleeping City you control to another without an army."
+        "text": "Move an [[army]] on a [[city]], [[village]], or [[Sleeping City]] you control to another without an army."
       }
+    ],
+    "notes": [
+      "Condition: You control a city, village, or Sleeping City with an army. Another city, village, or Sleeping City you control has no army.",
+      "Trigger: Click this ability ruletext.",
+      "On Trigger: Select an army on a city, village, or Sleeping City you control, then select another city, village, or Sleeping City you control that has no army.",
+      "Payment: Tap this character.",
+      "Effect: Move the selected army to the selected destination."
     ]
   },
   {
@@ -1286,8 +1697,14 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Cunning Deception",
-        "text": "After winning a Battle in which this character was the attacking general, you may activate the effects of an opponent's subterfuge card, regardless of its activation condition."
+        "text": "After winning a [[Battle]] in which this [[character]] was the [[attacking general]], you may activate the effects of an opponent's [[subterfuge card]], regardless of its activation condition."
       }
+    ],
+    "notes": [
+      "Condition: You win a Battle in which this character was the attacking general. The opponent holds a subterfuge card.",
+      "Trigger: Battle, after it resolves fully.",
+      "On Trigger: Select a subterfuge card held by the opponent.",
+      "Effect: Activate the effects of the selected subterfuge card against the opponent, regardless of its activation condition."
     ]
   },
   {
@@ -1304,8 +1721,13 @@ export const CHARACTERS: readonly CharacterDef[] = [
         "kind": "passive",
         "icon": "◫",
         "name": "Courtdweller",
-        "text": "If you have more characters in your court than any other player, this character has 1 power."
+        "text": "If you have more [[character]]s in your [[court]] than any other player, this character has 1 [[power]]."
       }
+    ],
+    "notes": [
+      "Condition: You have more characters in your court than any other player.",
+      "Trigger: Seasons Change, after it resolves fully.",
+      "Effect: Set this character’s power to 1 if you have more characters in your court than any other player; otherwise, set its power to 0."
     ]
   }
 ];

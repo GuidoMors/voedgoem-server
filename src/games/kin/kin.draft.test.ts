@@ -83,7 +83,7 @@ test("only neutral characters and characters of picked Kin are dealt", () => {
   assert.ok(!ids.includes("lumon"));
 });
 
-test("the character draft runs in natural Kin order through four rounds", () => {
+test("the character draft runs in natural Kin order through five rounds", () => {
   // p1 picked the later Kin but the Ethereal (p2) goes first in natural order.
   const state = atCharacters({ p1: "hanshu", p2: "ethereal" });
   const world = state.world!;
@@ -99,7 +99,12 @@ test("the character draft runs in natural Kin order through four rounds", () => 
   assert.match(dispatch(state, act("pickCharacter", "p1", { character: "hans" })) ?? "", /cannot claim/);
   assert.equal(dispatch(state, act("pickCharacter", "p1", { character: "bulu" })), null);
   assert.equal(characterRound(state), 1);
-  // Round 2: Discovery. Universal counts, a neutral Expansion character does not, and claimed characters are gone.
+  // The Ethereal has no second own-Kin character, so that turn is skipped.
+  assert.equal(characterPicker(state), "p1");
+  assert.match(dispatch(state, act("pickCharacter", "p1", { character: "torke" })) ?? "", /cannot claim/);
+  assert.equal(dispatch(state, act("pickCharacter", "p1", { character: "loong" })), null);
+  assert.equal(characterRound(state), 2);
+  // Discovery: Universal counts, a neutral Expansion character does not, and claimed characters are gone.
   assert.match(dispatch(state, act("pickCharacter", "p2", { character: "hans" })) ?? "", /cannot claim/);
   assert.match(dispatch(state, act("pickCharacter", "p2", { character: "ethereal" })) ?? "", /cannot claim/);
   assert.equal(dispatch(state, act("pickCharacter", "p2", { character: "torke" })), null);
@@ -114,17 +119,20 @@ test("the character draft runs in natural Kin order through four rounds", () => 
   assert.equal(state.cards.torke.owner, "p2");
   // Leftovers form the character deck.
   const left = Object.values(state.cards).filter(c => c.zone === "deck:character").length;
-  assert.equal(left, 17 + 6 + 1 - 8);
-  assert.equal(Object.values(state.cards).filter(c => c.owner).length, 8);
+  assert.equal(left, 17 + 6 + 1 - 9);
+  assert.equal(Object.values(state.cards).filter(c => c.owner).length, 9);
 });
 
-test("a solo Pride of Lumon player must take Lumon and then drafts three more", () => {
+test("a solo Pride of Lumon player takes Lumon, another Kin character, then three archetypes", () => {
   const state = atCharacters({ p1: "lumon" });
   assert.match(dispatch(state, act("pickCharacter", "p1", { character: "wololay" })) ?? "", /cannot claim/);
   assert.equal(dispatch(state, act("pickCharacter", "p1", { character: "lumon" })), null);
+  assert.ok(eligibleCharacters(state, "p1", 1).every(character => character.kin === "lumon"));
+  assert.equal(dispatch(state, act("pickCharacter", "p1", { character: "goldenmane" })), null);
   // Lumon is Universal but already claimed, so Wololay is the Discovery pick here.
   for (const character of ["wololay", "prishna", "anant"]) assert.equal(dispatch(state, act("pickCharacter", "p1", { character })), null);
   assert.equal(state.world!.step, "done");
+  assert.equal(Object.values(state.cards).filter(card => card.owner === "p1").length, 5);
 });
 
 test("character picks are public in the snapshot", () => {

@@ -3,10 +3,10 @@ import { test } from "node:test";
 import { createState, dispatch, tilePlacer } from "./engine";
 import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { addItem } from "./cards";
-import { arkOf, garrison, placementError, placements, production } from "./buildings";
+import { arkOf, buildPower, garrison, placeBuilding, placementError, placements, production } from "./buildings";
 import { canRecruitOn } from "./control";
 import { defenderBase } from "./battle";
-import { demolishOptions, deployOptions } from "./expansion";
+import { demolishOptions, demolishPower, deployOptions } from "./expansion";
 import { eventOptions } from "./events";
 import { massHarvestYield } from "./ark";
 import { createRng, nextInt } from "./rng";
@@ -82,15 +82,32 @@ test("the Ark cannot be built, but armies are deployed and recruited on it", () 
   assert.equal(canRecruitOn(state, army), true);
 });
 
-test("the ark board has 2 tiles for slice buildings, whatever their building conditions", () => {
+test("the ark board has 6 edges per tile for slice buildings, whatever their building conditions", () => {
   const { state } = arkGame();
   addItem(state, "university", "court:p1", "p1");
   assert.equal(placementError(state, "p1", "university", { tile: -1, side: 1 }), null);
   assert.match(placementError(state, "p1", "university", { tile: -1, side: 0 }) ?? "", /already built/);
-  assert.match(placementError(state, "p1", "university", { tile: -1, side: 2 }) ?? "", /2 tiles/);
-  assert.deepEqual(placements(state, "p1", "university").filter(place => place.tile === -1), [{ tile: -1, side: 1 }]);
+  for (const side of [-1, 12, 1.5]) assert.match(placementError(state, "p1", "university", { tile: -1, side }) ?? "", /2 tiles/);
+  assert.deepEqual(placements(state, "p1", "university").filter(place => place.tile === -1),
+    Array.from({ length: 11 }, (_, index) => ({ tile: -1, side: index + 1 })));
+  for (let side = 1; side < 12; side++) {
+    assert.equal(placementError(state, "p1", "university", { tile: -1, side }), null);
+    placeBuilding(state, "p1", "university", { tile: -1, side });
+  }
+  assert.equal(placements(state, "p1", "university").filter(place => place.tile === -1).length, 0);
+  assert.equal(state.buildings.filter(building => building.tile === -1).length, 12);
   state.items = state.items.filter(item => item.def !== "the-eternal-ark");
   assert.match(placementError(state, "p1", "university", { tile: -1, side: 1 }) ?? "", /no ark board/);
+});
+
+test("Ark Smith discounts stay on their own tile", () => {
+  const { state } = arkGame();
+  addBuilding(state, { def: "smith", owner: "p1", kind: "slice", tile: -1, side: 2 });
+  assert.equal(buildPower(state, "university", { tile: -1, side: 4 }), 2);
+  assert.equal(buildPower(state, "university", { tile: -1, side: 1 }), 3);
+  const first = placeBuilding(state, "p1", "university", { tile: -1, side: 4 });
+  const second = placeBuilding(state, "p1", "university", { tile: -1, side: 1 });
+  assert.equal(demolishPower(state, second) - demolishPower(state, first), 1);
 });
 
 test("worksites on the ark board do not produce, other slice buildings do", () => {

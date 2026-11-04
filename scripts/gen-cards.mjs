@@ -34,36 +34,55 @@ const plain = text => text.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, a, b
 // Splits a file into sections: a heading (level 1 or 2) and the lines under it.
 function sections(file) {
   const out = [];
-  let current = { level: 0, head: "", body: [] };
-  for (const line of read(file)) {
+  let current = { level: 0, head: "", body: [], notes: [] };
+  // Whole-line "//" comments directly below a heading (or its ">" lines) are the notes of that section; they never count as card text.
+  let attached = false;
+  for (const raw of read(file)) {
+    const whole = /^\s*\/\/\s?(.*)$/.exec(raw);
+    if (whole) {
+      if (attached && whole[1].trim()) { current.notes.push(plain(whole[1].trim())); current.body.push(`// ${whole[1].trim()}`); }
+      continue;
+    }
+    const line = raw.replace(/(^|[^:])\/\/.*$/, "$1").trimEnd();
+    const numbered = /^>\s*(\d+ - .+)$/.exec(line);
+    if (numbered) { current.notes.push(plain(numbered[1].trim())); attached = true; continue; }
     const head = /^(#{1,2}) (.*)$/.exec(line);
+    attached = !!head || (attached && line.startsWith(">"));
     if (head) {
       out.push(current);
-      current = { level: head[1].length, head: head[2].trim(), body: [] };
+      current = { level: head[1].length, head: head[2].trim(), body: [], notes: [] };
     } else current.body.push(line);
   }
   out.push(current);
   return out;
 }
 
-// "> Label: text" lines. A line without a label continues the previous field.
+// "> Label: text" lines and "// Label: text" comments. A line without a label continues the previous field; unlabelled ">" lines
+// are the short description, and ">>" lines are side notes that are not part of the rules.
 function fields(body) {
   const found = {};
+  const plainLines = [];
   let last = null;
   for (const raw of body) {
-    const line = raw.replace(/^>\s?/, "").trim();
+    if (raw.startsWith(">>")) { last = null; continue; }
+    const isNote = raw.startsWith("//");
+    const line = raw.replace(/^(>|\/\/)\s?/, "").trim();
     if (!line) { last = null; continue; }
-    const match = /^([A-Za-z][A-Za-z' ]*?):\s*(.*)$/.exec(line);
+    const match = /^([A-Za-z][A-Za-z']*(?: [A-Za-z']+){0,3}):\s*(.*)$/.exec(line);
     if (match) {
       last = match[1].toLowerCase();
       found[last] = found[last] ? `${found[last]} ${match[2]}` : match[2];
-    } else if (last) found[last] += `${line.startsWith("- ") ? "\n" : " "}${line}`;
+    } else if (isNote) last = null; // an unlabelled comment is only a note, never part of the previous field
+    else if (last) found[last] += `${line.startsWith("- ") ? "\n" : " "}${line}`;
+    else if (!isNote && raw.startsWith(">")) plainLines.push(line);
   }
+  if (plainLines.length > 0 && !found["short description"]) found["short description"] = plainLines.join("\n");
   return found;
 }
 
 const tags = head => head.split("|").map(s => s.trim());
 const cards = [];
+const withNotes = (card, notes) => notes.length > 0 ? { ...card, notes } : card;
 const add = card => {
   if (cards.some(other => other.id === card.id)) throw new Error(`Duplicate card id ${card.id}`);
   cards.push(card);
@@ -86,20 +105,20 @@ const startOf = (table, name) => {
   return false;
 };
 
-const eventStart = startTable("04-events.md", 1, 0);
-for (const { level, head, body } of sections("04-events.md")) {
+const eventStart = startTable("03-1-events.md", 0, 1);
+for (const { level, head, body, notes } of sections("03-1-events.md")) {
   const [name, tag] = tags(head);
   if (level !== 2 || tag !== "event card") continue;
   const f = fields(body);
-  add({ id: slug(name), kind: "event", name, text: f["short description"] ?? "", kin: null, start: startOf(eventStart, name) });
+  add(withNotes({ id: slug(name), kind: "event", name, text: f["short description"] ?? "", kin: null, start: startOf(eventStart, name) }, notes));
 }
 
-const actionStart = startTable("05-actions.md", 2, 1);
-for (const { level, head, body } of sections("05-actions.md")) {
+const actionStart = startTable("03-2-actions.md", 1, 2);
+for (const { level, head, body, notes } of sections("03-2-actions.md")) {
   const [name, tag] = tags(head);
   if (level !== 2 || tag !== "action card") continue;
   const f = fields(body);
-  add({ id: slug(name), kind: "action", name, text: f["short description"] ?? "", kin: null, phase: f.phase.toLowerCase(), start: startOf(actionStart, name) });
+  add(withNotes({ id: slug(name), kind: "action", name, text: f["short description"] ?? "", kin: null, phase: f.phase.toLowerCase(), start: startOf(actionStart, name) }, notes));
 }
 
 function blueprint(name, tag, f, kin) {
@@ -118,16 +137,16 @@ function blueprint(name, tag, f, kin) {
   };
 }
 
-for (const { level, head, body } of sections("06-buildings.md")) {
+for (const { level, head, body, notes } of sections("06-buildings.md")) {
   const [name, type, ...rest] = tags(head);
   if (level !== 2 || type !== "building blueprint") continue;
-  add({ ...blueprint(name, rest.join("|"), fields(body), null), start: ["village", "city", "worksite", "barracks", "road"].includes(slug(name)) });
+  add(withNotes({ ...blueprint(name, rest.join("|"), fields(body), null), start: ["village", "city", "worksite", "barracks", "road"].includes(slug(name)) }, notes));
 }
 
 const startTechs = {};
 for (const [file, kin] of Object.entries(KIN_FILES)) {
   let inEffects = false;
-  for (const { level, head, body } of sections(file)) {
+  for (const { level, head, body, notes } of sections(file)) {
     if (level === 1) inEffects = /^Faction Effects/i.test(head);
     if (head === "Starting setup") {
       const line = body.find(l => /Claim the following technolog/i.test(l));
@@ -137,17 +156,17 @@ for (const [file, kin] of Object.entries(KIN_FILES)) {
     if (level !== 2) continue;
     const [name, type, ...rest] = tags(head);
     if (type === "building blueprint") {
-      add({ ...blueprint(name, rest.join("|"), fields(body), kin), start: false });
+      add(withNotes({ ...blueprint(name, rest.join("|"), fields(body), kin), start: false }, notes));
       continue;
     }
     if (!inEffects) continue;
     const f = fields(body);
     const kind = type === "action card" || type === "event card" ? type.split(" ")[0] : "passive";
-    add({
+    add(withNotes({
       id: slug(name), kind: "faction", name, text: f["short description"] ?? "", kin, form: kind,
       core: tags(head).slice(1).some(t => /core/i.test(t)),
       ...(kind === "action" ? { phase: (f.phase ?? "").toLowerCase() } : {})
-    });
+    }, notes));
   }
 }
 
@@ -168,11 +187,13 @@ function parseGrants(text) {
   });
 }
 
-for (const { level, head, body } of sections("08-technologies.md")) {
+for (const { level, head, body, notes } of sections("08-technologies.md")) {
   const [name, tag] = tags(head);
   if (level !== 2 || tag !== "technology card") continue;
   const f = fields(body);
-  add({ id: slug(name), kind: "technology", name, text: f.effect ?? "", kin: null, gearCost: Number(f["gear cost"]), grants: f.cards ? parseGrants(f.cards) : [] });
+  // The description line follows "Gear cost: N" without a label, so it is read as part of that field.
+  const [, cost, rest] = /^(\d+)\s*(.*)$/.exec(f["gear cost"] ?? "") ?? [];
+  add(withNotes({ id: slug(name), kind: "technology", name, text: rest || f.effect || "", kin: null, gearCost: Number(cost), grants: f.cards ? parseGrants(f.cards) : /activation card/i.test(rest ?? "") ? parseGrants(rest) : [] }, notes));
 }
 
 for (const [id, { archetype, power }] of activationCards) {
@@ -183,13 +204,21 @@ for (const [id, { archetype, power }] of activationCards) {
 // Treaties and bans keep their labelled rules.
 const LABELS = ["before barter offer", "condition", "effect", "breaking", "penalty for breaking", "extra rules"];
 let part = "";
-for (const { level, head, body } of sections("10-treaties.md")) {
+for (const { level, head, body, notes } of sections("09-treaties.md")) {
   if (level === 1) { part = head; continue; }
   const kind = part === "Bans" ? "ban" : "treaty";
   if (level !== 2) continue;
-  const f = fields(body);
+  // Only ">" text is on the card; "//" comments (conditions, breaking, penalties) are notes behind the info icon.
+  const f = fields(body.filter(line => !line.startsWith("//")));
+  if (kind === "ban") {
+    // A ban card only states its effect; any extra rules go behind the info icon.
+    const extra = f["extra rules"] ? [`Extra rules: ${plain(f["extra rules"])}`] : [];
+    add(withNotes({ id: slug(head), kind, name: head, text: f.effect ?? f["short description"] ?? "", kin: null }, [...notes, ...extra]));
+    continue;
+  }
   const lines = LABELS.filter(label => f[label]).map(label => [label[0].toUpperCase() + label.slice(1), plain(f[label])]);
-  add({ id: slug(head), kind, name: head, text: "", kin: null, lines });
+  const text = lines.length === 0 ? f["short description"] ?? "" : "";
+  add(withNotes({ id: slug(head), kind, name: head, text, kin: null, ...(lines.length > 0 ? { lines } : {}) }, notes));
 }
 
 const ids = new Set(cards.map(c => c.id));
@@ -217,6 +246,8 @@ export interface CardDef {
   form?: "passive" | "action" | "event";
   core?: boolean;
   gearCost?: number;
+  // Extra information from the rulebook comments, shown behind the info icon.
+  notes?: string[];
   // Cards claimed together with a technology.
   grants?: string[];
   archetype?: CardArchetype;

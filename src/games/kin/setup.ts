@@ -12,7 +12,7 @@ const TASKS: Record<string, SetupTask[]> = { hanshu: ["village", "village2"], ar
 const tasksOf = (kin: string): SetupTask[] => TASKS[kin] ?? ["village", "worksite"];
 
 // Where a village may stand: the default is plains or snow, some Kin differ.
-const VILLAGE_TERRAIN: Record<string, Terrain[]> = { wanderers: ["snow"], beastmen: ["desert"], hammers: ["mountain"], deepones: ["ocean"] };
+const VILLAGE_TERRAIN: Record<string, Terrain[]> = { hanshu: ["plains", "snow", "farmland"], wanderers: ["snow"], beastmen: ["desert"], hammers: ["mountain"], deepones: ["ocean"] };
 const VILLAGE_DISTANCE = 3;
 const WORKSITE_TERRAIN: readonly Terrain[] = ["farmland", "forest", "mountain"];
 const CLIMATE: readonly Terrain[] = ["snow", "desert", "plains"];
@@ -209,4 +209,3 @@ export function settleSetup(state: KinState) {
   dealCharacters(state);
   settleCharacters(state);
 }
-

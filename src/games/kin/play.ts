@@ -175,6 +175,7 @@ const nextPlayer = (state: KinState, player: string) => {
 // Seasons Change, the first thing of every Event phase: everything untaps and every building produces its resource. Exhaustion
 // wears off: exhausted armies recover, overexhausted armies become exhausted. The card itself taps afterwards.
 function seasonsChange(state: KinState) {
+  for (const player of Object.values(state.players)) player.relicsTapped = 0;
   for (const card of Object.values(state.cards)) card.tapped = false;
   for (const item of state.items) item.tapped = false;
   for (const army of state.armies) {
@@ -203,10 +204,11 @@ function nextPhase(state: KinState) {
   } else play.phase = PLAY_PHASES[index];
   play.turn = naturalOrder(state)[0];
   play.passes = 0;
+  play.forcePass = [];
 }
 
-// A phase also ends when no card of that phase can be activated by anyone. The Event, Discovery and Control phases are the
-// exception, so that players see the result of their turn (tapped cards) and pass themselves.
+// Expansion ends when nobody can activate a card. Event auto-passing is settled by dispatch;
+// Discovery and Control wait for players to pass.
 function settlePlay(state: KinState) {
   for (let guard = 0; guard < 8 && state.play!.phase === "expansion" && !anyCanActivate(state); guard++) nextPhase(state);
 }

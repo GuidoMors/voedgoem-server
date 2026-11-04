@@ -1,4 +1,5 @@
 import { addItem, hasCard } from "./cards";
+import { untappedRelics } from "./relics";
 import { cardById } from "./cards.data";
 import { activationError, endTurn, setTapped } from "./play";
 import { onBarter } from "./tactics";
@@ -82,7 +83,11 @@ export function connected(state: KinState, a: string, b: string): boolean {
 // What a player could put in a Barter, for the UI.
 export function barterInfo(state: KinState, player: string) {
   return {
-    targets: state.order.filter(other => other !== player).map(other => ({ player: other, connected: connected(state, player, other) })),
+    targets: state.order.filter(other => other !== player).map(other => ({
+      player: other, connected: connected(state, player, other),
+      giveMintable: TREATY_TYPES.filter(type => hasTech(state, player, diplomacyDef(type)) && !treatyAllowed(state, type, player, other, [])),
+      mintable: TREATY_TYPES.filter(type => hasTech(state, other, diplomacyDef(type)) && !treatyAllowed(state, type, other, player, []))
+    })),
     mintable: TREATY_TYPES.filter(type => hasTech(state, player, diplomacyDef(type)) && !hasBan(state, player, type))
   };
 }
@@ -150,6 +155,7 @@ function readGoods(value: unknown): BarterGoods | string {
   if (!Array.isArray(raw.characters ?? []) || !Array.isArray(raw.treaties ?? [])) return "The offer is malformed.";
   goods.characters = (raw.characters ?? []).map(String);
   goods.treaties = (raw.treaties ?? []).map(String);
+  if (goods.treaties.length > 0) return "Held treaties cannot be traded. Create a new treaty instead.";
   if (goods.resources[TRADEGOOD]) {
     if (!BASIC.includes(String(raw.tradegoodAs))) return "Choose which basic resource the tradegoods turn into.";
     goods.tradegoodAs = String(raw.tradegoodAs);
@@ -206,26 +212,18 @@ export function readOffer(state: KinState, player: string, action: Record<string
   const sides: [string, BarterGoods][] = [[player, give], [to, take]];
   const pending: { type: TreatyType; giver: string; receiver: string }[] = [];
   for (const [owner, goods] of sides) {
-    const receiver = owner === player ? to : player;
+    if (goods.resources[TRADEGOOD] && !hasCard(state, owner, "tradegoods")) return "Only the Seven Streams Syndicate can offer tradegoods.";
     for (const [name, amount] of Object.entries(goods.resources)) {
+      if (name === "relic" && amount > untappedRelics(state.players[owner])) return `${state.players[owner].username} does not have ${amount} untapped relics.`;
       if (amount > (state.players[owner].resources[name] ?? 0)) return `${state.players[owner].username} does not have ${amount} ${name}.`;
     }
     for (const id of new Set(goods.characters)) {
       const card = state.cards[id];
       if (!card || card.owner !== owner) return "A chosen character is not in that court.";
+      if (id === "lumon" || id === "ethereal") return "Lumon and the Ethereal cannot be bartered away.";
       if (source.kind === "character" && source.id === id) return "The character that is tapped for the Barter cannot be offered.";
     }
     if (new Set(goods.characters).size !== goods.characters.length) return "A character was chosen twice.";
-    for (const id of new Set(goods.treaties)) {
-      const item = state.items.find(candidate => candidate.id === id);
-      const type = item && treatyType(item.def);
-      if (!item || !type || item.owner !== owner) return "A chosen treaty is not in that court.";
-      if (type === "trade") return "You can only barter your own Trade Treaties, not ones you received.";
-      pending.push({ type, giver: item.giver!, receiver });
-      const error = treatyAllowed(state, type, item.giver!, receiver, pending);
-      if (error) return error;
-    }
-    if (new Set(goods.treaties).size !== goods.treaties.length) return "A treaty was chosen twice.";
   }
   for (const entry of mint) {
     const type = treatyType(entry.def)!;

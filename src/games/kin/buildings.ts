@@ -26,6 +26,7 @@ const SIDES = [0, 1, 2, 3, 4, 5];
 
 function parseCost(text: string): Cost {
   const cost: Cost = { resources: {}, basic: 0 };
+  text = text.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, "$1");
   for (const [, amount, what] of text.matchAll(/(\d+) (basic resources|\w+)/g)) {
     if (what === "basic resources") cost.basic += Number(amount);
     else cost.resources[what === "relics" ? "relic" : what] = (cost.resources[what === "relics" ? "relic" : what] ?? 0) + Number(amount);
@@ -152,18 +153,17 @@ function reachTiles(state: KinState, player: string): Set<number> {
 
 const REACH_ERROR = "You can only build on a tile with one of your armies, or next to one of your buildings.";
 
-// The Eternal Ark (Archive Ark): the ark board is "tile" -1 and has 2 tiles (sides 0 and 1) where any slice building can be built,
-// whatever its Building Conditions say. It exists as long as the Ark stands.
+// Ark slots encode tile as side % 2 and edge as floor(side / 2), preserving legacy slots 0 and 1.
 export const ARK_BOARD = -1;
-export const ARK_BOARD_TILES = [0, 1];
+export const ARK_BOARD_SLOTS = Array.from({ length: 12 }, (_, side) => side);
 export const arkOf = (state: KinState, player: string) => state.buildings.find(building => building.def === "the-ark" && building.owner === player && building.tile >= 0);
 export const arkBoardOf = (state: KinState, ark: Building) => state.buildings.filter(building => building.tile === ARK_BOARD && building.owner === ark.owner);
 
 function arkBoardError(state: KinState, player: string, info: BlueprintInfo, place: Placement): string | null {
   if (!arkOf(state, player) || !hasCard(state, player, "the-eternal-ark")) return "You have no ark board.";
   if (info.kind !== "slice") return "Only slice buildings can be built on the ark board.";
-  if (!ARK_BOARD_TILES.includes(place.side as number)) return "Choose one of the 2 tiles of the ark board.";
-  return arkBoardOf(state, arkOf(state, player)!).some(building => building.side === place.side) ? "That tile of the ark board is already built." : null;
+  if (!ARK_BOARD_SLOTS.includes(place.side as number)) return "Choose an edge on one of the 2 tiles of the ark board.";
+  return arkBoardOf(state, arkOf(state, player)!).some(building => building.side === place.side) ? "That edge of the ark board is already built." : null;
 }
 
 // Why the building cannot be placed there, or null. Every building condition of 06-buildings.md is checked here.
@@ -288,22 +288,23 @@ export function placements(state: KinState, player: string, def: string): Placem
       : [{ tile }];
     for (const place of candidates) if (placementError(state, player, def, place, reach) === null) result.push(place);
   }
-  if (info.kind === "slice") for (const side of ARK_BOARD_TILES) if (placementError(state, player, def, { tile: ARK_BOARD, side }, reach) === null) result.push({ tile: ARK_BOARD, side });
+  if (info.kind === "slice") for (const side of ARK_BOARD_SLOTS) if (placementError(state, player, def, { tile: ARK_BOARD, side }, reach) === null) result.push({ tile: ARK_BOARD, side });
   return result;
 }
 
 // Smith: build power needed to Build or Demolish on a tile is lowered by 1 per Smith on it, to a minimum of 0.
 // Master Smiths (Hammers): each Smith of its owner lowers it by 2.
-export function smithDiscount(state: KinState, tiles: number[]): number {
+export function smithDiscount(state: KinState, tiles: number[], arkSide?: number): number {
   const power = (slice: Building) => slice.owner && hasCard(state, slice.owner, "master-smiths") ? 2 : 1;
-  return Math.max(0, ...tiles.map(tile => slicesAt(state, tile).filter(slice => slice.def === "smith").reduce((sum, slice) => sum + power(slice), 0)));
+  return Math.max(0, ...tiles.map(tile => slicesAt(state, tile).filter(slice => slice.def === "smith"
+    && (tile !== ARK_BOARD || (arkSide !== undefined && (slice.side ?? 0) % 2 === arkSide % 2))).reduce((sum, slice) => sum + power(slice), 0)));
 }
 
 export function buildPower(state: KinState, def: string, place: Placement): number {
   const info = blueprintInfo(def);
   if (!info) return 0;
   const tiles = place.to !== undefined ? [place.tile, place.to] : info.kind === "edge" && place.side !== undefined ? [place.tile, sideNeighbor(place.tile, place.side) ?? place.tile] : [place.tile];
-  return Math.max(0, info.power - smithDiscount(state, tiles));
+  return Math.max(0, info.power - smithDiscount(state, tiles, place.side));
 }
 
 const stock = (state: KinState, player: string, resource: string) => state.players[player].resources[resource] ?? 0;

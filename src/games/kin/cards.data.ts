@@ -19,6 +19,8 @@ export interface CardDef {
   form?: "passive" | "action" | "event";
   core?: boolean;
   gearCost?: number;
+  // Extra information from the rulebook comments, shown behind the info icon.
+  notes?: string[];
   // Cards claimed together with a technology.
   grants?: string[];
   archetype?: CardArchetype;
@@ -33,9 +35,13 @@ export const CARDS: readonly CardDef[] = [
     "id": "seasons-change",
     "kind": "event",
     "name": "Seasons Change",
-    "text": "This card is special in that it automatically activates at the start of the Event Phase. When activated it untaps all other cards, and all buildings produce their resources.",
+    "text": "This event is special in that it automatically activates at the start of the [[event phase]].\nWhen activated it [[untap]]s all other cards, and all buildings produce their resources.",
     "kin": null,
-    "start": true
+    "start": true,
+    "notes": [
+      "Untap all tapped cards, except the Seasons Change card itself. Every building produces its resource. This card taps.",
+      "Extra rules: It automatically untaps at the start of the Event Phase."
+    ]
   },
   {
     "id": "attrition",
@@ -43,15 +49,22 @@ export const CARDS: readonly CardDef[] = [
     "name": "Attrition",
     "text": "All [[army|armies]] on [[unbuilt]] [[snow]] lose 1 [[strength]].",
     "kin": null,
-    "start": true
+    "start": true,
+    "notes": [
+      "When activated, all armies on unbuilt snow tiles lose 1 strength. This card taps.",
+      "Extra Rules: Armies with the core faction effect Arctic, either because they are Wanderers or hold their Faction Treaty, are unaffected."
+    ]
   },
   {
     "id": "lapsed-treaties",
     "kind": "event",
     "name": "Lapsed Treaties",
-    "text": "All [[Trade Treaty]] cards held by players no longer connected are dissolved. All arbites decided whether the promises on [[Promise Treaty]] cards are broken.",
+    "text": "All [[Trade Treaty]] cards held by players who are no longer connected are dissolved.\nArbiters decide whether the promises on [[Promise Treaty]] cards were broken.",
     "kin": null,
-    "start": false
+    "start": false,
+    "notes": [
+      "When activated, remove all Trade Treaties from the Courts of players who are no longer connected. For each Promise Treaty, each arbiter of that treaty submits whether they believe the treaty was broken last round. If an arbiter says yes, the giver of the treaty breaks it. This card taps."
+    ]
   },
   {
     "id": "archeology",
@@ -59,15 +72,22 @@ export const CARDS: readonly CardDef[] = [
     "name": "Archeology",
     "text": "A [[ruins]] is placed on a random tile.",
     "kin": null,
-    "start": false
+    "start": false,
+    "notes": [
+      "When activated, place a ruins block on a random unbuilt tile without an army on it that is not an ocean. This card taps."
+    ]
   },
   {
     "id": "council",
     "kind": "event",
     "name": "Council",
-    "text": "A council is held between the players. Each player has votes equal to their population to vote on [[law card]]s. The law with the most vote is enacted for this round.",
+    "text": "A council is held between the players.\nEach player has votes equal to their [[population]] to vote on [[law card]]s.\nThe law with the most votes is enacted for this round.",
     "kin": null,
-    "start": false
+    "start": false,
+    "notes": [
+      "When activated, first discard laws enacted in previous rounds into the law deck discard pile. Then draw three random law cards from the law deck. In natural order, each player votes for one of the three laws. That law receives votes equal to the player's population. The law with the most votes is active for that round. In case of a tie, no law is enacted. Discard all laws that are not enacted into the law deck discard pile. This card taps.",
+      "Extra Rules: If the Council Science is in a player's court, only that player may vote. If it is public, all players may vote."
+    ]
   },
   {
     "id": "tactician",
@@ -75,16 +95,28 @@ export const CARDS: readonly CardDef[] = [
     "name": "Tactician",
     "text": "An auction is held for a random [[tactics card]].",
     "kin": null,
-    "start": false
+    "start": false,
+    "notes": [
+      "When activated, draw a random card from the tactics deck. Players that know the Tactician Science technology bid gold in natural order, starting at 1 gold. The highest bidder claims the card. This card taps.",
+      "Extra Rules: If a tactics card is drawn, only players who know the Tactician Science Technology may bid on it. If a secret tactics card is drawn, only players who know the Subterfuge Science Technology may bid on it. Players may only place bids higher than the current highest bid."
+    ]
   },
   {
     "id": "move",
     "kind": "action",
     "name": "Move",
-    "text": "Move an [[army]] to other tiles. The power of the character increases how far you can Move.",
+    "text": "Move an [[army]] to other tiles.",
     "kin": null,
     "phase": "discovery",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Discovery",
+      "Condition: You have armies.",
+      "On trigger: Select a untapped Discovery Character/Activation Card. Select an army you own.",
+      "Payment: Tapping the selected character/activation card.",
+      "Effect: For this Move you have speed equal to the power of the card used to activate this action. You may spend Speed to move the selected army to adjacent tiles for their tile speed cost. When you run out of speed, or when you choose to, you stop moving the Army.",
+      "Extra Rules: You may bring 1 relic block and 1 treasure block along with the army each tile you Move. You may not move your Army off a tile if there is an adjacent army of another player without that player's permission. With an access treaty that permission is not necessary: you get the permission."
+    ]
   },
   {
     "id": "research",
@@ -93,16 +125,30 @@ export const CARDS: readonly CardDef[] = [
     "text": "Use [[gears]] to research a [[technology]] from the [[technology board]].",
     "kin": null,
     "phase": "discovery",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Discovery",
+      "Condition: There is a technology you could research.",
+      "On trigger: Select an untapped Discovery Character/Activation Card. Select a technology on the research track of the technology board.",
+      "Payment: Pay the cost of the technology in gears. Tap the selected character/activation card.",
+      "Effect: Claim the selected technology, and claim any cards that the technology tells you to claim."
+    ]
   },
   {
     "id": "publicize",
     "kind": "action",
     "name": "Publicize",
-    "text": "Publicize a [[technology]] in any player's court. Publicizing your own technology costs no [[gear]].",
+    "text": "Publicize a [[technology]] in a player's court.",
     "kin": null,
     "phase": "discovery",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Discovery",
+      "Condition: There is a technology you could publicize.",
+      "On trigger: Select an untapped Discovery Character/Activation Card. Select a technology in any player's court.",
+      "Payment: Tap the selected character/activation card. If the selected technology belongs to another player, pay its gear cost. Publicizing your own technology costs no gear.",
+      "Effect: Make the selected technology public."
+    ]
   },
   {
     "id": "barter",
@@ -111,43 +157,81 @@ export const CARDS: readonly CardDef[] = [
     "text": "Trade resources, treaties, characters, and other cards with another player.",
     "kin": null,
     "phase": "discovery",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Discovery",
+      "Condition: None.",
+      "On trigger: Select an untapped Discovery Character/Activation Card. Select a player. Then select a certain amount of bartering goods from your court. Then select a certain amount of bartering goods from the selected player's court.",
+      "Payment: Tap the selected character/activation card.",
+      "Effect: The selected player may accept or decline the offer. If accepted, move the items selected in your court to their court and the items selected in their court to your court. If declined, no items are transferred.",
+      "Extra Rules: You can only barter your own trade treaties. You cannot barter the trade treaties you have received from others. A barter is successful only if the selected player accepts it."
+    ]
   },
   {
     "id": "dissolve",
     "kind": "action",
     "name": "Dissolve",
-    "text": "Dissolve a [[treaty]] you hold of another player.",
+    "text": "Dissolve a [[treaty]] you hold from another player.",
     "kin": null,
     "phase": "discovery",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Discovery",
+      "Condition: There is a treaty you could dissolve.",
+      "On trigger: Select an untapped Discovery Character/Activation Card. Select a treaty in your court given to you by another player.",
+      "Payment: Tap the selected character/activation card.",
+      "Effect: Dissolve the selected treaty. The treaty's consequences apply as written on the treaty.",
+      "Extra Rules: Returning a treaty does not count as you breaking it."
+    ]
   },
   {
     "id": "build",
     "kind": "action",
     "name": "Build",
-    "text": "Place a building on the [[world board]] by paying their construction cost. You can build on a tile with an army, or on tile adjacent to another building.",
+    "text": "Place a building on the [[world board]] by paying its construction cost. You can build on a tile with an army, or on a tile adjacent to another building.",
     "kin": null,
     "phase": "expansion",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Expansion",
+      "Condition: None.",
+      "On trigger: Select an untapped Expansion Character/Activation Card. Select a building blueprint in your court or on the building board. Select a tile/edge to place the building on that meets the Building Conditions. Select enough Expansion Characters/Activation Cards with enough power to satisfy the build power of the selected building.",
+      "Payment: Tap the selected character/activation cards. Pay the construction cost of the building.",
+      "Effect: Place a building of the selected building blueprint on the selected tile/edge. You own that building.",
+      "Extra Rules: You cannot build on a slot that is already built."
+    ]
   },
   {
     "id": "deploy",
     "kind": "action",
     "name": "Deploy",
-    "text": "Place a new [[army]] on a [[Barracks]] or other building you can recruit on.",
+    "text": "Place a new [[army]] on a [[Barracks]] or another building you can recruit on.",
     "kin": null,
     "phase": "expansion",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Expansion",
+      "Condition: You have a building on which you can Deploy. You have fewer armies than your army limit.",
+      "On trigger: Select an untapped Expansion Character/Activation Card. Select a building you own on which you may Deploy armies.",
+      "Payment: Tap the selected character/activation card.",
+      "Effect: Put an army of strength 1 on the tile with the building."
+    ]
   },
   {
     "id": "demolish",
     "kind": "action",
     "name": "Demolish",
-    "text": "Remove a building on a tile with an [[army]]. (can also be used on Walls with 4 power)",
+    "text": "Remove a building on a tile with an [[army]].",
     "kin": null,
     "phase": "expansion",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Expansion",
+      "Condition: You have a building that can be demolished, or you have an army adjacent to a wall.",
+      "On trigger: Select untapped Expansion Characters/Activation Cards with a total of at least 3 build power. Then select a building you own with an army you own on the same tile, or select a wall that is adjacent to your army. Walls from other players are allowed. If a wall was selected and the selected Expansion Character/Activation Card has less than 4 power, select additional Expansion Characters/Activation Cards until 4 power is reached.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Remove the selected building from play. If the army was owned by another player, this counts towards breaking treaties."
+    ]
   },
   {
     "id": "reclaim",
@@ -156,7 +240,14 @@ export const CARDS: readonly CardDef[] = [
     "text": "Reclaim a [[treasure block]] or [[relic block]] on a tile building.",
     "kin": null,
     "phase": "expansion",
-    "start": false
+    "start": false,
+    "notes": [
+      "Phase: Expansion",
+      "Condition: You have an army that can Reclaim.",
+      "On trigger: Select an untapped Expansion Character/Activation Card. Select a tile building you own with a relic block or treasure block on the tile.",
+      "Payment: Tap the selected character/activation card.",
+      "Effect: Remove all relic and treasure blocks from that tile. You gain 3 basic resources of your choice per treasure block and 1 relic per relic block removed."
+    ]
   },
   {
     "id": "revoke",
@@ -165,7 +256,14 @@ export const CARDS: readonly CardDef[] = [
     "text": "Spend 5 power to discard an enacted law.",
     "kin": null,
     "phase": "expansion",
-    "start": false
+    "start": false,
+    "notes": [
+      "Phase: Expansion",
+      "Condition: There is an enacted law. You have 5 untapped Expansion power.",
+      "On trigger: Select an untapped Expansion Character/Activation Card. Select a law card. Select activation cards and character cards that add up to 5 power.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Discard the selected law card."
+    ]
   },
   {
     "id": "battle",
@@ -174,16 +272,45 @@ export const CARDS: readonly CardDef[] = [
     "text": "Start a battle with an [[army]] against another army. Both sides roll dice to deal [[hit]] or [[block]].",
     "kin": null,
     "phase": "control",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own an army that is adjacent to a tile building, center building, or army owned by another player.",
+      "On trigger: Select an untapped Control Character/Activation Card. Select an army that is adjacent to a tile building, center building, or army owned by another player. Select a tile adjacent to the selected army that contains either a tile building, center building, or army.",
+      "Payment: Tap the selected character card.",
+      "Effect:",
+      "Step: Generals. You are the attacker. The other player is the defender. The character you tapped for the Battle action is the attacking general. The defender may respond by tapping a Control character in their court. If they do, that character is the defending general.",
+      "Step: Pool Strength. Calculate the pools of strength. Each side has its own pool of strength. Add up the following for each side:",
+      "- The power of that side's general.",
+      "- The strength of the army on that side's tile.",
+      "- The garrison of the building on the defender's tile, if any. The attacker does not add any garrison from buildings on their tile.",
+      "- Any abilities from characters in court that add strength to pools.",
+      "Step: Roll dice. Each side rolls 1 die per point of strength in their respective pools. They may choose any combination of combat dice available to them. At the start of the game, only the strategic dice are available to players, but more can be unlocked through technologies.",
+      "Step: Resolve Dice.",
+      "- Add self hits to the hit total of your opponent.",
+      "- Subtract the defender's blocks from the attacker's hits. Subtract the attacker's blocks from the defender's hits.",
+      "- Remaining hits are dealt to armies first. Each hit reduces an army's strength by 1. An army at 0 strength is disbanded.",
+      "- If hits remain after the defender's armies, the building on the tile is destroyed if the remaining hits are at least its garrison. A building with no garrison and no army on it is destroyed immediately, with no dice required.",
+      "Step: Ambush. Each side checks separately whether the opposing general can be taken hostage. The defending general can be taken hostage if the defender's tile is unbuilt; the attacking general can be taken hostage if the attacker's tile is unbuilt. The side attempting to take a general hostage must have dealt at least 1 unblocked hit and rolled an ambush total greater than that general's power. If both sides meet these conditions, both generals become hostages.",
+      "Extra Rules: Buildings are destroyed, not captured. Ownership of buildings cannot be transferred through Battle."
+    ]
   },
   {
     "id": "recruit",
     "kind": "action",
     "name": "Recruit",
-    "text": "Increase the [[strength]] of an [[army]] on a [[Barracks]] or other buildings that can recruit.",
+    "text": "Increase the [[strength]] of an [[army]] on a [[Barracks]] or another building that can Recruit.",
     "kin": null,
     "phase": "control",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own an army with less strength than its maximum strength on a building you own that can Recruit.",
+      "On trigger: Select an untapped Control Character/Activation Card. Select an army with less strength than its maximum strength on a building you own that can Recruit.",
+      "Payment: Tap the selected character/activation card. Pay 2 food.",
+      "Effect: Add 1 strength to the selected army.",
+      "Extra Rules: The maximum strength of an army is 3 by default. It can be increased by the Technology: Greater Army Strength."
+    ]
   },
   {
     "id": "reinforce",
@@ -192,34 +319,67 @@ export const CARDS: readonly CardDef[] = [
     "text": "Exchange [[strength]] between two adjacent [[army|armies]].",
     "kin": null,
     "phase": "control",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own two adjacent armies and neither is at maximum strength.",
+      "On trigger: 0. Select an untapped Control Character/Activation Card. 1. Select an army you own. 2. Select an army adjacent to the selected army.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Exchange any amount of strength between the two selected armies.",
+      "Extra Rules: Neither army may go above the maximum strength of an army."
+    ]
   },
   {
     "id": "harvest",
     "kind": "action",
     "name": "Harvest",
-    "text": "Put an [[army]] to work on a [[farmland]], [[forest]] or [[mountain]], gaining a resource of that type. The army becomes [[overexhausted]]: it cannot [[Move]], [[Battle]], or [[Harvest]] this round and next round.",
+    "text": "Put an [[army]] to work on [[farmland]], [[forest]], or [[mountain]]s, gaining a resource of that type. The army becomes [[overexhausted]]: it cannot [[Move]], [[Battle]], or [[Harvest]] this round and next.",
     "kin": null,
     "phase": "control",
-    "start": true
+    "start": true,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own an army on farmland, forest, or mountain.",
+      "On trigger: Select an untapped Control Character/Activation Card. Select an army you own on farmland, forest, or mountain.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Gain 1 resource of that tile's type. Farmland gives food, mountain gives stone, and forest gives lumber. Give the selected army the overexhausted status.",
+      "Extra Rules: The army is overexhausted for the rest of this round. At the next Seasons Change, it becomes exhausted. It remains exhausted for that round and is cleared at the following Seasons Change."
+    ]
   },
   {
     "id": "explore",
     "kind": "action",
     "name": "Explore",
-    "text": "Explore a [[ruins]] with an [[army]] to find a [[warp]], [[treasure block]] or [[relic block]].",
+    "text": "Explore a [[ruins]] with an [[army]] to find a [[warp]], [[treasure block]], or [[relic block]].",
     "kin": null,
     "phase": "control",
-    "start": false
+    "start": false,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own an army on a ruins.",
+      "On trigger: Select an untapped Control Character/Activation Card. Select an army you own on a ruins.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Roll a d6 and remove the ruins block.",
+      "On 1 to 2, the ruins is a warp: immediately claim 2 mana.",
+      "On 3 to 4, the ruins is a treasure: put a treasure block on that tile.",
+      "On 5 to 6, the ruins is a relic: put a relic block on that tile."
+    ]
   },
   {
     "id": "embark",
     "kind": "action",
     "name": "Embark",
-    "text": "Move onto an [[ocean]] with an [[army]] on a [[Harbor]] or other building that can embark. The army is then [[embarked]]: it can move over oceans.",
+    "text": "Move onto an [[ocean]] with an [[army]] on a [[Harbor]] or another building that can embark. The army is then [[embarked]]: it can move over oceans.",
     "kin": null,
     "phase": "control",
-    "start": false
+    "start": false,
+    "notes": [
+      "Phase: Control",
+      "Condition: You own an army on a harbor with an adjacent ocean tile.",
+      "On trigger: Select an untapped Control Character/Activation Card. Select an army you own on a harbor. Then select an adjacent ocean tile.",
+      "Payment: Tap the selected character/activation cards.",
+      "Effect: Move the selected army onto the selected tile. Give it the embarked status."
+    ]
   },
   {
     "id": "village",
@@ -232,10 +392,10 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🏘"
       ],
-      "cost": "2 lumber, 2 food",
+      "cost": "2 [[lumber]], 2 [[food]]",
       "buildPower": 3,
       "garrison": 2,
-      "conditions": "On plains or snow, with at least a distance of 3 tiles from any other tile building.",
+      "conditions": "On [[plains]] or [[snow]], with at least a distance of 3 tiles from any other [[tile building]].",
       "effects": "Worth 1 [[population]]"
     },
     "start": true
@@ -251,13 +411,16 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🏙"
       ],
-      "cost": "2 stone, 2 gold",
+      "cost": "2 [[stone]], 2 [[gold]]",
       "buildPower": 4,
       "garrison": 4,
-      "conditions": "Build on top of a village and replace it.",
+      "conditions": "Upgrade from a [[village]]",
       "effects": "Worth 2 [[population]]"
     },
-    "start": true
+    "start": true,
+    "notes": [
+      "Upgrade in this context means you select a village and turn it into a City instead."
+    ]
   },
   {
     "id": "worksite",
@@ -268,17 +431,22 @@ export const CARDS: readonly CardDef[] = [
     "stats": {
       "shape": "⨺",
       "icons": [
+        "🪚",
         "⛏️",
-        "🪏",
-        "🪚"
+        "🪏"
       ],
-      "cost": "2 basic resources",
+      "cost": "2 [[basic resource]]s",
       "buildPower": 1,
       "garrison": 0,
-      "conditions": "Inside a tile building. An adjacent tile must be farmland, forest, or a mountain.",
-      "effects": "- If the adjacent tile is farmland: The Worksite is a Farm 🪏 that produces 1 food.\n- If the adjacent tile is a mountain: The Worksite is a Quarry ⛏️ that produces 1 stone.\n- If the adjacent tile is forest: The Worksite is a Lumberyard 🪚 that produces 1 lumber."
+      "conditions": "Inside a [[tile building]]. An adjacent tile must be [[farmland]], [[forest]], or [[mountain]].",
+      "effects": "Produces 1 [[basic resource]] of the tile its adjacent to."
     },
-    "start": true
+    "start": true,
+    "notes": [
+      "If the adjacent tile is farmland: The Worksite is a Farm 🪏 that produces 1 food.",
+      "If the adjacent tile is a mountain: The Worksite is a Quarry ⛏️ that produces 1 stone.",
+      "If the adjacent tile is forest: The Worksite is a Lumberyard 🪚 that produces 1 lumber."
+    ]
   },
   {
     "id": "barracks",
@@ -291,11 +459,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "⚔️"
       ],
-      "cost": "2 lumber, 1 stone",
+      "cost": "2 [[lumber]], 1 [[stone]]",
       "buildPower": 2,
       "garrison": 0,
-      "conditions": "Inside a tile building, on plains or snow.",
-      "effects": "Adds 2 garrison to the tile building and increases your army limit by 1. Armies can Deploy and Recruit here."
+      "conditions": "Inside a [[tile building]], on [[plains]] or [[snow]].",
+      "effects": "Adds 2 [[garrison]] to the [[tile building]] and increases your [[army limit]] by 1. [[army|Armies]] can [[Deploy]] and [[Recruit]] here."
     },
     "start": true
   },
@@ -308,13 +476,16 @@ export const CARDS: readonly CardDef[] = [
     "stats": {
       "shape": "+",
       "icons": [],
-      "cost": "1 stone",
+      "cost": "1 [[stone]]",
       "buildPower": 1,
       "garrison": 0,
-      "conditions": "Must not touch the ocean.",
-      "effects": "Movement across costs ½ speed. Roads are not owned by anyone, but can be used as a connection building to another building you own for the purposes of placing new buildings."
+      "conditions": "Must not cross into [[ocean]].",
+      "effects": "Movement across costs ½ speed."
     },
-    "start": true
+    "start": true,
+    "notes": [
+      "Roads are not owned by anyone, but can be used as a connection building to another building you own for the purposes of placing new buildings."
+    ]
   },
   {
     "id": "market",
@@ -327,11 +498,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "⚖️"
       ],
-      "cost": "1 lumber, 1 food",
+      "cost": "1 [[lumber]], 1 [[food]]",
       "buildPower": 2,
       "garrison": 0,
-      "conditions": "An adjacent edge must be a river. One per tile building,.",
-      "effects": "Produces 1 gold."
+      "conditions": "An adjacent edge must be a [[river]]. Limit 1 per [[tile building]].",
+      "effects": "Produces 1 [[gold]]."
     },
     "start": false
   },
@@ -346,11 +517,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🔨"
       ],
-      "cost": "1 stone",
+      "cost": "1 [[stone]]",
       "buildPower": 1,
       "garrison": 0,
       "conditions": "None.",
-      "effects": "Lowers build power required to Build or Demolish buildings on this tile by 1, to a minimum of 0."
+      "effects": "Lowers build power required to [[Build]] or [[Demolish]] buildings on this tile by 1, to a minimum of 0."
     },
     "start": false
   },
@@ -365,11 +536,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "⚓"
       ],
-      "cost": "2 stone, 2 lumber",
+      "cost": "2 [[stone]], 2 [[lumber]]",
       "buildPower": 3,
       "garrison": 0,
-      "conditions": "Adjacent tile is ocean, or one of the adjacent edges is a river. One per tile building,.",
-      "effects": "Is used to Embark. Is used to connect players for the Trade Treaty."
+      "conditions": "Adjacent to [[ocean]] or a [[river]].Limit 1 per [[tile building]].",
+      "effects": "Is used to [[Embark]] and to connect players for the [[Trade Treaty]]."
     },
     "start": false
   },
@@ -384,11 +555,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🕮"
       ],
-      "cost": "2 stone, 2 gold",
+      "cost": "2 [[stone]], 2 [[gold]]",
       "buildPower": 3,
       "garrison": 0,
-      "conditions": "One per city. Must be built in a city.",
-      "effects": "Produces 1 gear."
+      "conditions": "One per [[city]]. Must be built in a [[city]].",
+      "effects": "Produces 1 [[gear]]."
     },
     "start": false
   },
@@ -403,11 +574,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🟣"
       ],
-      "cost": "2 stone, 2 gold",
+      "cost": "2 [[stone]], 2 [[gold]]",
       "buildPower": 3,
       "garrison": 0,
-      "conditions": "One per city. Must be built in a city.",
-      "effects": "Produces 1 mana."
+      "conditions": "One per [[city]]. Must be built in a [[city]].",
+      "effects": "Produces 1 [[mana]]."
     },
     "start": false
   },
@@ -420,11 +591,11 @@ export const CARDS: readonly CardDef[] = [
     "stats": {
       "shape": "/",
       "icons": [],
-      "cost": "1 stone",
+      "cost": "1 [[stone]]",
       "buildPower": 1,
       "garrison": 0,
-      "conditions": "Must not be on ocean.",
-      "effects": "Prevents you from Moving or Battling across it, except if you own it and there is a road across it."
+      "conditions": "Can not be build adjacent to an [[ocean]].",
+      "effects": "Prevents you from [[Move|Moving]] or [[Battle|Battling]] across it, except if you own it and there is a [[Road]] across it."
     },
     "start": false
   },
@@ -439,11 +610,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "♜"
       ],
-      "cost": "3 stone, 1 gold",
+      "cost": "3 [[stone]], 1 [[gold]]",
       "buildPower": 3,
-      "garrison": 4,
-      "conditions": "Must not be on ocean.",
-      "effects": "Blocks movement across it."
+      "garrison": 6,
+      "conditions": "Can not be build on an [[ocean]]",
+      "effects": "-"
     },
     "start": false
   },
@@ -458,11 +629,11 @@ export const CARDS: readonly CardDef[] = [
       "icons": [
         "🌙"
       ],
-      "cost": "3 lumber, 3 stone, 3 gold, 3 food",
+      "cost": "3 of every [[basic resource]]",
       "buildPower": 4,
       "garrison": 0,
-      "conditions": "Inside a city. Limit 1 per game.",
-      "effects": "When built, gain up to 3 Faction Treaties of Kin not in the game that you do not already hold."
+      "conditions": "Inside a [[city]]. Limit 1 per game.",
+      "effects": "When built, gain up to 3 [[Faction Treaty|Faction Treaties]] of [[Kin]] not in the game that you do not already hold."
     },
     "start": false
   },
@@ -470,19 +641,31 @@ export const CARDS: readonly CardDef[] = [
     "id": "open-source",
     "kind": "faction",
     "name": "Open Source",
-    "text": "When you [[Publicize]], gain 1 [[gear]].",
+    "text": "When you [[Publicize]], gain 2 [[gear]].",
     "kin": "ethereal",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Trigger: Publicize, after it resolves fully.",
+      "Effect: Gain 1 gear."
+    ]
   },
   {
     "id": "otherworldly-presence",
     "kind": "faction",
     "name": "Otherworldly Presence",
-    "text": "You must draft the [[Ethereal]] as the first character in the character draft. The Ethereal cannot be used as a [[general]] or held [[hostage]] by other players. 1 - Condition: You are drafting characters. 1 - Trigger: Character draft, when you draft your first character. 1 - Effect: You must draft the Ethereal as your first character. 2 - Condition: The Ethereal is in your court. 2 - Trigger: Whenever a player attempts to use the Ethereal as a general or take it hostage. 2 - Effect: The Ethereal cannot be used as a general or taken hostage by another player.",
+    "text": "You must draft the [[Ethereal]] as the first character in the character draft. The Ethereal cannot be used as a [[general]], held [[hostage]] by other players, or traded through [[Barter]].",
     "kin": "ethereal",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You are drafting characters.",
+      "1 - Trigger: Character draft, when you draft your first character.",
+      "1 - Effect: You must draft the Ethereal as your first character.",
+      "2 - Condition: The Ethereal is in your court.",
+      "2 - Trigger: Whenever a player attempts to use the Ethereal as a general or take it hostage.",
+      "2 - Effect: The Ethereal cannot be used as a general or taken hostage by another player."
+    ]
   },
   {
     "id": "student-of-the-ways",
@@ -491,16 +674,30 @@ export const CARDS: readonly CardDef[] = [
     "text": "You cannot break [[Faction Treaties]].",
     "kin": "ethereal",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: You are about to break a Faction Treaty.",
+      "Trigger: Treaty, before the effect that would break the treaty resolves.",
+      "Effect: You cannot break the Faction Treaty."
+    ]
   },
   {
     "id": "quantum-collapse",
     "kind": "faction",
     "name": "Quantum Collapse",
-    "text": "Random effects are predicted by the Ethereal. You choose which [[subterfuge card]] to draw when winning the bid for a [[secret tactics card]], which outcome an [[ruins]] has when [[Explore|Exploring]] it, and which 3 [[law card]]s are drawn for the [[Council]] event. 1 - Condition: You win the bid for a secret tactics card. 1 - Trigger: Secret tactics card bidding, after you win the bid and before drawing a subterfuge card. 1 - Effect: Choose which subterfuge card to draw from the subterfuge deck. 2 - Trigger: Explore, when determining the ruins's contents. 2 - Effect: Choose whether the ruins contains a warp, treasure block, or relic block. 3 - Trigger: Council event, before drawing the 3 laws. 3 - Effect: Choose which 3 laws are drawn.",
+    "text": "Random effects are predicted by the Ethereal:\n- You choose the [[subterfuge card]] when you win a [[Tactician]] bid.\n- You choose the outcome of [[ruins]] when [[Explore|Exploring]].\n- You choose the 3 [[law card]]s for the [[Council]] event.",
     "kin": "ethereal",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You win the bid for a secret tactics card.",
+      "1 - Trigger: Secret tactics card bidding, after you win the bid and before drawing a subterfuge card.",
+      "1 - Effect: Choose which subterfuge card to draw from the subterfuge deck.",
+      "2 - Trigger: Explore, when determining the ruins's contents.",
+      "2 - Effect: Choose whether the ruins contains a warp, treasure block, or relic block.",
+      "3 - Trigger: Council event, before drawing the 3 laws.",
+      "3 - Effect: Choose which 3 laws are drawn."
+    ]
   },
   {
     "id": "daimyo-castle",
@@ -528,34 +725,68 @@ export const CARDS: readonly CardDef[] = [
     "text": "[[Building]] a [[Road]] [[untap]]s the [[character]] used to build it.",
     "kin": "hanshu",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Condition: You completed a Build action, the character was used to perform that action, and the building built was a Road.",
+      "Trigger: Build, after the action resolves fully.",
+      "Effect: Untap the character used to perform the Build action."
+    ]
   },
   {
     "id": "expansionists",
     "kind": "faction",
     "name": "Expansionists",
-    "text": "You may [[Build]] a [[village]] on [[farmland]]. A village or [[city]] built on farmland [[produce]]s 1 [[food]]. 1 - Condition: You are building a village on farmland. 1 - Trigger: Build, when checking the build condition. 1 - Effect: Farmland is an allowed tile for building a village. 2 - Condition: A village or city is on farmland. 2 - Trigger: Seasons Change, before effects 2 - Effect: The village or city produces 1 food.",
+    "text": "You may [[Build]] a [[village]] on [[farmland]]. A village or [[city]] built on farmland [[produce]]s 1 [[food]].",
     "kin": "hanshu",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You are building a village on farmland.",
+      "1 - Trigger: Build, when checking the build condition.",
+      "1 - Effect: Farmland is an allowed tile for building a village.",
+      "2 - Condition: A village or city is on farmland.",
+      "2 - Trigger: Seasons Change, before effects",
+      "2 - Effect: The village or city produces 1 food."
+    ]
   },
   {
     "id": "rice-fields",
     "kind": "faction",
     "name": "Rice Fields",
-    "text": "[[Worksite]]s built adjacent to [[plains]] are Rice Fields 🌾 that [[produce]] 1 [[food]]. 1 - Condition: You are building a Worksite. 1 - Trigger: Build, when checking the Building Conditions. 1 - Effect: Plains is an allowed tile for the Building Conditions of the Worksite. 2 - Condition: A Worksite is adjacent to plains. 2 - Trigger: Seasons Change, before effects. 2 - Effect: The Worksite is a Rice Field 🌾 that produces 1 food.",
+    "text": "[[Worksite]]s built adjacent to [[plains]] are Rice Fields 🌾 that [[produce]] 1 [[food]].",
     "kin": "hanshu",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You are building a Worksite.",
+      "1 - Trigger: Build, when checking the Building Conditions.",
+      "1 - Effect: Plains is an allowed tile for the Building Conditions of the Worksite.",
+      "2 - Condition: A Worksite is adjacent to plains.",
+      "2 - Trigger: Seasons Change, before effects.",
+      "2 - Effect: The Worksite is a Rice Field 🌾 that produces 1 food."
+    ]
   },
   {
     "id": "influential",
     "kind": "faction",
     "name": "Influential",
-    "text": "[[Authority]] is a resource only the Hanshu use. You gain 1 authority when the law you voted for is enacted. You gain 1 authority when a law is [[Revoked]] by another player. You may revoke a law card for 1 authority. 1 - Condition: The law you voted on is enacted in the Council event. 1 - Trigger: Council, after the law is enacted. 1 - Effect: Gain 1 influence. 2 - Condition: Another player revokes a law. 2 - Trigger: Revoke, after the law is revoked. 2 - Effect: Gain 1 influence. 3 - Condition: You have at least 1 influence and want to revoke a law. 3 - Trigger: Revoke, before the Payment step. 3 - Payment: Pay 1 influence. 3 - Effect: Revoke the selected law without having to tap any sources for build power.",
+    "text": "[[Authority]] is a resource only the Hanshu use. You gain 1 authority when the law you voted for is enacted. You gain 1 authority when a law is [[Revoked]] by another player. You may revoke a law card for 1 authority.",
     "kin": "hanshu",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: The law you voted on is enacted in the Council event.",
+      "1 - Trigger: Council, after the law is enacted.",
+      "1 - Effect: Gain 1 influence.",
+      "2 - Condition: Another player revokes a law.",
+      "2 - Trigger: Revoke, after the law is revoked.",
+      "2 - Effect: Gain 1 influence.",
+      "3 - Condition: You have at least 1 influence and want to revoke a law.",
+      "3 - Trigger: Revoke, before the Payment step.",
+      "3 - Payment: Pay 1 influence.",
+      "3 - Effect: Revoke the selected law without having to tap any sources for build power.",
+      "Extra Rules: Influence cannot be bartered."
+    ]
   },
   {
     "id": "vault",
@@ -583,35 +814,63 @@ export const CARDS: readonly CardDef[] = [
     "text": "Your [[army|armies]] are immune to the [[Attrition]] event.",
     "kin": "wanderers",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Trigger: Attrition, before effects.",
+      "Effect: Your armies are unaffected by the Attrition event."
+    ]
   },
   {
     "id": "snow-strider",
     "kind": "faction",
     "name": "Snow Strider",
-    "text": "Moving from [[snow]] to snow costs ½. When you [[Move]] an [[army]], the top and bottom tiles of the same column count as adjacent. 1 - Condition: You are moving from a snow tile to another snow tile. 1 - Trigger: Move, when calculating tile speed cost. 1 - Effect: The tile speed cost for moving from snow to snow is reduced to ½. 2 - Trigger: Move, when checking tile adjacency. 2 - Effect: For you, the top tile and the bottom tile of the same column count as adjacent.",
+    "text": "Moving from [[snow]] to snow costs ½. When you [[Move]] an [[army]], the top and bottom tiles of the same column count as adjacent.",
     "kin": "wanderers",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You are moving from a snow tile to another snow tile.",
+      "1 - Trigger: Move, when calculating tile speed cost.",
+      "1 - Effect: The tile speed cost for moving from snow to snow is reduced to ½.",
+      "2 - Trigger: Move, when checking tile adjacency.",
+      "2 - Effect: For you, the top tile and the bottom tile of the same column count as adjacent."
+    ]
   },
   {
     "id": "nomads",
     "kind": "faction",
     "name": "Nomads",
-    "text": "Move a [[village]] you own to an adjacent [[snow]] tile. (all [[slice buildings]] inside the village move with it)",
+    "text": "Move a [[village]] you own to an adjacent [[snow]] tile.",
     "kin": "wanderers",
     "form": "action",
     "core": false,
-    "phase": "discovery"
+    "phase": "discovery",
+    "notes": [
+      "Phase: Discovery",
+      "Condition: You own a village adjacent to a snow tile.",
+      "On trigger: Select a untapped Discovery Character/Activation Card. Select a village adjacent to a snow. select a snow tile adjacent to the village.",
+      "Payment: Tapping the selected character/activation cards.",
+      "Effect: Move the selected village and any slice buildings on the same tile to the selected snow tile.",
+      "Extra Rules: Buildings whose conditions are no longer met stop producing until those conditions are met again, like worksites not adjacent to farmland, forest, or mountains, or markets not adjacent to rivers."
+    ]
   },
   {
     "id": "relic-seekers",
     "kind": "faction",
     "name": "Relic Seekers",
-    "text": "When you [[Explore]] a [[ruins]], you always find a [[relic]]. When you attack, if your [[ambush]] total is equal to or higher than the number of relics the other player has, you may steal 1 relic from them instead of taking a general hostage. 1 - Condition: You Explore a ruins. 1 - Trigger: Explore, when determining the ruin's contents. 1 - Effect: You find a relic block, instead of randomly determined relic block, warp or treasure block. 2 - Condition: You are attacking, your ambush total is equal to or higher than the number of relics the other player has, and they have at least 1 relic. 2 - Trigger: Battle, before the ambush step. 2 - On Trigger: Choose whether to steal 1 relic from the other player instead of taking a general hostage. 2 - Effect: If you choose to steal a relic, take 1 relic from the other player instead of taking a general hostage.",
+    "text": "When you [[Explore]] a [[ruins]], you always find a [[relic]].\nWhen you attack, if your [[ambush]] total is equal to or higher than the number of [[relic]] the other player has, you may steal 1 [[relic]] from them instead of taking a general [[hostage]].",
     "kin": "wanderers",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You Explore a ruins.",
+      "1 - Trigger: Explore, when determining the ruin's contents.",
+      "1 - Effect: You find a relic block, instead of randomly determined relic block, warp or treasure block.",
+      "2 - Condition: You are attacking, your ambush total is equal to or higher than the number of relics the other player has, and they have at least 1 relic.",
+      "2 - Trigger: Battle, before the ambush step.",
+      "2 - On Trigger: Choose whether to steal 1 relic from the other player instead of taking a general hostage.",
+      "2 - Effect: If you choose to steal a relic, take 1 relic from the other player instead of taking a general hostage."
+    ]
   },
   {
     "id": "divine-sanctum",
@@ -639,7 +898,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "Moving from [[plains]] to plains costs ½.",
     "kin": "lumon",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Condition: Army is standing on plains.",
+      "Trigger: Move, when calculating tile speed cost.",
+      "Effect: The tile speed cost for moving to plains is set to ½."
+    ]
   },
   {
     "id": "virtue",
@@ -648,16 +912,29 @@ export const CARDS: readonly CardDef[] = [
     "text": "[[Virtue]] equals the number of your treaties other players hold. It cannot be spent or bartered. Your characters use it for their abilities.",
     "kin": "lumon",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Barter, when it resolves",
+      "Effect: Set your virtue to the number of your treaties held by other players.",
+      "Extra rules: Virtue is not a bartering good."
+    ]
   },
   {
     "id": "diplomats",
     "kind": "faction",
     "name": "Diplomats",
-    "text": "When a player accepts a [[treaty]] from you, they receive a gift:\n- 1 [[gear]] for a Peace Treaty,\n- 1 [[mana]] for an Access Treaty,\n- 1 [[gold]] for a Trade Treaty.",
+    "text": "When a player accepts a [[treaty]] from you, they receive a gift:",
     "kin": "lumon",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "- 1 gear for a Peace Treaty,",
+      "- 1 mana for an Access Treaty,",
+      "- 1 gold for a Trade Treaty.",
+      "Condition: The barter included a peace treaty, access treaty, trade treaty from you.",
+      "Trigger: Barter, when it resolves.",
+      "Effect: The player who accepted the treaty gains 1 gear for a Peace Treaty, and/or 1 mana for an Access Treaty, and/or 1 gold for a Trade Treaty."
+    ]
   },
   {
     "id": "open-markets",
@@ -666,16 +943,28 @@ export const CARDS: readonly CardDef[] = [
     "text": "You can [[Build]] [[markets]] without an adjacent [[river]].",
     "kin": "lumon",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile.",
+      "Effect: A market does not require an adjacent river to be built."
+    ]
   },
   {
     "id": "the-white-prophet",
     "kind": "faction",
     "name": "The White Prophet",
-    "text": "You must draft Lumon as the first character in the character draft. Lumon cannot be used as a [[general]] or held [[hostage]] by other players. 1 - Condition: You are drafting characters. 1 - Trigger: Character draft, when you draft your first character. 1 - Effect: You must draft Lumon as your first character. 2 - Condition: Lumon is in your court. 2 - Trigger: Whenever a player attempts to use Lumon as a general or take Lumon hostage. 2 - Effect: Lumon cannot be used as a general or taken hostage by another player.",
+    "text": "You must draft Lumon as the first character in the character draft. Lumon cannot be used as a [[general]], held [[hostage]] by other players, or traded through [[Barter]].",
     "kin": "lumon",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Condition: You are drafting characters.",
+      "1 - Trigger: Character draft, when you draft your first character.",
+      "1 - Effect: You must draft Lumon as your first character.",
+      "2 - Condition: Lumon is in your court.",
+      "2 - Trigger: Whenever a player attempts to use Lumon as a general or take Lumon hostage.",
+      "2 - Effect: Lumon cannot be used as a general or taken hostage by another player."
+    ]
   },
   {
     "id": "warband-camp",
@@ -703,7 +992,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "Recruiting [[army]] strength costs 1 [[food]] instead of 2.",
     "kin": "beastmen",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Trigger: Recruit, when calculating the cost.",
+      "Effect: set the cost for the recruit to 1 food instead of 2 food."
+    ]
   },
   {
     "id": "salvage",
@@ -712,7 +1005,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "When you [[Demolish]], you gain back the resources spent on the building.",
     "kin": "beastmen",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Demolish, when it resolves.",
+      "Effect: Gain the resources of the resource cost of the building type of the demolished building."
+    ]
   },
   {
     "id": "desert-dwellers",
@@ -721,7 +1018,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "You may [[Build]] on [[desert]] tiles as if they were [[plains]].",
     "kin": "beastmen",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile.",
+      "Effect: Desert tiles are treated as plains for the purpose of determining which building blueprints are allowed."
+    ]
   },
   {
     "id": "great-feasts",
@@ -730,7 +1031,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "When an [[army]] in a [[Battle]] is [[disband]]ed because of you, gain 1 [[food]], even if the disbanded army is your own.",
     "kin": "beastmen",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: An army in a Battle is disbanded.",
+      "Trigger: Battle, when the action has fully resolved.",
+      "Effect: Gain 1 food."
+    ]
   },
   {
     "id": "the-ark",
@@ -758,16 +1064,23 @@ export const CARDS: readonly CardDef[] = [
     "text": "When someone [[Publicize]]s one of your [[technology|technologies]], gain 1 [[gear]].",
     "kin": "ark",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Trigger: Another player Publicize, when it resolves.",
+      "Effect: Gain 1 gear."
+    ]
   },
   {
     "id": "calculators",
     "kind": "faction",
     "name": "Calculators",
-    "text": "Secretly predict an action another player will make with a [[character]] this round. If it turns out to be true, gain 1 [[gear]] for each technology in your court. (can only trigger once per round)",
+    "text": "Secretly predict an action another player will make with a [[character]] this round. If it turns out to be true, gain 1 [[gear]] for each technology that only you know. (can only trigger once per round)",
     "kin": "ark",
     "form": "event",
-    "core": false
+    "core": false,
+    "notes": [
+      "Effect: The Archive Ark gets a popup where they choose a player, an action card, and a character in their court. When this action card is taken by that player, and it is activated by that player, and this is the first time this happens this round, the Archive Ark gains 1 gear for each technology in their court. This card taps."
+    ]
   },
   {
     "id": "drifting-citadel",
@@ -777,25 +1090,44 @@ export const CARDS: readonly CardDef[] = [
     "kin": "ark",
     "form": "action",
     "core": false,
-    "phase": "discovery"
+    "phase": "discovery",
+    "notes": [
+      "Phase: Discovery",
+      "Condition: The Ark has an adjacent unbuilt tile.",
+      "On trigger: Select a untapped Discovery Character/Activation Card. Select an unbuilt tile adjacent to the Ark.",
+      "Effect: Move the Ark to the selected tile.",
+      "Extra Rules: Character power does not change the distance the Ark moves."
+    ]
   },
   {
     "id": "the-eternal-ark",
     "kind": "faction",
     "name": "The Eternal Ark",
-    "text": "The Archive Ark has its own board: the ark board, which contains 2 tiles where [[slice buildings]] can be built regardless of their Building Conditions. For the Worksite on the ark board don't produce normally, but can be build there. You cannot Deploy armies on the ark board. 1 - Trigger: Seasons Change 1 - Effect: worksites on the ark board don't produce. 2 - Trigger: The Eternal Ark is destroyed. 2 - Effect: Destroy all buildings inside the Ark. Remove the ark board from play. 3 - Trigger: Build, when choosing which tiles are allowed as an option for a slice building 3 - Effect: add all edges on the ark board to the allowed edges.",
+    "text": "The Archive Ark has its own board: the ark board, which contains 2 tiles considered [[tile buildings]]. Each supports up to 6 [[slice buildings]], one per edge, regardless of their Building Conditions. [[Worksite]]s on the ark board do not produce normally, but can be built there. You cannot Deploy armies on the ark board.",
     "kin": "ark",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Trigger: Seasons Change",
+      "1 - Effect: worksites on the ark board don't produce.",
+      "2 - Trigger: The Eternal Ark is destroyed.",
+      "2 - Effect: Destroy all buildings inside the Ark. Remove the ark board from play.",
+      "3 - Trigger: Build, when choosing which tiles are allowed as an option for a slice building",
+      "3 - Effect: add all edges on the ark board to the allowed edges."
+    ]
   },
   {
     "id": "mass-harvest",
     "kind": "faction",
     "name": "Mass Harvest",
-    "text": "Gain a basic resource of the tile type the Ark is standing on for each Worksite.",
+    "text": "Gain a [[basic resource]] of the tile type the [[Ark]] is standing on for each [[Worksite]] on the ark board.",
     "kin": "ark",
     "form": "event",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: The Ark building is on the Board. The Ark Building is on a farmland, forest, or mountain. There are workites on the arkboard.",
+      "Effect: If The Ark if on farmland, gain 1 food for each worksite on the ark board. If The Ark is on a forest, gain 1 lumber for each worksite on the ark board. If The Ark is on a mountain, gain 1 stone for each worksite on the ark board. This card taps."
+    ]
   },
   {
     "id": "brewery",
@@ -817,14 +1149,35 @@ export const CARDS: readonly CardDef[] = [
     "start": false
   },
   {
+    "id": "master-smiths",
+    "kind": "faction",
+    "name": "Master Smiths",
+    "text": "Your [[Smith]]s reduce build power cost by 2 instead of 1 on that tile.",
+    "kin": "hammers",
+    "form": "passive",
+    "core": true,
+    "notes": [
+      "Conditions: There are Smiths on the selected tile of the Build action",
+      "Trigger: Build, when calculating the build power cost.",
+      "Effect: Each Smith reduces the build power cost by 2 instead of 1 on that tile."
+    ]
+  },
+  {
     "id": "craftdwarves",
     "kind": "faction",
     "name": "Craftdwarves",
     "text": "You may [[claim]] the top card of the [[tactics deck]] for 5 [[gold]].",
     "kin": "hammers",
     "form": "action",
-    "core": true,
-    "phase": "expansion"
+    "core": false,
+    "phase": "expansion",
+    "notes": [
+      "Phase: Expansion",
+      "Condition: You have at least 5 gold. The tactics deck is not empty.",
+      "On trigger: Select an untapped Expansion Character/Activation Card.",
+      "Payment: Tapping the selected character/activation cards. Pay 5 gold.",
+      "Effect: Take the top card of the tactics deck."
+    ]
   },
   {
     "id": "finders-keepers",
@@ -833,7 +1186,13 @@ export const CARDS: readonly CardDef[] = [
     "text": "During the [[Tacticians]] event, you bid first for a regular [[tactics card]], before everyone else. Then bidding continues in [[natural order]].",
     "kin": "hammers",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: The Tacticians event is resolving, and the drawn card is a regular tactics card.",
+      "Trigger: Tacticians, when determining the bidding order.",
+      "Effect: You bid first. After your bid, bidding continues in natural order.",
+      "Extra Rules: This ability does not work if the drawn card is a secret tactics card."
+    ]
   },
   {
     "id": "mountain-folk",
@@ -842,16 +1201,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "You may [[Build]] on [[mountains]] as if they were [[plains]].",
     "kin": "hammers",
     "form": "passive",
-    "core": false
-  },
-  {
-    "id": "master-smiths",
-    "kind": "faction",
-    "name": "Master Smiths",
-    "text": "Your [[Smith]]s reduce build power cost by 2 instead of 1 on that tile.",
-    "kin": "hammers",
-    "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile.",
+      "Effect: Mountains are treated as plains for the purpose of determining which building blueprints are allowed."
+    ]
   },
   {
     "id": "guild-hall",
@@ -879,16 +1233,32 @@ export const CARDS: readonly CardDef[] = [
     "text": "Gain 1 [[gold]] when you receive a [[Trade Treaty]] from another player.",
     "kin": "syndicate",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Condition: You receive a Trade Treaty from another player in this barter.",
+      "Trigger: Barter, when it resolves.",
+      "Effect: Gain 1 gold."
+    ]
   },
   {
     "id": "tradegoods",
     "kind": "faction",
     "name": "Tradegoods",
-    "text": "Tradegoods are a [[bartering goods]] only you generate. When you [[Barter]] them to another player, assign them a basic resource type. The receiver gets that resource instead. Your [[Harbor]]s [[produce]] 1 Tradegoods, and each [[Trade Treaty]] you hold from another player produces 1 Tradegoods. 1 - Trigger: Barter, when selecting to add Tradegoods to a barter offer. 1 - Effect: Add a window next to the Tradegoods quantity where you can select which resource the Tradegoods turns into upon a successful barter. The selected resource type determines what resource the receiver gains upon successfully completing the barter. 2 - Condition: You own a harbor. 2 - Trigger: Seasons Change, before effects. 2 - Effect: Each harbor you own produces 1 Tradegoods. 3 - Condition: You hold a trade treaty from another player. 3 - Trigger: Seasons Change, before effects. 3 - Effect: Each trade treaty you hold from another player produces 1 Tradegoods.",
+    "text": "Tradegoods are a [[bartering goods]] only you generate. When you [[Barter]] them to another player, assign them a basic resource type. The receiver gets that resource instead. Your [[Harbor]]s [[produce]] 1 Tradegoods, and each [[Trade Treaty]] you hold from another player produces 1 Tradegoods.",
     "kin": "syndicate",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Trigger: Barter, when selecting to add Tradegoods to a barter offer.",
+      "1 - Effect: Add a window next to the Tradegoods quantity where you can select which resource the Tradegoods turns into upon a successful barter. The selected resource type determines what resource the receiver gains upon successfully completing the barter.",
+      "Tradegoods can only be contributed from the Syndicate's side. Another player composing an offer with the Syndicate may request its Tradegoods and choose which basic resource they receive upon acceptance.",
+      "2 - Condition: You own a harbor.",
+      "2 - Trigger: Seasons Change, before effects.",
+      "2 - Effect: Each harbor you own produces 1 Tradegoods.",
+      "3 - Condition: You hold a trade treaty from another player.",
+      "3 - Trigger: Seasons Change, before effects.",
+      "3 - Effect: Each trade treaty you hold from another player produces 1 Tradegoods."
+    ]
   },
   {
     "id": "ruthless-capitalists",
@@ -898,7 +1268,14 @@ export const CARDS: readonly CardDef[] = [
     "kin": "syndicate",
     "form": "action",
     "core": false,
-    "phase": "discovery"
+    "phase": "discovery",
+    "notes": [
+      "Phase: Discovery",
+      "Condition: You are connected to a played of whom you do not hold a trade treaty, and who does not hold a trade treaty of yours. You have 3 tradegoods.",
+      "On trigger: Select an untapped Discovery Character/Activation Card. Select a player of which you don't hold a trade treaty of, and whom don't hold a trade treaty of yours.",
+      "Payment: Tapping the selected character/activation card. Pay 3 Tradegoods.",
+      "Effect: You and the selected player each gain a Trade Treaty from the other."
+    ]
   },
   {
     "id": "river-roamers",
@@ -907,7 +1284,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "You can [[Build]] a [[village]] on an tile connected by [[river]] to another village you own, without needing an army there or an adjacent building.",
     "kin": "syndicate",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: You are building a village",
+      "Trigger: Build, when checking the eligible tiles to build on",
+      "Effect: Add all tiles to the build location options which are adjacent to rivers which connect through river tiles to a village you own."
+    ]
   },
   {
     "id": "the-great-tree",
@@ -935,7 +1317,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "Moving from [[forest]] to forest costs ½.",
     "kin": "tree",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Condition: Army is standing on forest.",
+      "Trigger: Move, when calculating tile speed cost.",
+      "Effect: The tile speed cost for moving to forest is set to ½."
+    ]
   },
   {
     "id": "woodkin",
@@ -944,7 +1331,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "You can [[Build]] [[villages]] on [[forest]]s as if they were [[plains]].",
     "kin": "tree",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: You are building a village",
+      "Trigger: Build, when checking the Building Conditions.",
+      "Effect: Add forest to the allowed tiles for this Building selection."
+    ]
   },
   {
     "id": "seedling-villages",
@@ -953,7 +1345,12 @@ export const CARDS: readonly CardDef[] = [
     "text": "[[Build]]ing a [[village]] on a [[forest]] has no resource cost if the village is attached to [[The Great Tree]].",
     "kin": "tree",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Condition: You are building a village on a forest tile, and the village is attached to the Great Tree.",
+      "Trigger: Build, when determining the resource cost.",
+      "Effect: The resource cost for building the village is 0."
+    ]
   },
   {
     "id": "mana-affluent",
@@ -962,7 +1359,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "When someone [[Explore]]s a [[warp]], gain 1 [[mana]].",
     "kin": "tree",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "Trigger: Explore, when a warp is discovered.",
+      "Effect: Gain 1 mana."
+    ]
   },
   {
     "id": "sleeping-city",
@@ -990,7 +1391,11 @@ export const CARDS: readonly CardDef[] = [
     "text": "[[Subterfuge card]]s cannot be played against you.",
     "kin": "deepones",
     "form": "passive",
-    "core": true
+    "core": true,
+    "notes": [
+      "Trigger: when deciding whether a subterfuge card can trigger against this player or not",
+      "Effect: the subterfuge card cannot trigger"
+    ]
   },
   {
     "id": "chosen-thrall",
@@ -999,25 +1404,51 @@ export const CARDS: readonly CardDef[] = [
     "text": "Secretly choose a [[character]] from another player's court. If that character is ever used as a [[general]] in combat against you, or used to [[Move]] an [[army]] adjacent to one of your armies, put it in your [[court]]. Then discard this card.",
     "kin": "deepones",
     "form": "event",
-    "core": false
+    "core": false,
+    "notes": [
+      "Effect: The first time this is activated Deep Ones get a pop-up. There they select a character from another player's court in a dropdown. If that selected character is used as a general in combat against the Deep Ones, or if the Move action card is ever used to move an army adjacent to an army the Deep Ones own and the selected character was tapped to activate the Move, then the selected character is put into the court of the Deep Ones. The Move or Battle action card is immediately cancelled. No Battle or Move further takes place. This is still the end of that player's round. Then discard this card.",
+      "Extra rules: when it is put into your court, it is not a hostage. They own the character fully and can use its ability and tap it to active cards. When this card is discard, it is gone from play. It cannot be found in any board or any discard pile. It cannot be recovered or ever activated again."
+    ]
   },
   {
     "id": "underwater-cult",
     "kind": "faction",
     "name": "Underwater Cult",
-    "text": "You can only [[Build]] [[villages]] on [[ocean]]s. Villages on ocean tiles must be dedicated to a [[resource]]. [[Worksite]]s on ocean tiles can be built in your villages and cities regardless of what tile is adjacent. Those Worksites [[produce]] the dedicated resource of their tile building, instead of what they would usually produce. 1 - Trigger: Build, when checking the Building Conditions. 1 - Effect: Ocean is the only allowed tile for building the village. 2 - Condition: You are building a village on an ocean tile. 2 - Trigger: Build, when determining the dedication of the village. 2 - On trigger: get a pop-up where a choice has to be made between gold, lumber, stone, or food. A choice MUST be made. this cannot be declined. 2 - Effect: the chosen resource becomes the dedicated resource of that village. Show an icon on the village to indicate what it is dediated to. 3 - Condition: a worksite is chosen for the Build action card 3 - Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile. 3 - Effect: Worksites can be built in villages and cities regardless of the adjacent tile. 4 - Condition: A Worksite is on an ocean tile in one of your tile buildings. 4 - Trigger: Seasons Change, before effects. 4 - Effect: The Worksite produces 1 resource of the type that the tile building, it is on is dedicated to.",
+    "text": "You can only [[Build]] [[villages]] on [[ocean]]s. Villages on ocean tiles must be dedicated to a [[resource]]. [[Worksite]]s on ocean tiles can be built in your villages and cities regardless of what tile is adjacent. Those Worksites [[produce]] the dedicated resource of their tile building, instead of what they would usually produce.",
     "kin": "deepones",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Trigger: Build, when checking the Building Conditions.",
+      "1 - Effect: Ocean is the only allowed tile for building the village.",
+      "2 - Condition: You are building a village on an ocean tile.",
+      "2 - Trigger: Build, when determining the dedication of the village.",
+      "2 - On trigger: get a pop-up where a choice has to be made between gold, lumber, stone, or food. A choice MUST be made. this cannot be declined.",
+      "2 - Effect: the chosen resource becomes the dedicated resource of that village. Show an icon on the village to indicate what it is dediated to.",
+      "3 - Condition: a worksite is chosen for the Build action card",
+      "3 - Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile.",
+      "3 - Effect: Worksites can be built in villages and cities regardless of the adjacent tile.",
+      "4 - Condition: A Worksite is on an ocean tile in one of your tile buildings.",
+      "4 - Trigger: Seasons Change, before effects.",
+      "4 - Effect: The Worksite produces 1 resource of the type that the tile building, it is on is dedicated to."
+    ]
   },
   {
     "id": "benthic-walkers",
     "kind": "faction",
     "name": "Benthic Walkers",
-    "text": "[[ocean]]s do not block you. Oceans have a tile speed cost for you of ½. You cannot [[Embark]], and your [[army|armies]] cannot be [[embarked]]. 1 - Trigger: Move, when checking which tiles are allowed to be moved to. 1 - Effect: Oceans do not block you, and they have a tile speed cost of ½. 2 - Trigger: Embark, when checking whether you can take the action. 2 - Effect: You cannot take the Embark action. 3 - Trigger: Embark, when checking whether an army can be embarked. 3 - Effect: Your armies cannot be embarked.",
+    "text": "[[ocean]]s do not block you. Oceans have a tile speed cost for you of ½. You cannot [[Embark]], and your [[army|armies]] cannot be [[embarked]].",
     "kin": "deepones",
     "form": "passive",
-    "core": false
+    "core": false,
+    "notes": [
+      "1 - Trigger: Move, when checking which tiles are allowed to be moved to.",
+      "1 - Effect: Oceans do not block you, and they have a tile speed cost of ½.",
+      "2 - Trigger: Embark, when checking whether you can take the action.",
+      "2 - Effect: You cannot take the Embark action.",
+      "3 - Trigger: Embark, when checking whether an army can be embarked.",
+      "3 - Effect: Your armies cannot be embarked."
+    ]
   },
   {
     "id": "whispered-gifts",
@@ -1032,281 +1463,368 @@ export const CARDS: readonly CardDef[] = [
     "id": "market-construction",
     "kind": "technology",
     "name": "Market Construction",
-    "text": "",
+    "text": "Learn how to build the [[Market]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "market"
+    ],
+    "notes": [
+      "Cards: Market building blueprint."
     ]
   },
   {
     "id": "harbor-construction",
     "kind": "technology",
     "name": "Harbor Construction",
-    "text": "",
+    "text": "Learn how to build the [[Harbor]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "harbor"
+    ],
+    "notes": [
+      "Cards: Harbor building blueprint."
     ]
   },
   {
     "id": "wall-construction",
     "kind": "technology",
     "name": "Wall Construction",
-    "text": "",
+    "text": "Learn how to build the [[Wall]].",
     "kin": null,
     "gearCost": 1,
     "grants": [
       "wall"
+    ],
+    "notes": [
+      "Cards: Wall building blueprint."
     ]
   },
   {
     "id": "fort-construction",
     "kind": "technology",
     "name": "Fort Construction",
-    "text": "",
+    "text": "Learn how to build the [[Fort]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "fort"
+    ],
+    "notes": [
+      "Cards: Fort building blueprint."
     ]
   },
   {
     "id": "smith-construction",
     "kind": "technology",
     "name": "Smith Construction",
-    "text": "",
+    "text": "Learn how to build the [[Smith]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "smith"
+    ],
+    "notes": [
+      "Cards: Smith building blueprint."
     ]
   },
   {
     "id": "university-construction",
     "kind": "technology",
     "name": "University Construction",
-    "text": "",
+    "text": "Learn how to build the [[University]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "university"
+    ],
+    "notes": [
+      "Cards: University building blueprint."
     ]
   },
   {
     "id": "mage-college-construction",
     "kind": "technology",
     "name": "Mage College Construction",
-    "text": "",
+    "text": "Learn how to build the [[Mage College]].",
     "kin": null,
     "gearCost": 2,
     "grants": [
       "mage-college"
+    ],
+    "notes": [
+      "Cards: Mage College building blueprint."
     ]
   },
   {
     "id": "archeology-science",
     "kind": "technology",
     "name": "Archeology Science",
-    "text": "",
+    "text": "Unlock the [[Archeology]] event, and the actions [[Reclaim]] and [[Explore]] to interact with [[ruins]].",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "archeology",
       "reclaim",
       "explore"
+    ],
+    "notes": [
+      "Cards: Archeology event card, Reclaim action card, Explore action card."
     ]
   },
   {
     "id": "tactician-science",
     "kind": "technology",
     "name": "Tactician Science",
-    "text": "Shuffle the [[tactics card]]s into the [[Tactics Deck]].",
+    "text": "Unlock the [[Tactician]] event, in which you may bid for [[tactics card]]s.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "tactician"
+    ],
+    "notes": [
+      "Cards: Tactician event card.",
+      "Effect: Shuffle the tactics cards into the Tactics Deck."
     ]
   },
   {
     "id": "subterfuge-science",
     "kind": "technology",
     "name": "Subterfuge Science",
-    "text": "Shuffle the [[secret tactics card]]s into the [[Tactics Deck]].",
+    "text": "Unlock the [[Tactician]] event, in which you may bid for [[subterfuge card]]s.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "tactician"
+    ],
+    "notes": [
+      "Cards: Tactician event card.",
+      "Effect: Shuffle the secret tactics cards into the Tactics Deck."
     ]
   },
   {
     "id": "council-science",
     "kind": "technology",
     "name": "Council Science",
-    "text": "",
+    "text": "Unlocks the [[Council]], in wich you may vote for laws.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "council",
       "revoke"
+    ],
+    "notes": [
+      "Cards: Council event card, Revoke action card."
     ]
   },
   {
     "id": "aggresive-combat",
     "kind": "technology",
     "name": "Aggresive Combat",
-    "text": "Unlock the aggressive [[combat dice]] for use in Battle.",
+    "text": "Learn to use aggressive [[combat dice]] in [[Battle]].",
     "kin": null,
     "gearCost": 2,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: Unlock the aggressive combat dice for use in Battle."
+    ]
   },
   {
     "id": "defensive-combat",
     "kind": "technology",
     "name": "Defensive Combat",
-    "text": "Unlock the defensive [[combat dice]] for use in Battle.",
+    "text": "Learn to use defensive [[combat dice]] in [[Battle]].",
     "kin": null,
     "gearCost": 2,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: Unlock the defensive combat dice for use in Battle."
+    ]
   },
   {
     "id": "ambush-combat",
     "kind": "technology",
     "name": "Ambush Combat",
-    "text": "Unlock the ambush [[combat dice]] for use in Battle.",
+    "text": "Learn to use ambush [[combat dice]] in [[Battle]].",
     "kin": null,
     "gearCost": 2,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: Unlock the ambush combat dice for use in Battle."
+    ]
   },
   {
     "id": "greater-army-strength",
     "kind": "technology",
     "name": "Greater Army Strength",
-    "text": "Maximum army [[strength]] becomes 8.",
+    "text": "Increase the maximum [[strength]] of your [[armies]] to 8.",
     "kin": null,
     "gearCost": 3,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: Maximum army strength becomes 8."
+    ]
   },
   {
     "id": "active-discovery",
     "kind": "technology",
     "name": "Active Discovery",
-    "text": "When this is [[Publicize|publicized]], everyone else claims a [[Discovery]] [[activation card]] [[of power]] 1.",
+    "text": "Gain a [[Discovery]] [[activation card]] of [[power]] 1.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "activation-discovery"
+    ],
+    "notes": [
+      "Cards: Discovery activation card of power 1.",
+      "Effect: When this technology is publicized, everyone else claims a Discovery activation card of power 1."
     ]
   },
   {
     "id": "active-expansion",
     "kind": "technology",
     "name": "Active Expansion",
-    "text": "When this is [[Publicize|publicized]], everyone else claims a [[Expansion]] [[activation card]] [[of power]] 1.",
+    "text": "Gain an [[Expansion]] [[activation card]] of [[power]] 1.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "activation-expansion"
+    ],
+    "notes": [
+      "Cards: Expansion activation card of power 1.",
+      "Effect: When this technology is publicized, everyone else claims an Expansion activation card of power 1."
     ]
   },
   {
     "id": "active-control",
     "kind": "technology",
     "name": "Active Control",
-    "text": "When this is [[Publicize|publicized]], everyone else claims a [[Control]] [[activation card]] [[of power]] 1.",
+    "text": "Gain a [[Control]] [[activation card]] of [[power]] 1.",
     "kin": null,
     "gearCost": 3,
     "grants": [
       "activation-control"
+    ],
+    "notes": [
+      "Cards: Control activation card of power 1.",
+      "Effect: When this technology is publicized, everyone else claims a Control activation card of power 1."
     ]
   },
   {
     "id": "desert-movement",
     "kind": "technology",
     "name": "Desert Movement",
-    "text": "Speed cost for the [[desert]] tile becomes 1.",
+    "text": "Learn to move through the [[desert]] without additional speed cost.",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The tile speed cost for the desert tile becomes 1."
+    ]
   },
   {
     "id": "mountain-movement",
     "kind": "technology",
     "name": "Mountain Movement",
-    "text": "Speed cost for the [[mountain]] tile becomes 1.",
+    "text": "Learn to move through the [[mountain]]s without additional speed cost.",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The tile speed cost for the mountain tile becomes 1."
+    ]
   },
   {
     "id": "river-movement",
     "kind": "technology",
     "name": "River Movement",
-    "text": "No additional speed cost must be paid for [[river]]s.",
+    "text": "Learn to cross [[river]]s without additional speed cost.",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The +1 tile speed cost modifier of the river is not added during Move."
+    ]
   },
   {
     "id": "trade-diplomacy",
     "kind": "technology",
     "name": "Trade Diplomacy",
-    "text": "You may barter the [[Trade Treaty]].",
+    "text": "Learn to barter the [[Trade Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: You may barter the Trade Treaty.",
+      "Effect: The Trade Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "access-diplomacy",
     "kind": "technology",
     "name": "Access Diplomacy",
-    "text": "You may barter the [[Access Treaty]].",
+    "text": "Learn to barter the [[Access Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The Access Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "peace-diplomacy",
     "kind": "technology",
     "name": "Peace Diplomacy",
-    "text": "You may barter the [[Peace Treaty]].",
+    "text": "Learn to barter the [[Peace Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The Peace Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "faction-diplomacy",
     "kind": "technology",
     "name": "Faction Diplomacy",
-    "text": "You may barter the [[Faction Treaty]].",
+    "text": "Learn to barter the [[Faction Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The Faction Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "promise-diplomacy",
     "kind": "technology",
     "name": "Promise Diplomacy",
-    "text": "You may barter the [[Promise Treaty]].",
+    "text": "Learn to barter the [[Promise Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The Promise Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "vassal-diplomacy",
     "kind": "technology",
     "name": "Vassal Diplomacy",
-    "text": "You may barter the [[Vassal Treaty]].",
+    "text": "Learn to barter the [[Vassal Treaty]].",
     "kin": null,
     "gearCost": 1,
-    "grants": []
+    "grants": [],
+    "notes": [
+      "Effect: The Vassal Treaty becomes available in the Barter menu for this player."
+    ]
   },
   {
     "id": "steampower",
     "kind": "technology",
     "name": "Steampower",
-    "text": "Can only be [[Research]]ed if you have researched all other technologies.",
+    "text": "Gain a [[universal]] [[activation card]] of [[power]] 3. Can only be [[Research]]ed if you have researched all other technologies. This card cannot be [[Publicize]]d.",
     "kin": null,
     "gearCost": 12,
     "grants": [
@@ -1353,229 +1871,120 @@ export const CARDS: readonly CardDef[] = [
     "id": "trade-treaty",
     "kind": "treaty",
     "name": "Trade Treaty",
-    "text": "",
+    "text": "The giver of this treaty [[untap]]s the [[character]] or [[activation card]] used in a succesful [[Barter]].",
     "kin": null,
-    "lines": [
-      [
-        "Condition",
-        "The giver can only barter this treaty with someone they are connected to."
-      ],
-      [
-        "Effect",
-        "The giver of this treaty untaps the character used in a succesful Barter."
-      ],
-      [
-        "Breaking",
-        "When the receiver or giver attacks the other, they break this treaty."
-      ],
-      [
-        "Penalty for breaking",
-        "No penalty."
-      ]
+    "notes": [
+      "Condition: The giver can only barter this treaty with someone they are connected to.",
+      "Breaking: When the receiver or giver attacks the other, they break this treaty.",
+      "Penalty for breaking: No penalty."
     ]
   },
   {
     "id": "access-treaty",
     "kind": "treaty",
     "name": "Access Treaty",
-    "text": "",
+    "text": "The receiver of an access treaty may pass buildings of the giver, but may not end a [[Move]] on them.",
     "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "The receiver of an access treaty may pass walls and buildings of the giver, but may not end a Move on them."
-      ],
-      [
-        "Breaking",
-        "When the receiver or giver attacks the other, they break this treaty."
-      ],
-      [
-        "Penalty for breaking",
-        "Dissolve all Access Treaties the breaker holds, and all Access Treaties the breaker has given out, back to their giver. The breaker may never receive or give an Access Treaty again through Barter."
-      ]
+    "notes": [
+      "Breaking: When the receiver or giver attacks the other, they break this treaty.",
+      "Penalty for breaking: Dissolve all Access Treaties the breaker holds, and all Access Treaties the breaker has given out, back to their giver. The breaker may never receive or give an Access Treaty again through Barter."
     ]
   },
   {
     "id": "peace-treaty",
     "kind": "treaty",
     "name": "Peace Treaty",
-    "text": "",
+    "text": "Promise to not attack another player for a certain amount of rounds.",
     "kin": null,
-    "lines": [
-      [
-        "Before barter offer",
-        "The giver assigns this treaty a duration in rounds, up to a maximum of 10 rounds. Each Seasons Change it lowers by 1. When the duration reaches 0, the Peace Treaty is dissolved."
-      ],
-      [
-        "Breaking",
-        "When the receiver or giver attacks the other, they break this treaty."
-      ],
-      [
-        "Penalty for breaking",
-        "Dissolve all Peace Treaties the breaker holds, and all Peace Treaties the breaker has given out. Then the breaker gains a Peace Ban card."
-      ]
+    "notes": [
+      "Before barter offer: The giver assigns this treaty a duration in rounds, up to a maximum of 10 rounds. Each Seasons Change it lowers by 1. When the duration reaches 0, the Peace Treaty is dissolved.",
+      "Breaking: When the receiver or giver attacks the other, they break this treaty.",
+      "Penalty for breaking: Dissolve all Peace Treaties the breaker holds, and all Peace Treaties the breaker has given out. Then the breaker gains a Peace Ban card."
     ]
   },
   {
     "id": "faction-treaty",
     "kind": "treaty",
     "name": "Faction Treaty",
-    "text": "",
+    "text": "As long as the receiver holds this treaty, they have the [[core faction effect]] of the giver's [[Kin]] available to them in their [[faction effect]]s.",
     "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "As long as the receiver holds this treaty they have know their core faction effect of the Kin of the giver."
-      ],
-      [
-        "Breaking",
-        "When the receiver or giver attacks the other, they break this treaty."
-      ],
-      [
-        "Penalty for breaking",
-        "No penalty."
-      ]
+    "notes": [
+      "Breaking: When the receiver or giver attacks the other, they break this treaty.",
+      "Penalty for breaking: No penalty."
     ]
   },
   {
     "id": "promise-treaty",
     "kind": "treaty",
     "name": "Promise Treaty",
-    "text": "",
+    "text": "The giver of this treaty writes a promise in plain text on this treaty. The giver assigns another player as the arbiter to decide whether it is upheld each round.",
     "kin": null,
-    "lines": [
-      [
-        "Before barter offer",
-        "The giver writes a promise in plain text on the treaty. The giver assigns any player as the arbiter for this promise treaty."
-      ],
-      [
-        "Breaking",
-        "When the arbiter submits that the giver broke the treaty during the Lapsed Treaties event, the giver breaks it."
-      ],
-      [
-        "Penalty for breaking",
-        "Dissolve all Promise Treaties the breaker holds, and all Promise Treaties the breaker has given out. Then the breaker gains a Promise Ban card."
-      ],
-      [
-        "Extra rules",
-        "other playes may hold multiple promise treaties of the same Kin at a time."
-      ]
+    "notes": [
+      "Breaking: When the arbiter submits that the giver broke the treaty during the Lapsed Treaties event, the giver breaks it.",
+      "Penalty for breaking: Dissolve all Promise Treaties the breaker holds, and all Promise Treaties the breaker has given out. Then the breaker gains a Promise Ban card.",
+      "Extra rules: Other players may hold multiple Promise Treaties of the same Kin at a time."
     ]
   },
   {
     "id": "vassal-treaty",
     "kind": "treaty",
     "name": "Vassal Treaty",
-    "text": "",
+    "text": "The giver of this treaty becomes a vassal of the receiver (their Lord). As long as the Lord holds this treaty, the vassal cannot win the game. All pieces of the vassal count towards the Lord's victory conditions.",
     "kin": null,
-    "lines": [
-      [
-        "Condition",
-        "No other player has a vassal treaty from the giver."
-      ],
-      [
-        "Effect",
-        "The giver of this treaty is a vassal to the receiver of this treaty, their Lord. As long as your Lord holds this treaty the vassal cannot win the game. All the pieces of the vassal count towards the victory conditon of their Lord."
-      ],
-      [
-        "Breaking",
-        "When the receiver or giver attacks the other, they break this treaty."
-      ],
-      [
-        "Penalty for breaking",
-        "Dissolve all Vassal Treaties the breaker holds, and all Vassal Treaties the breaker has given out. Then the breaker gains a Vassal Ban card. If the vassal breaks the treaty, the receiver takes one character of the vassal hostage in their court, and they take all of their gold."
-      ],
-      [
-        "Extra rules",
-        "They count as having 0 cards or resources in court when it comes to victory conditions, their cards and resources count for their master."
-      ]
+    "notes": [
+      "Condition: No other player has a Vassal Treaty from the giver.",
+      "Breaking: When the receiver or giver attacks the other, they break this treaty.",
+      "Penalty for breaking: Dissolve all Vassal Treaties the breaker holds, and all Vassal Treaties the breaker has given out. Then the breaker gains a Vassal Ban card. If the vassal breaks the treaty, the receiver takes one character of the vassal hostage in their court and takes all of the vassal's gold.",
+      "Extra rules: For victory conditions, the vassal counts as having 0 cards or resources in their court. Their cards and resources count towards their Lord's victory conditions."
     ]
   },
   {
     "id": "trade-ban",
     "kind": "ban",
     "name": "Trade Ban",
-    "text": "",
+    "text": "You may no longer give or receive the [[Trade Treaty]].",
     "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Trade Treaties."
-      ],
-      [
-        "Extra rules",
-        "this card exists, but is not handed out for breaking a Trade Treaty by default."
-      ]
+    "notes": [
+      "Extra rules: this card exists, but is not handed out for breaking a Trade Treaty by default."
     ]
   },
   {
     "id": "access-ban",
     "kind": "ban",
     "name": "Access Ban",
-    "text": "",
-    "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Access Treaties."
-      ]
-    ]
+    "text": "You may no longer give or receive the [[Access Treaty]].",
+    "kin": null
   },
   {
     "id": "peace-ban",
     "kind": "ban",
     "name": "Peace Ban",
-    "text": "",
-    "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Peace Treaties."
-      ]
-    ]
+    "text": "You may no longer give or receive the [[Peace Treaty]].",
+    "kin": null
   },
   {
     "id": "faction-ban",
     "kind": "ban",
     "name": "Faction Ban",
-    "text": "",
+    "text": "You may no longer give or receive the [[Faction Treaty]].",
     "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Faction Treaties."
-      ],
-      [
-        "Extra rules",
-        "this card exists, but is not handed out for breaking a Faction Treaty by default."
-      ]
+    "notes": [
+      "Extra rules: this card exists, but is not handed out for breaking a Faction Treaty by default."
     ]
   },
   {
     "id": "promise-ban",
     "kind": "ban",
     "name": "Promise Ban",
-    "text": "",
-    "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Promise Treaties."
-      ]
-    ]
+    "text": "You may no longer give or receive the [[Promise Treaty]].",
+    "kin": null
   },
   {
     "id": "vassal-ban",
     "kind": "ban",
     "name": "Vassal Ban",
-    "text": "",
-    "kin": null,
-    "lines": [
-      [
-        "Effect",
-        "You may no longer give or receive Vassal Treaties."
-      ]
-    ]
+    "text": "You may no longer give or receive the [[Vassal Treaty]].",
+    "kin": null
   }
 ];
 
@@ -1609,7 +2018,8 @@ export const START_TECHS: Record<string, string[]> = {
   ],
   "syndicate": [
     "trade-diplomacy",
-    "harbor-construction"
+    "harbor-construction",
+    "river-movement"
   ],
   "tree": [
     "mage-college-construction"

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { createState, dispatch, tilePlacer } from "./engine";
 import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { addItem } from "./cards";
-import { armyLimit, buildPower, canAfford, costError, garrison, placeBuilding, placementError, placements, payCost, population, produce, production } from "./buildings";
+import { armyLimit, blueprintInfo, buildPower, canAfford, costError, garrison, placeBuilding, placementError, placements, payCost, population, produce, production } from "./buildings";
 import { stepCost } from "./play";
 import { createRng, nextInt } from "./rng";
 import { addBuilding, setupChoices } from "./setup";
@@ -55,6 +55,13 @@ const HOME = tileIndex(6, 10);
 const village = (state: KinState, tile = HOME, owner = "p1") => addBuilding(state, { def: "village", owner, kind: "tile", tile });
 const army = (state: KinState, tile: number, owner = "p1") => { state.armies.push({ id: `x${state.armies.length}`, owner, tile, strength: 1 }); };
 const side = (tile: number, next: number) => [0, 1, 2, 3, 4, 5].find(s => sideNeighbor(tile, s) === next)!;
+
+test("blueprint resource links preserve payable costs", () => {
+  assert.deepEqual(blueprintInfo("village")?.cost, { resources: { lumber: 2, food: 2 }, basic: 0 });
+  assert.deepEqual(blueprintInfo("city")?.cost, { resources: { stone: 2, gold: 2 }, basic: 0 });
+  assert.deepEqual(blueprintInfo("worksite")?.cost, { resources: {}, basic: 2 });
+  assert.deepEqual(blueprintInfo("divine-sanctum")?.cost, { resources: { gold: 8, relic: 2 }, basic: 0 });
+});
 
 test("a Village needs plains or snow, distance 3 and an army or a nearby building", () => {
   const state = blank();

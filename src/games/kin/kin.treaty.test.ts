@@ -6,11 +6,27 @@ import { addItem, hasCard } from "./cards";
 import { legalSteps, sourcesFor } from "./play";
 import { createRng, nextInt } from "./rng";
 import { setupChoices } from "./setup";
-import { breakOnAttack, connected, lapsedTreaties, seasonsChangeTreaties } from "./treaties";
+import { barterInfo, breakOnAttack, connected, lapsedTreaties, seasonsChangeTreaties } from "./treaties";
 import { neighbors, sideEdge, tileIndex } from "./world";
 import type { Action, KinState } from "./types";
 
 const act = (type: string, id: string, extra: Record<string, unknown> = {}): Action => ({ type, actor: { id, username: id, isHost: id === "p1" }, ...extra });
+
+test("barter lists eligible treaties separately for each giver", () => {
+  const state = createState(1);
+  for (const id of ["p1", "p2"]) assert.equal(dispatch(state, act("join", id)), null);
+  state.order = ["p1", "p2"];
+  addItem(state, "peace-diplomacy", "court:p1", "p1");
+  addItem(state, "access-diplomacy", "court:p2", "p2");
+  let target = barterInfo(state, "p1").targets[0];
+  assert.deepEqual(target.giveMintable, ["peace"]);
+  assert.deepEqual(target.mintable, ["access"]);
+  addItem(state, "access-ban", "court:p1", "p1");
+  addItem(state, "peace-treaty", "court:p2", "p2", "p1");
+  target = barterInfo(state, "p1").targets[0];
+  assert.deepEqual(target.giveMintable, []);
+  assert.deepEqual(target.mintable, []);
+});
 
 function playing(kinId: string): KinState {
   const state = createState(1);
@@ -34,7 +50,7 @@ function playing(kinId: string): KinState {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
     dispatch(state, act("pickCharacter", "p1", { character: pick.id }));
   }
-  dispatch(state, act("pass", "p1"));
+  if (state.play!.phase === "event") dispatch(state, act("pass", "p1"));
   // A second player, who has no setup of their own: enough to barter with.
   state.order.push("p2");
   state.players.p2 = { id: "p2", username: "p2", connected: true, resources: {} };
@@ -72,6 +88,25 @@ test("a Barter checks what each side really has", () => {
   assert.match(dispatch(state, act("barter", "p1", { ...base, give: { characters: ["nobody"] } })) ?? "", /not in that court/);
 });
 
+test("only untapped relics can be bartered in either direction", () => {
+  for (const side of ["give", "take"]) {
+    const state = playing("hammers");
+    const owner = side === "give" ? "p1" : "p2";
+    const receiver = side === "give" ? "p2" : "p1";
+    state.players[owner].resources.relic = 5;
+    state.players[owner].relicsTapped = 3;
+    const base = { ...tap(state), to: "p2" };
+    assert.match(dispatch(state, act("barter", "p1", { ...base, [side]: { resources: { relic: 3 } } })) ?? "", /untapped relics/);
+    assert.equal(dispatch(state, act("barter", "p1", { ...base, [side]: { resources: { relic: 2 } } })), null);
+    assert.match(dispatch(state, act("tapRelics", "p1", { amount: 1, resource: "gold" })) ?? "", /current action/);
+    assert.equal(dispatch(state, act("barterRespond", "p2", { accept: true })), null);
+    assert.equal(state.players[owner].resources.relic, 3);
+    assert.equal(state.players[owner].relicsTapped, 3);
+    assert.equal(state.players[receiver].resources.relic, 2);
+    assert.equal(state.players[receiver].relicsTapped ?? 0, 0);
+  }
+});
+
 test("characters change courts in a Barter", () => {
   const state = playing("hammers");
   const source = sourcesFor(state, "p1", "discovery")[0];
@@ -81,6 +116,56 @@ test("characters change courts in a Barter", () => {
   dispatch(state, act("barterRespond", "p2", { accept: true }));
   assert.equal(other.owner, "p2");
   assert.equal(other.zone, "court:p2");
+});
+
+test("Lumon and the Ethereal cannot be offered or requested in a Barter", () => {
+  for (const id of ["lumon", "ethereal"]) {
+    for (const owner of ["p1", "p2"]) {
+      const state = playing("hammers");
+      state.cards[id] = { ...Object.values(state.cards)[0], id, owner, zone: `court:${owner}` };
+      const source = tap(state);
+      if (source.card === id) {
+        const other = sourcesFor(state, "p1", "discovery").find(entry => entry.id !== id)!;
+        source.kind = other.kind;
+        source.card = other.id;
+      }
+      const side = owner === "p1" ? "give" : "take";
+      assert.match(dispatch(state, act("barter", "p1", { ...source, to: "p2", [side]: { characters: [id] } })) ?? "", /cannot be bartered away/);
+      assert.equal(state.cards[id].owner, owner);
+      assert.ok(!state.play!.barter);
+    }
+  }
+});
+
+test("held treaties cannot be offered or requested in a Barter", () => {
+  const state = playing("hammers");
+  for (const def of ["trade-treaty", "access-treaty", "peace-treaty", "promise-treaty", "vassal-treaty", "faction-treaty"]) {
+    for (const owner of ["p1", "p2"]) {
+      const item = give(state, owner, def, owner === "p1" ? "p2" : "p1");
+      const side = owner === "p1" ? "give" : "take";
+      assert.match(dispatch(state, act("barter", "p1", { ...tap(state), to: "p2", [side]: { treaties: [item.id] } })) ?? "", /Held treaties cannot be traded/);
+      assert.equal(item.owner, owner);
+      assert.ok(!state.play!.barter);
+    }
+  }
+});
+
+test("Tradegoods belong to the Syndicate and convert in either direction of a Barter", () => {
+  for (const owner of ["p1", "p2"]) {
+    const state = playing("hammers");
+    state.players[owner].resources.tradegood = 3;
+    const goods = { resources: { tradegood: 2 }, tradegoodAs: "food" };
+    const offer = { to: "p2", ...(owner === "p1" ? { give: goods } : { take: goods }) };
+    assert.match(dispatch(state, act("barter", "p1", { ...tap(state), ...offer })) ?? "", /Only the Seven Streams Syndicate/);
+    give(state, owner, "tradegoods");
+    assert.equal(dispatch(state, act("barter", "p1", { ...tap(state), ...offer })), null);
+    const receiver = owner === "p1" ? "p2" : "p1";
+    const food = state.players[receiver].resources.food ?? 0;
+    assert.equal(dispatch(state, act("barterRespond", "p2", { accept: true })), null);
+    assert.equal(state.players[owner].resources.tradegood, 1);
+    assert.equal(state.players[receiver].resources.food, food + 2);
+    assert.equal(state.players[receiver].resources.tradegood ?? 0, 0);
+  }
 });
 
 test("Harbor Treaty connections follow the Harbor edge through a connected river", () => {
@@ -150,7 +235,7 @@ test("a Trade Treaty needs a connection, untaps the card, and cannot be passed o
   const treaty = courtOf(state, "p2", "trade-treaty")[0];
   state.cards[Object.keys(state.cards).find(id => state.cards[id].owner === null)!].owner = "p2";
   const p2Source = Object.values(state.cards).find(card => card.owner === "p2")!;
-  assert.match(dispatch(state, act("barter", "p2", { kind: "character", card: p2Source.id, to: "p1", give: { treaties: [treaty.id] } })) ?? "", /Discovery|untapped|own Trade/);
+  assert.match(dispatch(state, act("barter", "p2", { kind: "character", card: p2Source.id, to: "p1", give: { treaties: [treaty.id] } })) ?? "", /Discovery|untapped|Held treaties/);
 });
 
 test("Lapsed Treaties dissolves unconnected Trade Treaties and asks arbiters for a verdict", () => {

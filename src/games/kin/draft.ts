@@ -2,8 +2,8 @@ import { CHARACTERS, type Archetype, type CharacterDef } from "./characters.data
 import { KINS } from "./kins";
 import type { KinState } from "./types";
 
-// Setup step 5: four rounds, each in natural order (the order of the Kin): own Kin, then Discovery, Expansion and Control.
-export const CHARACTER_ROUNDS = ["kin", "discovery", "expansion", "control"] as const;
+// Each round follows natural Kin order: two own-Kin picks, then one per archetype.
+export const CHARACTER_ROUNDS = ["kin", "kin", "discovery", "expansion", "control"] as const;
 
 // Some Kin must start with a specific character.
 const FORCED: Record<string, string> = { ethereal: "ethereal", lumon: "lumon" };
@@ -33,11 +33,12 @@ export function eligibleCharacters(state: KinState, playerId: string, round: num
   const kin = state.world!.kinPicks[playerId];
   const pool = unclaimed(state);
   if (round === 0) return pool.filter(c => (FORCED[kin] ? c.id === FORCED[kin] : c.kin === kin));
+  if (CHARACTER_ROUNDS[round] === "kin") return pool.filter(c => c.kin === kin);
   const wanted = CHARACTER_ROUNDS[round] as Archetype;
   return pool.filter(c => c.archetypes.includes(wanted) || c.archetypes.includes("universal"));
 }
 
-export const draftDone = (state: KinState) => state.world!.charPicks.length >= 4 * state.order.length;
+export const draftDone = (state: KinState) => state.world!.charPicks.length >= CHARACTER_ROUNDS.length * state.order.length;
 
 export function characterPicker(state: KinState): string | null {
   const world = state.world;

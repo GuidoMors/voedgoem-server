@@ -34,7 +34,7 @@ function playing(kinId: string): KinState {
     const pick = eligibleCharacters(state, characterPicker(state)!, characterRound(state))[0];
     assert.equal(dispatch(state, act("pickCharacter", "p1", { character: pick.id })), null);
   }
-  assert.equal(dispatch(state, act("pass", "p1")), null);
+  if (state.play!.phase === "event") assert.equal(dispatch(state, act("pass", "p1")), null);
   return state;
 }
 

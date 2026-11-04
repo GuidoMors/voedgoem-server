@@ -25,6 +25,7 @@ export interface KinPlayer {
   connected: boolean;
   // Basic and special resources by name, e.g. { gold: 3, mana: 1 }.
   resources: Record<string, number>;
+  relicsTapped?: number;
 }
 
 // Where a card currently is, e.g. "deck:event", "court:<playerId>", "discard:event".
@@ -227,9 +228,11 @@ export interface BattleReport {
 
 // The round loop: which phase it is, whose turn, how many players passed in a row, and a Move in progress.
 export interface PlayState {
+  selectionStep?: string;
   phase: PlayPhase;
   turn: string;
   passes: number;
+  forcePass?: string[];
   move: MoveState | null;
   barter: BarterOffer | null;
   verdicts: Verdict[];

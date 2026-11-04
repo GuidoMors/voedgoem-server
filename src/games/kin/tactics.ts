@@ -4,6 +4,7 @@ import { characterAbilityHolder } from "./neutrals";
 import { characterById, naturalOrder } from "./draft";
 import { endTurn } from "./play";
 import { nextInt, shuffle } from "./rng";
+import { SUBTERFUGE_CARDS, TACTICS_CARDS } from "./tactics.data";
 import { PUBLIC_ZONE, RESEARCH_ZONE, makePublic } from "./tech";
 import { removeItem, treatyType } from "./treaties";
 import type { Army, BarterGoods, BarterOffer, Item, KinState, ReactionState, SubterfugeBoard, TacticsBoard } from "./types";
@@ -17,23 +18,9 @@ export interface TacticsCard {
   text: string;
 }
 
-export const TACTICS: readonly TacticsCard[] = [
-  { id: "diplomatic-maneuvering", name: "Diplomatic Maneuvering", text: "Dissolve any treaty." },
-  { id: "alchemical-plague", name: "Alchemical Plague", text: "Tap a character in any court." },
-  { id: "blackmail", name: "Blackmail", text: "Disband an army of strength 3 or less." },
-  { id: "graphiscope", name: "Graphiscope", text: "Use it as a universal activation card of power 2; it is then discarded." },
-  { id: "shoulders-of-giants", name: "Shoulders of Giants", text: "Publicize a technology for free (not Steampower)." },
-  { id: "great-archeologist", name: "Great Archeologist", text: "This round you choose the outcome when you Explore ruins." }
-];
+export const TACTICS: readonly TacticsCard[] = TACTICS_CARDS;
 
-export const SUBTERFUGE: readonly TacticsCard[] = [
-  { id: "technological-reconnaissance", name: "Technological Reconnaissance", text: "When a barter you are in includes an Access or Promise Treaty: publicize all their technologies and gain their tactics cards." },
-  { id: "bank-heist", name: "Bank Heist", text: "When a barter you are in gives them gold: take all the gold they have." },
-  { id: "feigned-allegiance", name: "Feigned Allegiance", text: "When a barter you are in includes a Faction Treaty: dissolve the one you gave, gain theirs." },
-  { id: "trojan-trade", name: "Trojan Trade", text: "When you give something in a barter and receive nothing: tap all their characters." },
-  { id: "counterattack", name: "Counterattack", text: "When you are attacked in Battle: the attacking army loses 3 strength." },
-  { id: "retaliation", name: "Retaliation", text: "When a subterfuge or tactics card is played against you, the effect hits them instead." }
-];
+export const SUBTERFUGE: readonly TacticsCard[] = SUBTERFUGE_CARDS;
 
 const SECRET = "secret";
 
@@ -392,7 +379,7 @@ function spend(state: KinState, player: string, card: string) {
 
 // Effect of a barter card, from `by` against `other`.
 function barterEffect(state: KinState, card: string, by: string, other: string) {
-  if (card === "technological-reconnaissance") {
+  if (card === "reconnaissance") {
     for (const item of state.items.filter(candidate => cardById(candidate.def)?.kind === "technology" && candidate.zone === `court:${other}` && candidate.def !== "steampower")) makePublic(state, item);
     const board = tacticsBoard(state);
     board.hands[by] = [...(board.hands[by] ?? []), ...(board.hands[other] ?? [])];
@@ -419,7 +406,7 @@ export function onBarter(state: KinState, offer: BarterOffer) {
     const mintGives = offer.mint.some(entry => (entry.giver === "from") === (holder === offer.from));
     const mintGets = offer.mint.some(entry => (entry.giver === "from") !== (holder === offer.from));
     const conditions: Record<string, boolean> = {
-      "technological-reconnaissance": defs.includes("access-treaty") || defs.includes("promise-treaty"),
+      reconnaissance: defs.includes("access-treaty") || defs.includes("promise-treaty"),
       "bank-heist": (gives.resources.gold ?? 0) > 0,
       "feigned-allegiance": defs.includes("faction-treaty") && !state.items.some(item => item.def === "faction-treaty" && item.zone === `court:${holder}` && item.giver === other)
         && state.items.some(item => item.def === "faction-treaty" && item.zone === `court:${other}` && item.giver === holder),

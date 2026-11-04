@@ -8,6 +8,7 @@ import { kin } from "./index";
 import { sourcesFor } from "./play";
 import { createRng, nextInt } from "./rng";
 import { setupChoices } from "./setup";
+import { SUBTERFUGE, TACTICS } from "./tactics";
 import { PUBLIC_ZONE } from "./tech";
 import type { Action, KinState } from "./types";
 
@@ -58,6 +59,12 @@ function auction(deck: string[], tactician: string, subterfuge: string = "board:
   state.play!.passes = 0;
   return state;
 }
+
+test("every tactics and subterfuge card of the rulebook has behaviour", () => {
+  // Card ids come from the rulebook headings (scripts/gen-tactics.mjs); renaming one needs the matching change in tactics.ts.
+  assert.deepEqual(TACTICS.map(card => card.id), ["diplomatic-maneuvering", "alchemical-plague", "blackmail", "graphiscope", "shoulders-of-giants", "great-archeologist"]);
+  assert.deepEqual(SUBTERFUGE.map(card => card.id), ["reconnaissance", "bank-heist", "feigned-allegiance", "trojan-trade", "counterattack", "retaliation"]);
+});
 
 test("the Tactician auction is only for those who know the Science; the highest bidder pays and claims the card", () => {
   const state = auction(["blackmail"], "court:p2");
