@@ -1,0 +1,3 @@
+ALTER TABLE "gameResults" ADD COLUMN "playerGuesses" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "gameResults" ADD COLUMN "yellowDiscoveries" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "gameResults" ADD COLUMN "greenDiscoveries" INTEGER NOT NULL DEFAULT 0;

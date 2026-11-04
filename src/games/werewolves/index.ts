@@ -240,7 +240,7 @@ function startNight(state: WerewolvesState) {
   pushRoleStep(state, night, "seer", "seer-check", "The Seer chooses a player to view.", "night");
   pushRoleStep(state, night, "sniffer", "sniffer-check", "The Sniffer chooses a player to check.", "night");
   if (aliveSeats(state).some(player => isWolfAligned(state, player.id) && !isAbsent(state, player.id))) {
-    night.push(step(state, "night", "wolf-target", "Each living Werewolf submits a target. Record a target only if they agree unanimously, or override/skip the attack.", "wolves", { required: true }));
+    night.push(step(state, "night", "wolf-target", "Each living Werewolf selects a target. The GM confirms a unanimous target or chooses the final target/skip.", "wolves", { required: true }));
   }
   if (!state.throatcutterUsed) pushRoleStep(state, night, "throatcutter", "silence-target", "The Throatcutter may silence one player for the next day or pass.", "night", { optional: true });
   if (roleAlive(state, "alchemist") && (state.potionAvailable || state.poisonAvailable)) {
@@ -351,6 +351,23 @@ function currentWolfSubmissions(state: WerewolvesState, step: Step) {
 
 function requireRecord(value: unknown): ActionValue | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as ActionValue : null;
+}
+
+function validateDraft(value: ActionValue): string | null {
+  const booleanFields = new Set(["candidate", "usePotion", "usePoison", "pass", "skip", "reveal"]);
+  const stringFields = new Set(["targetId", "saveTarget", "poisonTarget", "card", "name", "userId"]);
+  for (const [key, field] of Object.entries(value)) {
+    if (booleanFields.has(key)) {
+      if (typeof field !== "boolean") return "Choice flags must be true or false.";
+    } else if (stringFields.has(key)) {
+      if (typeof field !== "string" || field.length > (key === "name" ? 60 : 128)) return "Choice text is invalid or too long.";
+    } else if (key === "targetIds") {
+      if (!Array.isArray(field) || field.length > 2 || field.some(id => typeof id !== "string" || id.length > 128)) return "Player selections are invalid.";
+    } else {
+      return "The choice contains an unsupported field.";
+    }
+  }
+  return null;
 }
 
 function validateTarget(state: WerewolvesState, value: ActionValue, key = "targetId", options: { another?: boolean; allowAbsent?: boolean } = {}) {
@@ -660,6 +677,13 @@ function getSubmission(state: WerewolvesState, current: Step): ActionValue | und
   const override = state.overrides[current.id];
   if (override) return override;
   const submissions = state.submissions[current.id] ?? {};
+  if (current.kind === "wolf-target") {
+    const wolves = actorsForStep(state, current);
+    if (!wolves.length || wolves.some(id => !submissions[id])) return undefined;
+    const choices = wolves.map(id => submissions[id]?.pass === true ? null : submissions[id]?.targetId);
+    if (choices.some(choice => choice !== choices[0])) return undefined;
+    return choices[0] === null ? { pass: true } : typeof choices[0] === "string" ? { targetId: choices[0] } : undefined;
+  }
   const actor = current.actorId ?? current.voterId ?? (current.actorMode === "mayor" ? state.mayorId : null);
   return actor ? submissions[actor] : undefined;
 }
@@ -1358,10 +1382,13 @@ export const werewolves: GameModule<WerewolvesState> = {
         const problem = startGame(state);
         return problem ? { error: problem } : "save";
       }
+      case "select_action":
       case "submit_action": {
         if (state.phase !== "playing" || !current) return "ignore";
         const value = requireRecord(message.value);
-        if (!value) return { error: "Submit an action value." };
+        if (!value) return { error: "Provide a current choice." };
+        const draftError = validateDraft(value);
+        if (draftError) return { error: draftError };
         const targetId = current.voterId;
         const groupSubstitute = current.actorMode === "living"
           && typeof message.forUserId === "string"
@@ -1375,11 +1402,10 @@ export const werewolves: GameModule<WerewolvesState> = {
           && actor.userId === state.mayorId;
         if (current.actorMode === "living" && state.interruptedIds.includes(actor.userId)) return "ignore";
         if (!activeRoleActionsAllowed(state, actor.userId, current) && !substitutedByMayor) return "ignore";
-        const error = validateValue(state, current, value, groupSubstitute ?? (targetId && substitutedByMayor ? targetId : actor.userId));
-        if (error) return { error };
         state.submissions[current.id] ??= {};
         const submitterId = groupSubstitute ?? (targetId && substitutedByMayor ? targetId : actor.userId);
         state.submissions[current.id][submitterId] = { ...value, userId: submitterId };
+        delete state.overrides[current.id];
         return "save";
       }
       case "gm_action": {
@@ -1419,6 +1445,17 @@ export const werewolves: GameModule<WerewolvesState> = {
         }
         const chosen = getSubmission(state, current);
         const saved = state.submissions[current.id] ?? {};
+        if (!state.overrides[current.id]) {
+          for (const [userId, selection] of Object.entries(saved)) {
+            const error = validateValue(state, current, selection, userId);
+            if (error) return { error: `${state.seats[userId]?.username ?? "A player's"} choice needs attention: ${error}` };
+          }
+          const chosenActor = current.actorId ?? current.voterId ?? (current.actorMode === "mayor" ? state.mayorId : null);
+          if (chosen && chosenActor && !saved[chosenActor]) {
+            const error = validateValue(state, current, chosen, chosenActor);
+            if (error) return { error };
+          }
+        }
         state.steps.shift();
         const resolved = resolveStep(state, current, chosen, saved);
         if (resolved) {
@@ -1629,7 +1666,7 @@ export const werewolves: GameModule<WerewolvesState> = {
       wolfchildTarget: isGM || viewer?.role === "wolfchild" ? state.wolfchildTarget : null,
       publicStep,
       privatePrompt: isGM || (!!current && activeRoleActionsAllowed(state, viewerId, current))
-        ? current ? { kind: current.kind, prompt: current.prompt, role: current.role ?? null, data: current.data } : null
+        ? current ? { id: current.id, kind: current.kind, prompt: current.prompt, role: current.role ?? null, data: current.data } : null
         : null,
       sparedPlayerIds: current?.kind === "lynch-spare"
         ? aliveVoters(state).filter(player => !state.lynchRemaining.includes(player.id)).map(player => player.id)
@@ -1680,7 +1717,7 @@ export const werewolves: GameModule<WerewolvesState> = {
         configure: state.phase === "lobby",
         setGM: state.phase === "lobby",
         start: state.phase === "lobby" && isGM,
-        submitAction: state.phase === "playing" && !isGM && !!current && activeRoleActionsAllowed(state, viewerId, current),
+        selectAction: state.phase === "playing" && !isGM && !!current && activeRoleActionsAllowed(state, viewerId, current),
         gmAction: state.phase === "playing" && isGM,
         confirmStep: state.phase === "playing" && isGM && !!current
       }

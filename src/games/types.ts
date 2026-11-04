@@ -51,5 +51,15 @@ export interface GameModule<S> {
 
 export interface GameResult {
   // flag, score and extra are game-specific (see stats.ts for what each game stores in them).
-  players: { userId: string; role: string; won: boolean; flag?: boolean; score?: number; extra?: number }[];
+  players: {
+    userId: string;
+    role: string;
+    won: boolean;
+    flag?: boolean;
+    score?: number;
+    extra?: number;
+    guesses?: number;
+    yellow?: number;
+    green?: number;
+  }[];
 }
