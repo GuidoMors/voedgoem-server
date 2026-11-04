@@ -1,6 +1,7 @@
 import { parseAvatar, parseStoredAvatar } from "./avatar";
 import type { Env, SessionUser } from "./env";
 import { GAMES } from "./games/registry";
+import { STARTER_CLOCKS, normalizeClock, validClock } from "./games/pass-time/clocks";
 import { GAME_STATS } from "./stats";
 import {
   authenticate, createSession, generateRecoveryKey, hashPassword, hashRecoveryKey, randomId, sha256Hex, verifyPassword
@@ -177,6 +178,65 @@ async function route(request: Request, env: Env): Promise<Response> {
   }
 
   if (method === "GET" && path === "/api/games") return json({ games: Object.values(GAMES) });
+  if (method === "GET" && path === "/api/pass-time/clocks") {
+    await env.DB.batch(STARTER_CLOCKS.map(clock =>
+      env.DB.prepare(`INSERT OR IGNORE INTO "passTimeClocks" ("id", "clock", "deleted") VALUES (?1, ?2, 0)`)
+        .bind(clock.id, JSON.stringify(clock))
+    ));
+    const { results } = await env.DB.prepare(`SELECT "id", "clock", "deleted" FROM "passTimeClocks" ORDER BY "createdAt", "id"`).all<{ id: string; clock: string; deleted: number }>();
+    const clocks = new Map(STARTER_CLOCKS.map(clock => [clock.id, clock]));
+    for (const row of results) {
+      if (row.deleted) {
+        clocks.delete(row.id);
+        continue;
+      }
+      let clock: unknown;
+      try { clock = JSON.parse(row.clock); }
+      catch { throw new HttpError(500, `Stored Pass Time clock ${row.id} contains invalid JSON.`); }
+      if (!validClock(clock)) throw new HttpError(500, `Stored Pass Time clock ${row.id} is invalid.`);
+      clocks.set(row.id, normalizeClock(clock, row.id));
+    }
+    return json({ clocks: [...clocks.values()] });
+  }
+  if (path === "/api/admin/pass-time/clocks") {
+    if (!user.isAdmin) throw new HttpError(403, "Admins only.");
+    if (method === "POST") {
+      const body = await readBody(request);
+      if (!validClock(body.clock)) throw new HttpError(400, "Provide a valid Pass Time clock.");
+      const id = `custom-${crypto.randomUUID()}`;
+      const clock = normalizeClock(body.clock, id);
+      await env.DB.prepare(`INSERT INTO "passTimeClocks" ("id", "clock") VALUES (?1, ?2)`)
+        .bind(id, JSON.stringify(clock)).run();
+      return json({ clock }, 201);
+    }
+  }
+  const passTimeClockMatch = path.match(/^\/api\/admin\/pass-time\/clocks\/([A-Za-z0-9_-]{1,80})$/);
+  if (passTimeClockMatch) {
+    if (!user.isAdmin) throw new HttpError(403, "Admins only.");
+    const id = passTimeClockMatch[1];
+    if (id.startsWith("starter-")) throw new HttpError(400, "Starter clocks cannot be edited or deleted.");
+    if (method === "PUT") {
+      const body = await readBody(request);
+      if (!validClock(body.clock)) throw new HttpError(400, "Provide a valid Pass Time clock.");
+      const clock = normalizeClock(body.clock, id);
+      await env.DB.prepare(`
+        INSERT INTO "passTimeClocks" ("id", "clock", "deleted") VALUES (?1, ?2, 0)
+        ON CONFLICT ("id") DO UPDATE SET "clock" = excluded."clock", "deleted" = 0, "updatedAt" = CURRENT_TIMESTAMP
+      `).bind(id, JSON.stringify(clock)).run();
+      return json({ clock });
+    }
+    if (method === "DELETE") {
+      if (!STARTER_CLOCKS.some(clock => clock.id === id)) {
+        const existing = await env.DB.prepare(`SELECT 1 AS "found" FROM "passTimeClocks" WHERE "id" = ?1`).bind(id).first<{ found: number }>();
+        if (!existing) throw new HttpError(404, "Pass Time clock not found.");
+      }
+      await env.DB.prepare(`
+        INSERT INTO "passTimeClocks" ("id", "clock", "deleted") VALUES (?1, '{}', 1)
+        ON CONFLICT ("id") DO UPDATE SET "deleted" = 1, "updatedAt" = CURRENT_TIMESTAMP
+      `).bind(id).run();
+      return new Response(null, { status: 204 });
+    }
+  }
 
   const statsMatch = path.match(/^\/api\/stats\/([a-z0-9]+)$/);
   if (method === "GET" && statsMatch) {

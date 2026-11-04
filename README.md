@@ -6,11 +6,13 @@ Cloudflare Worker + D1 + Durable Objects backend for Voedgoem.
 - `src/lobby.ts` – generic `Lobby` Durable Object: one per lobby. Owns sockets, the host and broadcasting, and delegates game rules to the lobby's game module.
 - `src/games/types.ts` – the `GameModule` interface every game implements.
 - `src/games/registry.ts` – the only place games are listed.
-- `src/games/<game>/` – one folder per game (`tetris/`, `codenames/`, `thirtyone/`, `blokus/`). Codenames word lists are in `src/games/codenames/words/*.txt`; 31 Seconds easy and hard lists are in `content/31seconds/`. `npm run words` (run automatically before typecheck, build and deploy) bundles the lists into generated TypeScript.
+- `src/games/<game>/` – one folder per game (`tetris/`, `codenames/`, `thirtyone/`, `blokus/`, `pass-time/`). Codenames word lists are in `src/games/codenames/words/*.txt`; 31 Seconds easy and hard lists are in `content/31seconds/`. `npm run words` (run automatically before typecheck, build and deploy) bundles the lists into generated TypeScript.
 
 To add a game: create `src/games/<id>/index.ts` exporting a `GameModule` (with `info`), then add it to `src/games/registry.ts`.
 - `src/auth.ts` – PBKDF2 password hashing, bearer-token sessions, recovery keys (only hashes are stored).
 - `migrations/` – D1 schema.
+
+Pass Time's starter and custom clock catalog is stored in the `passTimeClocks` D1 table. The first request to `/api/pass-time/clocks` seeds any missing starter clocks; admins can edit, add, and remove catalog clocks in the Pass Time lobby.
 
 ## Local development
 
@@ -75,4 +77,4 @@ Standard four-player Blokus on a 20×20 board, with 21 pieces per color, rotatio
 - src/stats.ts defines the 3-6 stats per game (SQL aggregates). GET /api/stats/:game serves them.
 - Display accounts (users.isDisplay) can't join games and only receive the spectator view.
 - An hourly cron deletes non-admin, non-display users named dbg_* that are over an hour old.
-- Games: Tetrys (solo and team mode), Woerdgoem, 31 Seconds, Dworf, and Blokus.
+- Games: Tetrys (solo and team mode), Woerdgoem, 31 Seconds, Dworf, Blokus, and Pass Time.

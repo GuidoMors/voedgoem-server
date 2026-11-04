@@ -62,5 +62,9 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "wolfchildRate", label: "Win rate as Wolfchild", format: "percent", sql: rate(`"role" = 'wolfchild'`, `"role" = 'wolfchild'`) },
     { key: "foolRate", label: "Win rate as Fool", format: "percent", sql: rate(`"role" = 'fool'`, `"role" = 'fool'`) },
     { key: "foolWins", label: "Wins as Fool", format: "number", sql: `SUM(CASE WHEN "role" = 'fool' THEN "won" ELSE 0 END)` }
+  ],
+  "pass-time": [
+    games,
+    winRate
   ]
 };

@@ -4,6 +4,7 @@ import { dworf } from "./dworf";
 import { tetris } from "./tetris";
 import { thirtyone } from "./thirtyone";
 import { werewolves } from "./werewolves";
+import { passTime } from "./pass-time";
 import type { GameInfo, GameModule } from "./types";
 
 // To add a game: create src/games/<id>/index.ts exporting a GameModule, then list it here.
@@ -13,7 +14,8 @@ export const MODULES: Record<string, GameModule<any>> = {
   [codenames.info.id]: codenames,
   [thirtyone.info.id]: thirtyone,
   [dworf.info.id]: dworf,
-  [werewolves.info.id]: werewolves
+  [werewolves.info.id]: werewolves,
+  [passTime.info.id]: passTime
 };
 
 export const GAMES: Record<string, GameInfo> = Object.fromEntries(Object.values(MODULES).map(module => [module.info.id, module.info]));
