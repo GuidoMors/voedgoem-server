@@ -238,7 +238,7 @@ async function route(request: Request, env: Env): Promise<Response> {
     }
   }
 
-  const statsMatch = path.match(/^\/api\/stats\/([a-z0-9]+)$/);
+  const statsMatch = path.match(/^\/api\/stats\/([a-z0-9-]+)$/);
   if (method === "GET" && statsMatch) {
     const game = statsMatch[1] === "saboteur" ? "dworf" : statsMatch[1];
     const defs = GAME_STATS[game];
