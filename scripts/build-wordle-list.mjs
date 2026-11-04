@@ -3,12 +3,15 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const source = join(root, "content", "wordle-pvp", "wordle-list.txt");
+const source = join(root, "src", "games", "wordle-pvp", "words.txt");
 const target = join(root, "src", "games", "wordle-pvp", "words.generated.ts");
-const text = readFileSync(source, "utf8").replace(/,\s*\]\s*$/, "\n]");
-const words = JSON.parse(text);
-if (!Array.isArray(words) || words.some(word => typeof word !== "string" || !/^[a-z]{5}$/.test(word))) {
-  throw new Error(`${source} must contain a JSON array of lowercase five-letter words.`);
+const words = readFileSync(source, "utf8")
+  .split(/\r?\n/)
+  .map(line => line.trim())
+  .filter(line => line && !line.startsWith("#"));
+const invalidWords = words.filter(word => !/^[a-z]{5}$/.test(word));
+if (invalidWords.length > 0) {
+  throw new Error(`${source} must contain one lowercase five-letter word per line. Invalid entries: ${invalidWords.join(", ")}`);
 }
 if (new Set(words).size !== words.length || words.length < 10) {
   throw new Error(`${source} must contain at least 10 unique words.`);

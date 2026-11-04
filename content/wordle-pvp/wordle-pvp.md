@@ -15,33 +15,41 @@
 
 - The game has two teams: red and blue.
 - Each team must have at least one player before the game can start, and may have at most 10 players.
-- Both teams receive the same 10 secret words, selected from `content/wordle-pvp/wordle-list.txt`. Each team has its own independent copy of each puzzle. A team scores one point for each puzzle it solves.
+- In the lobby, the host can configure the total team timer (1–60 minutes) and the time deducted from the opposing team for each solved Wordle (0–900 seconds). Defaults are 15 minutes total and a 60-second penalty.
+- Both teams receive the same 10 secret words, selected from `src/games/wordle-pvp/words.txt`. Each team has its own independent copy of each puzzle. A team scores one point for each puzzle it solves.
+- The editable word list contains one lowercase five-letter word per line. Add new words on their own lines; blank lines and lines beginning with `#` are ignored. Every listed word is valid both as a possible answer and as an accepted guess.
 - The team that solves the most puzzles wins.
 
 ## Wordle rules
 
 - Each puzzle uses standard English five-letter Wordle rules and has no guess limit.
-- A guess is accepted only if it appears in `content/wordle-pvp/wordle-list.txt`.
-- Reject guesses that are not in the list. The player stays on the same puzzle until submitting an accepted guess.
+- A guess is accepted only if it appears in `src/games/wordle-pvp/words.txt`.
+- Reject guesses that are not in the list. The player stays on the same spot until submitting an accepted guess.
 - After a guess, the player sees its result for 1.5 seconds.
-- Unsolved puzzles circulate between teammates after each guess. Solved puzzles are removed and never circulate again.
-- Players can see only the puzzle they are currently guessing and the number of puzzles in their queue. Queue contents are hidden.
-- If a player has no puzzle to guess, show a waiting message with an animated three-dot indicator.
+- Each team has the same ten numbered Wordles with independent guesses and solved states.
+- After an accepted guess and its 1.5-second feedback, the player moves to the next numbered unsolved spot, wrapping from Wordle 10 to Wordle 1. Solved spots are skipped.
+- A player waits if their next unsolved spot is occupied by a teammate. When it becomes free, they take that spot; they do not skip an occupied unsolved spot.
+- During play, show all ten Wordles for each team in number order, including each letter's latest guess feedback and the avatar/name of the player currently on that spot. Also show players waiting for an occupied spot.
+- If a player has no available spot because all Wordles are solved, show a waiting message with an animated three-dot indicator.
 
-## Puzzle allocation and circulation
+## Puzzle assignment and movement
 
-- At the start of the game, shuffle the 10 puzzles and deal them round-robin among each team's players. The initial queue sizes should differ by no more than one.
-- After a player guesses an unsolved puzzle, show the result for 1.5 seconds, then add that puzzle to the bottom of the next teammate's queue. The player draws their next puzzle from the top of their own queue, if one is available.
-- If a player solves a puzzle, remove it from circulation and have them draw from their own queue if possible.
+- At game start, order the ten puzzles once, then use that same order for both teams so puzzle number N has the same answer for Red and Blue.
+- For each team, evenly spread players across the ten spots in join order. For example, with three players, assign spots 1, 4, and 7.
+- A player's position advances to the next unsolved spot after every accepted guess, whether or not the guess solves the current Wordle. Multiple players may not occupy the same spot simultaneously.
+- Keep each team's guesses, solved state, and player positions independent from the opposing team.
 
 ## Timers and match end
 
-- Each team's timer starts at 15 minutes.
-- When a team solves a puzzle, subtract one minute from the opposing team's remaining time. A timer cannot go below zero.
+- A new lobby starts in pregame. Players may join either team, but no puzzles are dealt and neither timer runs before the host starts the game.
+- When the host starts the game, deal the puzzles and start each team's timer at the configured total time.
+- A team's remaining time stays at its configured total throughout pregame.
+- When a team solves a puzzle, subtract the configured penalty in seconds from the opposing team's remaining time. A timer cannot go below zero.
 - When a team's timer reaches zero, that team can no longer guess and its score is locked. The other team may continue playing.
 - When a team solves all 10 puzzles, it can no longer guess, its score is locked, and its remaining time is frozen for the tiebreaker. The other team may continue playing.
 - The match ends when all 20 puzzles are solved or when both teams' timers have reached zero.
 - When the match ends, show “Wordling is over” immediately. Reveal the score and winner after five seconds.
+- On the results screen, show each player's guesses and their first-time yellow-letter and green-position discoveries next to their avatar. Count each yellow letter once per puzzle, and each correctly identified green position once per puzzle; attribute a discovery to the player whose guess first reveals it.
 
 ## Winner and tiebreakers
 
@@ -49,3 +57,10 @@
 2. If tied, the team that used the fewest guesses wins.
 3. If still tied, the team with the most time remaining when it can no longer guess wins. Freeze the time when a team finishes all 10 puzzles; a team that times out has zero time remaining.
 4. If still tied, the match is a draw.
+
+## Player statistics
+
+- Track each player's accepted guesses and first-time discoveries for the finished match.
+- A yellow discovery is counted once per distinct letter per puzzle, when it first receives yellow feedback for that puzzle.
+- A green discovery is counted once per answer position per puzzle, when that position first receives green feedback.
+- Game statistics report each player's average guesses, new yellow letters, and new green letters per game.

@@ -452,8 +452,8 @@ export class Lobby extends DurableObject<Env> {
       try {
         if (humans.length) {
           await this.env.DB.batch(humans.map(player =>
-            this.env.DB.prepare(`INSERT INTO "gameResults" ("game", "userId", "role", "won", "flag", "score", "extra") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)`)
-              .bind(state.game, player.userId, player.role, player.won ? 1 : 0, player.flag ? 1 : 0, player.score ?? 0, player.extra ?? 0)));
+            this.env.DB.prepare(`INSERT INTO "gameResults" ("game", "userId", "role", "won", "flag", "score", "extra", "playerGuesses", "yellowDiscoveries", "greenDiscoveries") VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)`)
+              .bind(state.game, player.userId, player.role, player.won ? 1 : 0, player.flag ? 1 : 0, player.score ?? 0, player.extra ?? 0, player.guesses ?? 0, player.yellow ?? 0, player.green ?? 0)));
         }
       } catch (error) {
         console.error("Could not store game results", error);

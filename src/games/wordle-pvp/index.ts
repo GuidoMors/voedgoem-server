@@ -31,15 +31,23 @@ interface TeamState {
   timeAtStopMs: number | null;
   solved: number[];
   guesses: number;
-  queues: Record<string, number[]>;
-  current: Record<string, number | null>;
+  positions: Record<string, number>;
+  waiting: Record<string, number>;
   history: Record<string, GuessRecord[]>;
   feedback: Record<string, Feedback | null>;
+  playerStats: Record<string, { guesses: number; yellow: number; green: number }>;
+  yellowLetters: Record<string, string[]>;
+  greenPositions: Record<string, number[]>;
+  queues?: Record<string, number[]>;
+  current?: Record<string, number | null>;
 }
 
 interface WordleState {
   phase: Phase;
   nextOrder: number;
+  roundMinutes: number;
+  penaltySeconds: number;
+  penaltyMinutes?: number;
   seats: Record<string, Seat>;
   words: string[];
   teams: Record<TeamId, TeamState>;
@@ -50,23 +58,28 @@ interface WordleState {
 
 const TEAM_IDS: TeamId[] = ["red", "blue"];
 const ROUND_MS = 15 * 60_000;
-const PENALTY_MS = 60_000;
+const MAX_ROUND_MINUTES = 60;
+const MAX_PENALTY_SECONDS = 15 * 60;
 const FEEDBACK_MS = 1_500;
 const END_REVEAL_MS = 5_000;
 const TICK_MS = 250;
+const PUZZLE_COUNT = 10;
 
-function emptyTeam(now: number): TeamState {
+function emptyTeam(now: number, roundMs = ROUND_MS): TeamState {
   return {
-    remainingMs: ROUND_MS,
+    remainingMs: roundMs,
     lastTickAt: now,
     locked: false,
     timeAtStopMs: null,
     solved: [],
     guesses: 0,
-    queues: {},
-    current: {},
+    positions: {},
+    waiting: {},
     history: {},
-    feedback: {}
+    feedback: {},
+    playerStats: {},
+    yellowLetters: {},
+    greenPositions: {}
   };
 }
 
@@ -89,8 +102,9 @@ function lockTeam(team: TeamState, remainingMs: number) {
   team.timeAtStopMs = team.remainingMs;
 }
 
-function remainingAt(team: TeamState, now: number): number {
+function remainingAt(team: TeamState, now: number, running = true): number {
   if (team.locked) return team.remainingMs;
+  if (!running) return team.remainingMs;
   return Math.max(0, team.remainingMs - Math.max(0, now - team.lastTickAt));
 }
 
@@ -112,41 +126,58 @@ function evaluateGuess(answer: string, guess: string): GuessRecord["result"] {
   return result;
 }
 
-function dealTeam(state: WordleState, teamId: TeamId) {
+function nextUnsolved(team: TeamState, start: number, puzzleCount: number): number | null {
+  if (puzzleCount === 0) return null;
+  for (let offset = 0; offset < puzzleCount; offset++) {
+    const puzzleId = (start + offset) % puzzleCount;
+    if (!team.solved.includes(puzzleId)) return puzzleId;
+  }
+  return null;
+}
+
+function assignTeam(state: WordleState, teamId: TeamId) {
   const team = state.teams[teamId];
   const members = teamMembers(state, teamId);
-  const puzzleIds = shuffled(state.words.map((_, index) => index));
-  members.forEach(member => {
-    team.queues[member.id] = [];
-    team.current[member.id] = null;
+  team.positions = {};
+  team.waiting = {};
+  members.forEach((member, index) => {
+    team.positions[member.id] = Math.floor(index * state.words.length / members.length);
     team.feedback[member.id] = null;
   });
-  puzzleIds.forEach((puzzleId, index) => {
-    const member = members[index % members.length];
-    team.queues[member.id].push(puzzleId);
-  });
-  for (const member of members) {
-    team.current[member.id] = team.queues[member.id].shift() ?? null;
-  }
 }
 
-function activateNext(team: TeamState, userId: string) {
-  if (team.locked || team.feedback[userId] || team.current[userId] !== null) return;
-  team.current[userId] = team.queues[userId]?.shift() ?? null;
-}
-
-function circulateFeedback(state: WordleState, teamId: TeamId, userId: string, feedback: Feedback) {
+function activateWaiting(state: WordleState, teamId: TeamId) {
   const team = state.teams[teamId];
+  const members = teamMembers(state, teamId);
+  let activated: boolean;
+  do {
+    activated = false;
+    for (const member of members) {
+      const target = team.waiting[member.id];
+      if (target === undefined) continue;
+      const next = nextUnsolved(team, target, state.words.length);
+      if (next === null) {
+        delete team.waiting[member.id];
+        activated = true;
+        continue;
+      }
+      team.waiting[member.id] = next;
+      const occupied = Object.values(team.positions).includes(next);
+      if (occupied) continue;
+      team.positions[member.id] = next;
+      delete team.waiting[member.id];
+      activated = true;
+    }
+  } while (activated && members.some(member => team.waiting[member.id] !== undefined));
+}
+
+function advancePlayer(state: WordleState, teamId: TeamId, userId: string, puzzleId: number) {
+  const team = state.teams[teamId];
+  delete team.positions[userId];
   team.feedback[userId] = null;
-  team.current[userId] = null;
-  if (!feedback.solved && !team.solved.includes(feedback.puzzleId)) {
-    const members = teamMembers(state, teamId);
-    const currentIndex = members.findIndex(member => member.id === userId);
-    const next = members[(currentIndex + 1) % members.length];
-    team.queues[next.id].push(feedback.puzzleId);
-  }
-  activateNext(team, userId);
-  for (const member of teamMembers(state, teamId)) activateNext(team, member.id);
+  const next = nextUnsolved(team, puzzleId + 1, state.words.length);
+  if (next !== null) team.waiting[userId] = next;
+  activateWaiting(state, teamId);
 }
 
 function finishMatch(state: WordleState, now: number) {
@@ -182,7 +213,7 @@ function advance(state: WordleState, now: number): boolean {
       const team = state.teams[id];
       for (const [userId, feedback] of Object.entries(team.feedback)) {
         if (feedback && feedback.resolveAt <= now) {
-          circulateFeedback(state, id, userId, feedback);
+          advancePlayer(state, id, userId, feedback.puzzleId);
           changed = true;
         }
       }
@@ -221,6 +252,8 @@ export const wordlePvp: GameModule<WordleState> = {
   create: () => ({
     phase: "lobby",
     nextOrder: 0,
+    roundMinutes: 15,
+    penaltySeconds: 60,
     seats: {},
     words: [],
     teams: { red: emptyTeam(Date.now()), blue: emptyTeam(Date.now()) },
@@ -230,6 +263,9 @@ export const wordlePvp: GameModule<WordleState> = {
   }),
 
   migrate(state) {
+    state.roundMinutes ??= 15;
+    state.penaltySeconds ??= (state.penaltyMinutes ?? 1) * 60;
+    delete state.penaltyMinutes;
     state.seats ??= {};
     state.words ??= [];
     state.teams ??= { red: emptyTeam(Date.now()), blue: emptyTeam(Date.now()) };
@@ -237,13 +273,38 @@ export const wordlePvp: GameModule<WordleState> = {
       state.teams[id] ??= emptyTeam(Date.now());
       const team = state.teams[id];
       team.solved ??= [];
-      team.queues ??= {};
-      team.current ??= {};
       team.history ??= {};
       team.feedback ??= {};
+      team.playerStats ??= {};
+      team.yellowLetters ??= {};
+      team.greenPositions ??= {};
       team.lastTickAt ??= Date.now();
       team.locked ??= false;
       team.timeAtStopMs ??= team.locked ? team.remainingMs : null;
+      const oldCurrent = team.current ?? {};
+      if (!team.positions) {
+        team.positions = {};
+        team.waiting = {};
+        const occupied = new Set<number>();
+        for (const member of teamMembers(state, id)) {
+          const previous = oldCurrent[member.id];
+          if (previous !== null && previous !== undefined && previous >= 0 && previous < state.words.length
+            && !team.solved.includes(previous) && !occupied.has(previous)) {
+            team.positions[member.id] = previous;
+            occupied.add(previous);
+          } else if (state.phase === "playing") {
+            const available = Array.from({ length: state.words.length }, (_, puzzleId) => puzzleId)
+              .find(puzzleId => !team.solved.includes(puzzleId) && !occupied.has(puzzleId));
+            if (available !== undefined) {
+              team.positions[member.id] = available;
+              occupied.add(available);
+            }
+          }
+        }
+      }
+      team.waiting ??= {};
+      delete team.queues;
+      delete team.current;
     }
     state.resultAt ??= null;
     state.resultRecorded ??= false;
@@ -280,16 +341,34 @@ export const wordlePvp: GameModule<WordleState> = {
         delete state.seats[actor.userId];
         return "save";
       }
+      case "update_settings": {
+        if (!actor.isHost || state.phase !== "lobby") return "ignore";
+        const roundMinutes = message.roundMinutes;
+        const penaltySeconds = message.penaltySeconds;
+        if (typeof roundMinutes !== "number" || !Number.isInteger(roundMinutes) || roundMinutes < 1 || roundMinutes > MAX_ROUND_MINUTES) {
+          return { error: `Total time must be between 1 and ${MAX_ROUND_MINUTES} minutes.` };
+        }
+        if (typeof penaltySeconds !== "number" || !Number.isInteger(penaltySeconds) || penaltySeconds < 0 || penaltySeconds > MAX_PENALTY_SECONDS) {
+          return { error: `Time lost per solved Wordle must be between 0 and ${MAX_PENALTY_SECONDS} seconds.` };
+        }
+        state.roundMinutes = roundMinutes;
+        state.penaltySeconds = penaltySeconds;
+        state.teams = {
+          red: emptyTeam(now, roundMinutes * 60_000),
+          blue: emptyTeam(now, roundMinutes * 60_000)
+        };
+        return "save";
+      }
       case "start": {
         if (!actor.isHost || state.phase !== "lobby") return "ignore";
         const error = startError(state);
         if (error) return { error };
-        const words = shuffled(WORDLE_WORDS).slice(0, 10);
-        if (words.length !== 10) return { error: "The Wordle word list needs at least 10 valid words." };
+        const words = shuffled(WORDLE_WORDS).slice(0, PUZZLE_COUNT);
+        if (words.length !== PUZZLE_COUNT) return { error: `The Wordle word list needs at least ${PUZZLE_COUNT} valid words.` };
         state.words = words;
         for (const id of TEAM_IDS) {
-          state.teams[id] = emptyTeam(now);
-          dealTeam(state, id);
+          state.teams[id] = emptyTeam(now, state.roundMinutes * 60_000);
+          assignTeam(state, id);
         }
         state.resultAt = null;
         state.winner = null;
@@ -300,9 +379,9 @@ export const wordlePvp: GameModule<WordleState> = {
       case "guess": {
         if (state.phase !== "playing" || !seat) return "ignore";
         const team = state.teams[seat.team];
-        const puzzleId = team.current[actor.userId];
+        const puzzleId = team.positions[actor.userId];
         const guess = typeof message.word === "string" ? message.word.trim().toLowerCase() : "";
-        if (team.locked || remainingAt(team, now) <= 0 || team.feedback[actor.userId] || puzzleId === null || puzzleId === undefined) return "ignore";
+        if (team.locked || remainingAt(team, now) <= 0 || team.feedback[actor.userId] || puzzleId === undefined) return "ignore";
         if (!/^[a-z]{5}$/.test(guess) || !WORDLE_WORDS.includes(guess)) return { error: "That guess is not in the Wordle word list." };
         const answer = state.words[puzzleId];
         const result = evaluateGuess(answer, guess);
@@ -310,16 +389,29 @@ export const wordlePvp: GameModule<WordleState> = {
         team.guesses++;
         team.history[puzzleId] ??= [];
         team.history[puzzleId].push({ guess, result });
+        const stats = team.playerStats[actor.userId] ??= { guesses: 0, yellow: 0, green: 0 };
+        stats.guesses++;
+        const yellowLetters = new Set(team.yellowLetters[puzzleId] ?? []);
+        const greenPositions = new Set(team.greenPositions[puzzleId] ?? []);
+        for (let index = 0; index < result.length; index++) {
+          if (result[index] === "present" && !yellowLetters.has(guess[index])) {
+            yellowLetters.add(guess[index]);
+            stats.yellow++;
+          } else if (result[index] === "correct" && !greenPositions.has(index)) {
+            greenPositions.add(index);
+            stats.green++;
+          }
+        }
+        team.yellowLetters[puzzleId] = [...yellowLetters];
+        team.greenPositions[puzzleId] = [...greenPositions];
         team.feedback[actor.userId] = { puzzleId, guess, result, solved, resolveAt: now + FEEDBACK_MS };
         if (solved) {
           team.solved.push(puzzleId);
-          for (const playerId of Object.keys(team.queues)) {
-            team.queues[playerId] = team.queues[playerId].filter(item => item !== puzzleId);
-          }
-          if (team.solved.length === 10) lockTeam(team, remainingAt(team, now));
+          activateWaiting(state, seat.team);
+          if (team.solved.length === PUZZLE_COUNT) lockTeam(team, remainingAt(team, now));
           const opponent = state.teams[seat.team === "red" ? "blue" : "red"];
           if (!opponent.locked) {
-            const remaining = remainingAt(opponent, now) - PENALTY_MS;
+            const remaining = remainingAt(opponent, now) - state.penaltySeconds * 1_000;
             opponent.lastTickAt = now;
             if (remaining <= 0) lockTeam(opponent, 0);
             else opponent.remainingMs = remaining;
@@ -328,12 +420,24 @@ export const wordlePvp: GameModule<WordleState> = {
         }
         return "save";
       }
+      case "end_game": {
+        if (!actor.isHost || state.phase !== "playing") return "ignore";
+        for (const id of TEAM_IDS) {
+          const team = state.teams[id];
+          lockTeam(team, remainingAt(team, now));
+        }
+        finishMatch(state, now);
+        return "save";
+      }
       case "close_results": {
         if (!actor.isHost || state.phase !== "results") return "ignore";
         state.phase = "lobby";
         state.seats = {};
         state.words = [];
-        state.teams = { red: emptyTeam(now), blue: emptyTeam(now) };
+        state.teams = {
+          red: emptyTeam(now, state.roundMinutes * 60_000),
+          blue: emptyTeam(now, state.roundMinutes * 60_000)
+        };
         state.resultAt = null;
         state.winner = null;
         state.resultRecorded = false;
@@ -351,6 +455,13 @@ export const wordlePvp: GameModule<WordleState> = {
       : false;
   },
 
+  openSpots(state, userId) {
+    if (state.phase !== "lobby" || state.seats[userId]) return [];
+    return TEAM_IDS
+      .filter(team => teamMembers(state, team).length < 10)
+      .map(team => ({ type: "join", team }));
+  },
+
   participants: state => new Set(Object.keys(state.seats)),
 
   takeResult(state) {
@@ -362,7 +473,10 @@ export const wordlePvp: GameModule<WordleState> = {
         role: player.team,
         won: state.winner === player.team,
         score: state.teams[player.team].solved.length,
-        extra: state.teams[player.team].guesses
+        extra: state.teams[player.team].guesses,
+        guesses: state.teams[player.team].playerStats[player.id]?.guesses ?? 0,
+        yellow: state.teams[player.team].playerStats[player.id]?.yellow ?? 0,
+        green: state.teams[player.team].playerStats[player.id]?.green ?? 0
       }))
     };
   },
@@ -374,25 +488,49 @@ export const wordlePvp: GameModule<WordleState> = {
       const team = state.teams[id];
       return [id, {
         solved: team.solved.length,
-        total: 10,
+        total: PUZZLE_COUNT,
         guesses: team.guesses,
-        remainingMs: remainingAt(team, now),
+        remainingMs: remainingAt(team, now, state.phase === "playing"),
         locked: team.locked,
+        puzzles: state.words.map((_, puzzleId) => {
+          const owner = teamMembers(state, id).find(player => team.positions[player.id] === puzzleId);
+          return {
+            id: puzzleId,
+            solved: team.solved.includes(puzzleId),
+            history: team.history[puzzleId] ?? [],
+            player: owner ? {
+              id: owner.id,
+              username: owner.username,
+              connected: connected.has(owner.id)
+            } : null,
+            waitingPlayers: teamMembers(state, id)
+              .filter(player => team.waiting[player.id] === puzzleId)
+              .map(player => ({ id: player.id, username: player.username, connected: connected.has(player.id) }))
+          };
+        }),
         players: teamMembers(state, id).map(player => ({
           id: player.id,
           username: player.username,
           connected: connected.has(player.id),
-          queueCount: team.queues[player.id]?.length ?? 0,
-          active: team.current[player.id] !== null && team.current[player.id] !== undefined,
+          position: team.positions[player.id] ?? null,
+          waitingFor: team.waiting[player.id] ?? null,
+          stats: team.playerStats[player.id] ?? { guesses: 0, yellow: 0, green: 0 },
           isYou: player.id === viewerId
         }))
       }];
     })) as Record<TeamId, {
       solved: number; total: number; guesses: number; remainingMs: number; locked: boolean;
-      players: { id: string; username: string; connected: boolean; queueCount: number; active: boolean; isYou: boolean }[];
+      puzzles: {
+        id: number;
+        solved: boolean;
+        history: GuessRecord[];
+        player: { id: string; username: string; connected: boolean } | null;
+        waitingPlayers: { id: string; username: string; connected: boolean }[];
+      }[];
+      players: { id: string; username: string; connected: boolean; position: number | null; waitingFor: number | null; stats: { guesses: number; yellow: number; green: number }; isYou: boolean }[];
     }>;
     const team = viewer ? state.teams[viewer.team] : null;
-    const puzzleId = viewer ? team?.current[viewerId] : null;
+    const puzzleId = viewer ? team?.positions[viewerId] ?? null : null;
     const feedback = viewer && team ? team.feedback[viewerId] : null;
     const activePuzzleId = feedback?.puzzleId ?? puzzleId;
     return {
@@ -408,7 +546,6 @@ export const wordlePvp: GameModule<WordleState> = {
         ? {
             puzzleId: activePuzzleId,
             history: team.history[activePuzzleId] ?? [],
-            queueCount: team.queues[viewerId]?.length ?? 0,
             feedback: feedback ? {
               guess: feedback.guess,
               result: feedback.result,
@@ -418,13 +555,15 @@ export const wordlePvp: GameModule<WordleState> = {
           }
         : null,
       now,
+      settings: { roundMinutes: state.roundMinutes, penaltySeconds: state.penaltySeconds },
       winner: state.phase === "results" ? state.winner : null,
       resultsAt: state.phase === "ending" ? state.resultAt : null,
       options: {
-        join: state.phase === "lobby" && !viewer,
+        join: state.phase === "lobby" && TEAM_IDS.some(id => id !== viewer?.team && teamMembers(state, id).length < 10),
         leave: state.phase === "lobby" && !!viewer,
         start: state.phase === "lobby" && TEAM_IDS.every(id => teamMembers(state, id).length > 0),
         guess: state.phase === "playing" && !!viewer && !!team && !team.locked && !feedback && puzzleId !== null && puzzleId !== undefined && remainingAt(team, now) > 0,
+        endGame: state.phase === "playing",
         closeResults: state.phase === "results"
       }
     };

@@ -1,5 +1,5 @@
 // Per-game statistics, computed from the "gameResults" table (one row per player per finished game).
-// Columns: role, won, flag, score, extra. Each game decides what flag/score/extra mean:
+// Columns: role, won, flag, score, extra, and optional per-game detail columns. Each game decides what flag/score/extra mean:
 //   codenames: flag = guessed the black card
 //   tetris:    score = player's (or team's) final score, extra = lines cleared
 //   thirtyone: score = the player's team score
@@ -70,5 +70,12 @@ export const GAME_STATS: Record<string, StatDef[]> = {
   "pass-time": [
     games,
     winRate
+  ],
+  "wordle-pvp": [
+    games,
+    winRate,
+    { key: "avgGuesses", label: "Average guesses per game", format: "number", sql: `ROUND(AVG("playerGuesses"))` },
+    { key: "avgYellow", label: "Average new yellow letters per game", format: "number", sql: `ROUND(AVG("yellowDiscoveries"))` },
+    { key: "avgGreen", label: "Average new green letters per game", format: "number", sql: `ROUND(AVG("greenDiscoveries"))` }
   ]
 };
