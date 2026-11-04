@@ -9,6 +9,9 @@ Cloudflare Worker + D1 + Durable Objects backend for Voedgoem.
 - `src/games/<game>/` – one folder per game, with its `index.ts` exporting one `GameModule`. The registry is generated from these folders, so adding a game does not require editing a shared list. Codenames word lists are in `src/games/codenames/words/*.txt`; 31 Seconds easy and hard lists are in `content/31seconds/`. `npm run words` bundles the lists into generated TypeScript.
 
 To add a game: create `src/games/<id>/index.ts` exporting exactly one const typed as `GameModule` (with `info`). The generated game registry is refreshed automatically by `npm run dev`, `npm run typecheck`, `npm test`, `npm run build`, and `npm run deploy`; do not edit the generated file.
+
+Then complete the [frontend's cross-repository checklist](../voedgoem/README.md#adding-a-game): check `content/favicons/` and apply the supplied icon, register results/statistics, support the canonical game ID in routes, and theme the hub bar plus statistics tab/modal. A generated registry entry alone is not a finished game integration.
+
 - `src/auth.ts` – PBKDF2 password hashing, bearer-token sessions, recovery keys (only hashes are stored).
 - `migrations/` – D1 schema.
 
