@@ -38,7 +38,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     "name": "Worksite",
     "kind": "slice",
     "icons": [
-      "🪚",
+      "🪓",
       "⛏️",
       "🪏"
     ],
@@ -60,6 +60,16 @@ export const BUILDINGS: readonly BuildingDef[] = [
     "name": "Road",
     "kind": "cross",
     "icons": [],
+    "kin": null,
+    "garrison": 0
+  },
+  {
+    "id": "university",
+    "name": "University",
+    "kind": "slice",
+    "icons": [
+      "📖"
+    ],
     "kin": null,
     "garrison": 0
   },
@@ -89,16 +99,6 @@ export const BUILDINGS: readonly BuildingDef[] = [
     "kind": "slice",
     "icons": [
       "⚓"
-    ],
-    "kin": null,
-    "garrison": 0
-  },
-  {
-    "id": "university",
-    "name": "University",
-    "kind": "slice",
-    "icons": [
-      "🕮"
     ],
     "kin": null,
     "garrison": 0

@@ -23,7 +23,7 @@ Use the role icons in `content/werewolf` throughout the UI, accompanied by each 
 - **Big Bad Wolf — Werewolf:** Once per game, during the day and before voting starts, may reveal their role and kill a player of their choice outright. Their role is then revealed to everyone.
 - **Cloaked Wolf — Werewolf:** Cannot be detected by the Guard's dog; does not make the Bearman's bear growl; and is not identified by the Seer.
 - **Wise Wolf — Werewolf:** While alive, causes the GM to give the Werewolves a thumbs-down when they target the Old Knight, a player protected by the Old Knight, the Hunter, or the Elder. This is a warning, not a restriction: the Werewolves may reconsider any number of times, or unanimously keep the warned target.
-- **Throatcutter — Werewolf:** After the Werewolves choose their kill target, may raise their hand and choose a player to silence for the next day. The Throatcutter may use this ability once per game.
+- **Throatcutter — Werewolf:** After the Werewolves choose their kill target, may raise their hand and choose a Villager-aligned player to silence for the next day. A Wolfchild is eligible while their imitation target is alive, but not after converting to Werewolf. Werewolves and neutral players are not eligible. The Throatcutter may use this ability once per game.
 - **Sniffer — Werewolf:** Wakes alone before the Werewolves and may check a player's role. On the first night only, if the Sniffer checks a Werewolf, the GM gives a thumbs-down and the Sniffer may reconsider any number of times.
 - **Wolfchild — Neutral:** On the first night, before anyone has died, chooses one player to imitate. The Wolfchild does not copy that player's role. Their role remains Wolfchild, but their faction follows the chosen player's living status: they count as a Villager while that player is alive and become a Werewolf as soon as that player dies.
 - **Fool — Neutral:** If selected to be lynched, reveals their role and wins individually without dying. The game continues and the Fool does not affect its normal win conditions. If the game ends because only one faction remains, a living Fool loses unless they are a living lover; lovers win together under the lover win condition. If killed by a Werewolf, the Fool loses. The Fool may continue talking, but must keep their eyes closed during the night.
@@ -40,6 +40,16 @@ Use the role icons in `content/werewolf` throughout the UI, accompanied by each 
 
 ## In-game screens
 
+After the Wolfchild chooses an imitation target, **feeling-watched** wakes that player alone. They privately learn that a Wolfchild is imitating them (not who it is) and must mark **Seen it** before the GM continues. Their own town card has an orange border during the step. Afterwards, both the Wolfchild and imitated player see that border only when **Show secret role** is enabled, while the Wolfchild lives. The GM always sees orange imitation and pink lovers' borders.
+
+After Cupido assigns the lovers, **lovers-meet** wakes them together so they can privately see their partner. Both lovers' town cards have pink borders on their own screens during the meeting. After the meeting, the borders and partner text are visible only with **Show secret role** enabled. The GM can see them privately; other players cannot.
+
+Before night deaths are revealed at dawn, the GM announces the Throatcutter's victim in a separate step, if the ability was used. Confirmation adds a public red dashed border to that player's town card for the day. They cannot speak but may still vote. The border disappears when night starts.
+
+When the Fool is selected for lynching, a separate GM step asks them to reveal themselves to everyone. Once confirmed, their role remains publicly visible. The next step asks the GM to announce the Fool's individual victory; the Fool stays alive and normal play resumes.
+
+If the Fool is mayor, they must appoint another active player during the victory step. After victory, the Fool is out of play and treated as dead for all game mechanics: they cannot vote, use abilities, be targeted by any ability, or count as a living neighbour or living Wolfchild imitation target. Their individual victory remains recorded; no death is recorded for leaving play.
+
 Role-holding players see their own role and the seating order. A rules tab opens a modal showing the game rules, all role rules, and the roles in this game's pool. Spectators see public information only; they do not see roles or private actions.
 
 The GM sets the seating order, can see every player's role, and sees a prompt for the next step with a control to confirm it. The GM also sees a table of the remaining steps for the current day and following night, or for the current night and following day. The GM can open the same rules modal as the players.
@@ -48,11 +58,15 @@ The game must work both for remote players who cannot see one another and for pl
 
 ## Win conditions
 
+A Werewolf faction victory is awarded to every Werewolf-aligned player, including dead Werewolves and converted Wolfchildren, not only survivors.
+
+The Wolfchild's faction is fixed when they die. A Wolfchild who died as a Villager wins with the Villagers; one who died as a Werewolf wins with the Werewolves. Their imitation target dying after them cannot change their faction or victory eligibility.
+
 The Fool is ignored when checking faction win conditions. If no Villagers and no Werewolves remain, the game is a draw. Otherwise, the Villagers win when no Werewolves remain, and the Werewolves win when no Villagers remain. The Wolfchild counts as a Villager or Werewolf according to their current alignment. A living Fool loses when either faction wins unless they are one of the living lovers; lovers win together under the lover win condition. If the lovers are the only two players alive, they win together. If both lovers are Werewolves, they can win as part of the Werewolf faction.
 
 ## GM flow
 
-Show a step only when its role is in the pool and is not known by everyone to be dead. Steps marked **[UI]** need a GM-facing control. When a player has a choice, they select it on their device; each change is saved as a draft and shown to the GM immediately. Players do not submit or resolve actions. Before confirmation, the GM's choice control is prefilled from the relevant player selection (or the selected outcome for a vote). The GM may change the choice, then must confirm every step before its effects are applied. For group choices, the GM sees each player's current selection and may edit a player's selection before confirming the step. Do not resolve an unclear step automatically. The GM adjudicates rule violations such as interruptions or silencing and records the consequence by selecting the player in the UI.
+Show a step only when its role is in the pool and is not known by everyone to be dead. If a role is in the pool but was not dealt, show a GM-only **Pretend** step at its normal action moment: the GM pauses as if performing it, then confirms to continue. Pretend steps have no player UI, selections, results, or gameplay effects. Death-triggered abilities still require an actual death. Steps marked **[UI]** need a GM-facing control. When a player has a choice, they select it on their device; each change is saved as a draft and shown to the GM immediately. Players do not submit or resolve actions. Before confirmation, the GM's choice control is prefilled from the relevant player selection (or the selected outcome for a vote). The GM may change the choice, then must confirm every step before its effects are applied. For group choices, the GM sees each player's current selection and may edit a player's selection before confirming the step. Do not resolve an unclear step automatically. The GM adjudicates rule violations such as interruptions or silencing and records the consequence by selecting the player in the UI.
 
 ### Before the first night
 

@@ -40,6 +40,7 @@ interface DeathRecord {
   reason: string;
   order: number;
   revealedRole?: RoleId;
+  factionAtDeath?: Faction;
 }
 
 interface WerewolvesState {
@@ -58,6 +59,7 @@ interface WerewolvesState {
     moonCards: boolean;
   };
   steps: Step[];
+  stepHistory?: { step: Step; submissions: Record<string, ActionValue>; override: ActionValue | null; chosen: ActionValue | null; names: Record<string, string> }[];
   submissions: Record<string, Record<string, ActionValue>>;
   overrides: Record<string, ActionValue>;
   actions: Record<string, ActionValue>;
@@ -107,7 +109,7 @@ const ROLE_INFO: Record<RoleId, { name: string; faction: Faction; icon: string; 
   "big-bad-wolf": { name: "Big Bad Wolf", faction: "werewolf", icon: "big-bad-wolf.svg", rule: "Once per game, before voting starts during the day, reveal your role and kill one player outright." },
   "cloaked-wolf": { name: "Cloaked Wolf", faction: "werewolf", icon: "cloaked-wolf.svg", rule: "The Guard's dog, Bearman's bear, and Seer cannot detect you." },
   "wise-wolf": { name: "Wise Wolf", faction: "werewolf", icon: "wise-wolf.svg", rule: "While alive, warns the Werewolves when they target the Old Knight, a protected player, the Hunter, or the Elder. The warning does not prevent the attack." },
-  throatcutter: { name: "Throatcutter", faction: "werewolf", icon: "throatcutter.svg", rule: "Once per game after the Werewolves choose a target, you may silence one player for the next day. Silenced players may still vote." },
+  throatcutter: { name: "Throatcutter", faction: "werewolf", icon: "throatcutter.svg", rule: "Once per game after the Werewolves choose a target, you may silence one Villager-aligned player for the next day, including a Wolfchild whose imitation target is still alive. Silenced players may still vote." },
   sniffer: { name: "Sniffer", faction: "werewolf", icon: "sniffer.svg", rule: "Wakes alone before the Werewolves and checks a player's role. On the first night, a Werewolf result is thumbs-down and you may reconsider." },
   wolfchild: { name: "Wolfchild", faction: "neutral", icon: "wolfdog.svg", rule: "On the first night, choose a player to imitate. You stay Wolfchild; you count as a Villager while they live and a Werewolf as soon as they die." },
   fool: { name: "Fool", faction: "neutral", icon: "fool.svg", rule: "If selected for lynching, reveal your role and win individually without dying. You lose if killed by Werewolves; you do not affect faction wins." },
@@ -170,10 +172,12 @@ function shuffle<T>(values: T[]): T[] {
   return values;
 }
 
-const aliveSeats = (state: WerewolvesState) => Object.values(state.seats).filter(seat => seat.alive).sort((a, b) => a.order - b.order);
+const retiredFool = (state: WerewolvesState, id: unknown) =>
+  typeof id === "string" && state.seats[id]?.role === "fool" && state.individualWinners.includes(id);
+const aliveSeats = (state: WerewolvesState) => Object.values(state.seats).filter(seat => isAlive(state, seat.id)).sort((a, b) => a.order - b.order);
 const seat = (state: WerewolvesState, id: unknown) => typeof id === "string" ? state.seats[id] : undefined;
 const roleOf = (state: WerewolvesState, id: string) => state.seats[id]?.role;
-const isAlive = (state: WerewolvesState, id: unknown) => !!seat(state, id)?.alive;
+const isAlive = (state: WerewolvesState, id: unknown) => !!seat(state, id)?.alive && !retiredFool(state, id);
 const isAbsent = (state: WerewolvesState, id: string) => {
   if (state.absentId !== id) return false;
   if (state.absentThroughNight >= state.day) return true;
@@ -184,6 +188,14 @@ function isWolfAligned(state: WerewolvesState, id: string): boolean {
   const player = state.seats[id];
   if (!player?.role) return false;
   if (WOLF_ROLES.includes(player.role)) return true;
+  if (player.role === "wolfchild" && !player.alive) {
+    const death = state.deaths.find(entry => entry.userId === id);
+    if (death?.factionAtDeath) return death.factionAtDeath === "werewolf";
+    if (death) {
+      const targetDeath = state.deaths.find(entry => entry.userId === state.wolfchildTarget);
+      return !!targetDeath && targetDeath.order < death.order;
+    }
+  }
   return player.role === "wolfchild" && !!state.wolfchildTarget && !isAlive(state, state.wolfchildTarget);
 }
 
@@ -191,6 +203,13 @@ function factionOf(state: WerewolvesState, id: string): Faction {
   const role = roleOf(state, id);
   if (role === "wolfchild") return isWolfAligned(state, id) ? "werewolf" : "villager";
   return role ? ROLE_INFO[role].faction : "neutral";
+}
+
+function deathCause(state: WerewolvesState, userId: string, reason: string) {
+  const partnerId = reason === "heartbreak" && state.lovers?.includes(userId)
+    ? state.lovers.find(id => id !== userId) : undefined;
+  const partner = partnerId ? state.seats[partnerId] : undefined;
+  return partner ? `heartbreak — in love with ${partner.username}` : reason;
 }
 
 function addEvent(state: WerewolvesState, text: string) {
@@ -210,9 +229,27 @@ function step(state: WerewolvesState, phase: StepPhase, kind: string, prompt: st
   };
 }
 
+function undraftedRole(state: WerewolvesState, role: RoleId) {
+  return state.settings.rolePool.includes(role) && !Object.values(state.seats).some(player => player.role === role);
+}
+
+function pretendRoleStep(state: WerewolvesState, role: RoleId, prompt: string, phase: StepPhase) {
+  return step(state, phase, "pretend-role", `Pretend to perform the ${ROLE_INFO[role].name} step: ${prompt} This role is in the pool but was not dealt. Do not select targets or reveal a result; pause as if performing the step, then continue.`, "gm", { role });
+}
+
+function undraftedPackRole(state: WerewolvesState) {
+  return Object.values(state.seats).some(player => player.role && WOLF_ROLES.includes(player.role))
+    ? undefined : state.settings.rolePool.find(role => WOLF_ROLES.includes(role));
+}
+
 function pushRoleStep(state: WerewolvesState, steps: Step[], role: RoleId, kind: string, prompt: string, phase: StepPhase, options: Partial<Step> = {}) {
-  const holder = Object.values(state.seats).find(player => player.alive && player.role === role && !isAbsent(state, player.id));
-  if (holder) steps.push(step(state, phase, kind, prompt, "role", { role, actorId: holder.id, required: true, ...options }));
+  if (!state.settings.rolePool.includes(role)) return;
+  if (undraftedRole(state, role)) {
+    steps.push(pretendRoleStep(state, role, prompt, phase));
+    return;
+  }
+  const holder = roleHolderId(state, role);
+  if (holder) steps.push(step(state, phase, kind, prompt, "role", { role, actorId: holder, required: true, ...options }));
 }
 
 function newGameSteps(state: WerewolvesState) {
@@ -230,7 +267,9 @@ function startNight(state: WerewolvesState) {
   delete state.actions.nightResolutionSummary;
   state.night = { wolfTarget: null, oldKnightTarget: null, oldKnightVictim: null, alchemistSaveTarget: null, poisonTarget: null, wolfKnightVictim: null };
   state.nightVisitors = [];
-  const night: Step[] = [];
+  const night: Step[] = [
+    step(state, "night", "go-to-sleep", "Tell everyone to close their eyes and go to sleep.", "gm")
+  ];
   if (state.firstNight) {
     pushRoleStep(state, night, "cupido", "lovers", "Cupido chooses two players to become lovers.", "night", { data: { targets: 2 } });
     pushRoleStep(state, night, "wolfchild", "wolfchild-target", "The Wolfchild chooses a player to imitate.", "night");
@@ -241,17 +280,16 @@ function startNight(state: WerewolvesState) {
   pushRoleStep(state, night, "sniffer", "sniffer-check", "The Sniffer chooses a player to check.", "night");
   if (aliveSeats(state).some(player => isWolfAligned(state, player.id) && !isAbsent(state, player.id))) {
     night.push(step(state, "night", "wolf-target", "Each living Werewolf selects a target. The GM confirms a unanimous target or chooses the final target/skip.", "wolves", { required: true }));
+  } else {
+    const packRole = undraftedPackRole(state);
+    if (packRole) night.push(pretendRoleStep(state, packRole, "Pretend to wake the Werewolves and let them choose a target.", "night"));
   }
   if (!state.throatcutterUsed) pushRoleStep(state, night, "throatcutter", "silence-target", "The Throatcutter may silence one player for the next day or pass.", "night", { optional: true });
-  if (roleAlive(state, "alchemist") && (state.potionAvailable || state.poisonAvailable)) {
-    night.push(step(state, "night", "alchemist-actions", "The Alchemist may use either or both remaining potions, then confirm.", "role", {
-      role: "alchemist",
-      actorId: roleHolderId(state, "alchemist") ?? undefined,
-      required: true
-    }));
+  if (state.potionAvailable || state.poisonAvailable) {
+    pushRoleStep(state, night, "alchemist", "alchemist-actions", "The Alchemist may use either or both remaining potions, then confirm.", "night");
   }
   pushRoleStep(state, night, "little-girl", "little-girl-check", "The Little Girl chooses a player. Report whether they visited anyone tonight.", "night");
-  night.push(step(state, "night", "night-deaths", "Resolve the Werewolves' attack, Old Knight protection, and Alchemist actions. Then reveal deaths in random order.", "gm"));
+  night.push(step(state, "day", "night-deaths", "At dawn, wake everyone up, and reveal these deaths in a random order.", "gm"));
   state.steps = night;
 }
 
@@ -298,6 +336,36 @@ function targetIsElder(state: WerewolvesState, id: string | null) {
   return !!id && roleOf(state, id) === "elder" && isAlive(state, id);
 }
 
+function bearmanActive(state: WerewolvesState) {
+  return state.settings.rolePool.includes("bearman") && roleAlive(state, "bearman");
+}
+
+function bearmanReport(state: WerewolvesState) {
+  const bearmanId = roleHolderId(state, "bearman");
+  const neighbors = bearmanId ? ([-1, 1] as const).map(direction => circularNeighbor(state, bearmanId, direction)) : [];
+  const wolfIds = neighbors.flatMap(player => player && isWolfAligned(state, player.id) && player.role !== "cloaked-wolf" ? [player.id] : []);
+  const reasons = neighbors.map((player, index) => {
+    const side = index === 0 ? "Left" : "Right";
+    if (!player) return `${side}: no living neighbour.`;
+    return `${side}: ${player.username} — ${player.role === "cloaked-wolf"
+      ? "Cloaked Wolf counts as a Villager for the bear."
+      : isWolfAligned(state, player.id) ? "Werewolf-aligned, so the bear growls." : "not Werewolf-aligned."}`;
+  });
+  return { growl: wolfIds.length > 0, neighbors: neighbors.map(player => player?.id), wolfIds, reasons };
+}
+
+function skipUnavailableBearman(state: WerewolvesState) {
+  if (!bearmanActive(state)) state.steps = state.steps.filter(item => item.kind !== "bearman-growl");
+}
+
+function ensureThroatcutterReveal(state: WerewolvesState) {
+  const dawn = state.steps.findIndex(item => item.kind === "night-deaths");
+  if (dawn < 0 || !state.silencedId || state.actions.silence?.day !== state.day
+    || state.actions.silence?.revealed === true || state.steps.some(item => item.kind === "throatcutter-reveal")) return;
+  state.steps.splice(dawn, 0, step(state, "day", "throatcutter-reveal",
+    `Wake everyone up and announce that ${state.seats[state.silencedId]?.username ?? "the selected player"} has their throat cut today. They cannot speak, but may still vote.`, "gm", { targetId: state.silencedId }));
+}
+
 function wiseWolfWarning(state: WerewolvesState, targetId: string | null) {
   if (!targetId || !roleAlive(state, "wise-wolf")) return false;
   return roleOf(state, targetId) === "old-knight"
@@ -316,24 +384,42 @@ function roleResult(state: WerewolvesState, step: Step, value: ActionValue) {
     case "guard-check": {
       const neighborIds = [circularNeighbor(state, targetId, -1)?.id, circularNeighbor(state, targetId, 1)?.id];
       const detected = [targetId, ...neighborIds].some(id => !!id && isWolfAligned(state, id) && roleOf(state, id) !== "cloaked-wolf");
-      state.privateResults[actorId][step.kind] = { result: detected ? "thumbs-up" : "thumbs-down", targetId };
-      break;
+      const revealed = { result: detected ? "thumbs-up" : "thumbs-down", targetId };
+      state.privateResults[actorId][step.kind] = revealed;
+      return revealed;
     }
     case "seer-check": {
       const hidden = targetRole === "cloaked-wolf" || targetRole === "wolfchild" || targetRole === "fool" || targetRole === "bearman";
-      state.privateResults[actorId][step.kind] = hidden ? { result: "thumbs-down", targetId } : { result: "role", role: targetRole, targetId };
-      break;
+      const revealed = hidden ? { result: "thumbs-down", targetId } : { result: "role", role: targetRole, targetId };
+      state.privateResults[actorId][step.kind] = revealed;
+      return revealed;
     }
     case "sniffer-check": {
       const isWolf = !!targetRole && (ROLE_INFO[targetRole].faction === "werewolf" || (targetRole === "wolfchild" && isWolfAligned(state, targetId)));
       const result = state.firstNight && isWolf ? { result: "thumbs-down" } : { result: "role", role: targetRole };
-      state.privateResults[actorId][step.kind] = { ...result, targetId };
-      break;
+      const revealed = { ...result, targetId };
+      state.privateResults[actorId][step.kind] = revealed;
+      return revealed;
     }
     case "little-girl-check": {
       const visited = state.nightVisitors.includes(targetId);
-      state.privateResults[actorId][step.kind] = { targetId, visited };
-      break;
+      const visitedIds = visited ? [...new Set((state.stepHistory ?? [])
+        .filter(entry => entry.step.day === step.day && entry.step.phase === "night"
+          && (entry.step.actorId === targetId || (entry.step.kind === "wolf-target" && isWolfAligned(state, targetId))))
+        .flatMap(entry => {
+          const action = entry.chosen;
+          if (!action || action.pass === true) return [];
+          const ids = [
+            action.targetId,
+            ...(Array.isArray(action.targetIds) ? action.targetIds : []),
+            ...(action.usePotion === true ? [action.saveTarget] : []),
+            ...(action.usePoison === true ? [action.poisonTarget] : [])
+          ];
+          return ids.filter((id): id is string => typeof id === "string" && !!state.seats[id]);
+        }))] : [];
+      const revealed = { targetId, visited, visitedIds };
+      state.privateResults[actorId][step.kind] = revealed;
+      return revealed;
     }
   }
 }
@@ -354,7 +440,7 @@ function requireRecord(value: unknown): ActionValue | null {
 }
 
 function validateDraft(value: ActionValue): string | null {
-  const booleanFields = new Set(["candidate", "usePotion", "usePoison", "pass", "skip", "reveal"]);
+  const booleanFields = new Set(["candidate", "usePotion", "usePoison", "pass", "skip", "reveal", "acknowledged"]);
   const stringFields = new Set(["targetId", "saveTarget", "poisonTarget", "card", "name", "userId"]);
   for (const [key, field] of Object.entries(value)) {
     if (booleanFields.has(key)) {
@@ -377,10 +463,25 @@ function validateTarget(state: WerewolvesState, value: ActionValue, key = "targe
   if (!options.allowAbsent && typeof id === "string" && isAbsent(state, id)) return "That player is absent and cannot be targeted.";
   return null;
 }
+function targetsRetiredFool(state: WerewolvesState, value: ActionValue) {
+  return [value.targetId, value.saveTarget, value.poisonTarget, ...(Array.isArray(value.targetIds) ? value.targetIds : [])]
+    .some(id => retiredFool(state, id));
+}
 function validateValue(state: WerewolvesState, step: Step, value: ActionValue, actorId: string): string | null {
+  if (targetsRetiredFool(state, value)) return "The victorious Fool is out of play and cannot be targeted.";
   const hasTarget = (another = false) => validateTarget(state, { ...value, userId: actorId }, "targetId", { another });
   const targetId = typeof value.targetId === "string" ? value.targetId : null;
   switch (step.kind) {
+    case "fool-win":
+      if (step.actorMode === "role") return hasTarget(true);
+      break;
+    case "feeling-watched":
+    case "sniffer-result":
+    case "seer-result":
+    case "guard-result":
+    case "little-girl-result":
+      if (typeof value.acknowledged !== "boolean") return "Choose whether the private result has been seen.";
+      break;
     case "mayor-nominations":
       if (typeof value.candidate !== "boolean") return "Choose whether to run for mayor.";
       break;
@@ -414,6 +515,7 @@ function validateValue(state: WerewolvesState, step: Step, value: ActionValue, a
         const error = hasTarget(["old-knight-target", "seer-check", "hunter-shot", "lynch-spare"].includes(step.kind));
         if (error) return error;
       }
+      if (step.kind === "silence-target" && targetId && factionOf(state, targetId) !== "villager") return "The Throatcutter can only target Villager-aligned players.";
       if (step.kind === "lynch-spare") {
         const remaining = state.lynchRemaining;
         if (!remaining.includes(targetId ?? "") || targetId === step.voterId) return "Choose another player still in the lynch vote.";
@@ -425,6 +527,7 @@ function validateValue(state: WerewolvesState, step: Step, value: ActionValue, a
       break;
     case "wolf-target":
       if (value.pass === true) break;
+      if (targetId && isWolfAligned(state, targetId)) return "Werewolves cannot attack another Werewolf.";
       return hasTarget();
     case "alchemist-actions": {
       const save = value.saveTarget;
@@ -504,6 +607,7 @@ function actorsForStep(state: WerewolvesState, current: Step): string[] {
 }
 
 function activeRoleActionsAllowed(state: WerewolvesState, actorId: string, current: Step) {
+  if (current.kind === "feeling-watched") return current.actorId === actorId && isAlive(state, actorId);
   if (current.actorMode === "hunter") return current.actorId === actorId;
   if (!isAlive(state, actorId) || isAbsent(state, actorId)) return false;
   if (current.actorMode === "wolves") return isWolfAligned(state, actorId);
@@ -513,13 +617,8 @@ function activeRoleActionsAllowed(state: WerewolvesState, actorId: string, curre
 
 function beginLynch(state: WerewolvesState) {
   state.lynchRemaining = aliveVoters(state).map(player => player.id);
-  if (state.lynchRemaining.length <= 2) {
-    const mayorId = state.mayorId && state.lynchRemaining.includes(state.mayorId) ? state.mayorId : null;
-    const targetId = mayorId
-      ? state.lynchRemaining.find(id => id !== mayorId) ?? null
-      : state.mayorId && isAbsent(state, state.mayorId) && state.lynchRemaining.length === 2
-        ? null
-        : state.lynchRemaining[0] ?? null;
+  if (state.lynchRemaining.length <= 1) {
+    const targetId = state.lynchRemaining[0] ?? null;
     state.steps.unshift(step(state, "day", "lynch-result", "The last player is selected for lynching.", "gm", {
       required: true,
       ...(targetId ? { targetId, data: { targetId } } : {})
@@ -541,13 +640,8 @@ function beginLynch(state: WerewolvesState) {
 
 function appendNextLynchStep(state: WerewolvesState, previousSparedId: string) {
   const remaining = state.lynchRemaining;
-  if (remaining.length <= 2) {
-    const mayorId = state.mayorId && remaining.includes(state.mayorId) ? state.mayorId : null;
-    const targetId = mayorId
-      ? remaining.find(id => id !== mayorId) ?? null
-      : state.mayorId && isAbsent(state, state.mayorId) && remaining.length === 2
-        ? null
-        : remaining[0] ?? null;
+  if (remaining.length <= 1) {
+    const targetId = remaining[0] ?? null;
     state.steps.unshift(step(state, "day", "lynch-result", "The last player is selected for lynching.", "gm", {
       required: true,
       ...(targetId ? { targetId, data: { targetId } } : {})
@@ -639,7 +733,9 @@ function getWinCheck(state: WerewolvesState) {
   if (!wolves.length) {
     return {
       winner: "villagers" as const,
-      factionWinners: villagers.map(player => player.id),
+      factionWinners: Object.values(state.seats).filter(player =>
+        (isAlive(state, player.id) || player.role === "wolfchild") && factionOf(state, player.id) === "villager"
+      ).map(player => player.id),
       werewolves: 0,
       villagers: villagers.length,
       living: living.length,
@@ -649,7 +745,7 @@ function getWinCheck(state: WerewolvesState) {
   if (!villagers.length) {
     return {
       winner: "werewolves" as const,
-      factionWinners: wolves.map(player => player.id),
+      factionWinners: Object.values(state.seats).filter(player => isWolfAligned(state, player.id)).map(player => player.id),
       werewolves: wolves.length,
       villagers: 0,
       living: living.length,
@@ -674,6 +770,7 @@ function checkWin(state: WerewolvesState): boolean {
 }
 
 function getSubmission(state: WerewolvesState, current: Step): ActionValue | undefined {
+  if (current.kind === "lynch-result" && current.targetId) return { targetId: current.targetId };
   const override = state.overrides[current.id];
   if (override) return override;
   const submissions = state.submissions[current.id] ?? {};
@@ -689,6 +786,10 @@ function getSubmission(state: WerewolvesState, current: Step): ActionValue | und
 }
 
 function confirmRequirements(state: WerewolvesState, current: Step): string | null {
+  if (["seer-result", "sniffer-result", "guard-result", "little-girl-result", "feeling-watched"].includes(current.kind)) {
+    return getSubmission(state, current)?.acknowledged === true
+      ? null : `Wait for the ${current.role ? ROLE_INFO[current.role].name : "player"} to confirm seeing the result.`;
+  }
   if (!current.required) return null;
   if (state.overrides[current.id]) return null;
   if (current.actorMode === "gm") {
@@ -716,7 +817,56 @@ function confirmRequirements(state: WerewolvesState, current: Step): string | nu
   return null;
 }
 
+function nightDeathOutcome(state: WerewolvesState) {
+  const deaths: { id: string; reason: string }[] = [];
+  const notes: string[] = [];
+  const summary: string[] = [];
+  const wolfTarget = state.night.wolfTarget;
+  const knightId = roleHolderId(state, "old-knight") ?? null;
+  const protectedTarget = !!wolfTarget && !targetIsElder(state, wolfTarget)
+    && wolfTarget === state.night.oldKnightTarget && !!knightId;
+  const wolfId = protectedTarget ? wolfToLeftOf(state, wolfTarget!)?.id ?? null : null;
+  const name = (id: string) => state.seats[id]?.username ?? id;
+  if (state.night.oldKnightTarget && !protectedTarget) {
+    notes.push(`The Old Knight's protection of ${name(state.night.oldKnightTarget)} did not stop an attack tonight.`);
+  }
+  if (!wolfTarget) {
+    summary.push("The Werewolves did not attack a player tonight.");
+  } else if (targetIsElder(state, wolfTarget)) {
+    notes.push(`The Werewolves targeted ${name(wolfTarget)}, the Elder, who was not devoured because the Elder cannot be killed by their attack.`);
+  } else if (protectedTarget && knightId) {
+    summary.push(`The Werewolves targeted ${name(wolfTarget)}, who was protected by the Old Knight.`);
+    if (state.night.alchemistSaveTarget === knightId) {
+      notes.push(`${name(knightId)} was saved by the Alchemist's potion.`);
+    } else {
+      deaths.push({ id: knightId, reason: "Old Knight's Last Stand" });
+      summary.push(`${name(knightId)} will die; the Alchemist did not save them.`);
+    }
+    if (wolfId) {
+      deaths.push({ id: wolfId, reason: "Old Knight's Revenge" });
+      summary.push(`${name(wolfId)}, the first living Werewolf to the left of ${name(wolfTarget)}, will die.`);
+    } else {
+      summary.push(`No living Werewolf was found to the left of ${name(wolfTarget)}.`);
+    }
+  } else if (state.night.alchemistSaveTarget === wolfTarget) {
+    notes.push(`${name(wolfTarget)} was saved by the Alchemist's potion.`);
+  } else {
+    deaths.push({ id: wolfTarget, reason: "Werewolves" });
+    summary.push(`${name(wolfTarget)} will die from the Werewolves' attack.`);
+  }
+  if (state.night.poisonTarget) {
+    deaths.push({ id: state.night.poisonTarget, reason: "Alchemist's poison" });
+    summary.push(`${name(state.night.poisonTarget)} will die from the Alchemist's poison.`);
+  }
+  return {
+    deaths: [...new Map(deaths.filter(death => isAlive(state, death.id)).map(death => [death.id, death])).values()],
+    notes, summary,
+    protection: protectedTarget ? { triggered: true, protectedTarget: wolfTarget, knightId, wolfId } : null
+  };
+}
+
 function resolveStep(state: WerewolvesState, current: Step, value: ActionValue | undefined, submissions: Record<string, ActionValue>) {
+  if (current.kind === "pretend-role") return null;
   const chosen = value ?? {};
   const targetId = typeof chosen.targetId === "string" ? chosen.targetId : null;
   switch (current.kind) {
@@ -754,12 +904,16 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
       savePrivateAction(state, current, chosen);
       for (const id of ids) privatelyReveal(state, id, "lover", { partnerId: ids.find(other => other !== id) });
       addEvent(state, "Two players are now lovers.");
+      state.steps.unshift(step(state, "night", "lovers-meet", `Wake ${ids.map(id => state.seats[id]?.username ?? id).join(" and ")} together. Let the lovers see who their partner is, then tell them to close their eyes again.`, "gm"));
       break;
     }
     case "wolfchild-target":
       state.wolfchildTarget = targetId;
       savePrivateAction(state, current, chosen);
       addEvent(state, "The Wolfchild has chosen someone to imitate.");
+      if (targetId) state.steps.unshift(step(state, "night", "feeling-watched",
+        `Wake ${state.seats[targetId]?.username ?? "the imitated player"} alone. Tell them a Wolfchild is imitating them, without revealing who the Wolfchild is. Wait until they confirm seeing the message, then put them back to sleep.`,
+        "role", { actorId: targetId, required: true, data: { targetId } }));
       break;
     case "old-knight-target":
       state.night.oldKnightTarget = targetId;
@@ -771,12 +925,34 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
     case "seer-check":
     case "sniffer-check":
     case "little-girl-check":
-      roleResult(state, current, { ...chosen, userId: current.actorId });
+      const checkedResult = roleResult(state, current, { ...chosen, userId: current.actorId });
       savePrivateAction(state, current, chosen);
       if (current.kind !== "little-girl-check" && current.actorId) state.nightVisitors.push(current.actorId);
       state.actions[current.kind] = { ...chosen, userId: current.actorId };
       if (current.kind === "sniffer-check" && state.firstNight && targetId && isWolfAligned(state, targetId)) {
-        state.steps.unshift({ ...current, id: `${current.id}-reconsider-${crypto.randomUUID()}`, prompt: "The Sniffer gets thumbs-down. They may check another player or reconsider any number of times." });
+        state.steps.unshift({ ...current, id: `${current.id}-reconsider-${crypto.randomUUID()}`, prompt: "The Sniffer gets a thumbs-down (because they tried to sniff a werewolf on the first night). They may check another player or reconsider any number of times." });
+      }
+      if (current.kind === "sniffer-check" && current.actorId) {
+        state.steps.unshift(step(state, current.phase, "sniffer-result", "Reveal the result to the Sniffer. Wait for them to confirm seeing it on their device.", "role", {
+          role: "sniffer",
+          actorId: current.actorId,
+          required: true,
+          data: checkedResult
+        }));
+      }
+      if (current.kind === "seer-check" && current.actorId) {
+        state.steps.unshift(step(state, current.phase, "seer-result", "Reveal the result to the Seer. Wait for them to confirm seeing it on their device.", "role", {
+          role: "seer",
+          actorId: current.actorId,
+          required: true,
+          data: checkedResult
+        }));
+      }
+      if ((current.kind === "guard-check" || current.kind === "little-girl-check") && current.actorId) {
+        const role = current.kind === "guard-check" ? "guard" : "little-girl";
+        state.steps.unshift(step(state, current.phase, `${role}-result`, `Privately tell the ${ROLE_INFO[role].name} what they learned. Confirm that they have seen it before continuing.`, "role", {
+          role, actorId: current.actorId, required: true, data: checkedResult
+        }));
       }
       break;
     case "wolf-target": {
@@ -823,49 +999,21 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
       savePrivateAction(state, current, action);
       break;
     }
+    case "throatcutter-reveal":
+      if (state.silencedId && state.actions.silence?.day === state.day) {
+        state.actions.silence.revealed = true;
+        addEvent(state, `${state.seats[state.silencedId]?.username ?? "A player"} has their throat cut today and cannot speak, but may still vote.`);
+      }
+      break;
     case "night-deaths": {
-      const deaths: { id: string; reason: string }[] = [];
-      const summary: string[] = [];
-      const wolfTarget = state.night.wolfTarget;
-      if (!wolfTarget) {
-        summary.push("The Werewolves did not attack a player tonight.");
-      } else if (targetIsElder(state, wolfTarget)) {
-        summary.push(`The Werewolves targeted ${state.seats[wolfTarget]?.username ?? "a player"}, but the Elder cannot be killed by their attack.`);
-      } else {
-        const targetName = state.seats[wolfTarget]?.username ?? "the target";
-        if (wolfTarget === state.night.oldKnightTarget && roleAlive(state, "old-knight")) {
-          const knightId = roleHolderId(state, "old-knight");
-          const wolf = wolfToLeftOf(state, wolfTarget);
-          state.night.oldKnightVictim = knightId ?? null;
-          state.night.wolfKnightVictim = wolf?.id ?? null;
-          summary.push(`The Werewolves targeted ${targetName}, who was protected by the Old Knight.`);
-          if (knightId) {
-            if (state.night.alchemistSaveTarget !== knightId) {
-              deaths.push({ id: knightId, reason: "Old Knight protection" });
-              summary.push(`${state.seats[knightId]?.username ?? "The Old Knight"} will die; the Alchemist did not save them.`);
-            } else {
-              summary.push(`${state.seats[knightId]?.username ?? "The Old Knight"} was saved by the Alchemist's potion.`);
-            }
-          }
-          if (wolf?.id) deaths.push({ id: wolf.id, reason: "Old Knight protection" });
-          if (wolf?.id) {
-            summary.push(`${wolf.username}, the first living Werewolf to the left of ${targetName}, will die.`);
-          } else {
-            summary.push(`No living Werewolf was found to the left of ${targetName}.`);
-          }
-          state.actions.oldKnightProtection = { triggered: true, protectedTarget: wolfTarget, knightId, wolfId: wolf?.id ?? null };
-        } else if (state.night.alchemistSaveTarget !== wolfTarget) {
-          deaths.push({ id: wolfTarget, reason: "Werewolves" });
-          summary.push(`The Werewolves targeted ${targetName}; ${targetName} will die from the attack.`);
-        } else {
-          summary.push(`The Werewolves targeted ${targetName}, but the Alchemist's potion saved them.`);
-        }
+      const outcome = nightDeathOutcome(state);
+      const summary = [...outcome.summary, ...outcome.notes];
+      if (outcome.protection) {
+        state.night.oldKnightVictim = outcome.protection.knightId;
+        state.night.wolfKnightVictim = outcome.protection.wolfId;
+        state.actions.oldKnightProtection = outcome.protection;
       }
-      if (state.night.poisonTarget) {
-        deaths.push({ id: state.night.poisonTarget, reason: "Alchemist's poison" });
-        summary.push(`${state.seats[state.night.poisonTarget]?.username ?? "The poison target"} will die from the Alchemist's poison.`);
-      }
-      const resolvedDeaths = shuffle([...new Map(deaths.map(death => [death.id, death])).values()]);
+      const resolvedDeaths = shuffle(outcome.deaths);
       summary.push(resolvedDeaths.length
         ? `Reveal these deaths in this random order: ${resolvedDeaths.map(death => state.seats[death.id]?.username ?? "a player").join(", ")}.`
         : "No deaths will be revealed this morning.");
@@ -987,11 +1135,13 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
       state.lynchTarget = targetId ?? (typeof current.targetId === "string" ? current.targetId : null);
       if (state.lynchTarget && state.seats[state.lynchTarget]?.role === "fool") {
         const fool = state.seats[state.lynchTarget];
-        fool.publiclyRevealed = true;
-        state.individualWinners.push(fool.id);
         state.strictFirstWasWolf ??= isWolfAligned(state, fool.id);
-        addEvent(state, "The Fool reveals their role and wins individually without dying.");
-        state.steps.unshift(...(state.currentMoon === "strict-sentence" && state.strictFirstWasWolf === false
+        state.steps.unshift(
+          step(state, "day", "fool-reveal", `${fool.username} reveals themselves as the Fool to everyone.`, "gm", { targetId: fool.id }),
+          step(state, "day", "fool-win", `Tell everyone that ${fool.username}, the Fool, has won individually and is now out of play.${state.mayorId === fool.id ? " The Fool must choose a new mayor before continuing." : ""}`, state.mayorId === fool.id ? "role" : "gm", {
+            actorId: fool.id, role: "fool", required: state.mayorId === fool.id
+          }),
+          ...(state.currentMoon === "strict-sentence" && state.strictFirstWasWolf === false
           ? [step(state, "day", "strict-sentence-check", "Strict Sentence requires an immediate second lynch because the first selected player was not a Werewolf.", "gm")]
           : []), step(state, "day", "day-check-after-lynch", "Check whether either faction has won.", "gm"));
       } else {
@@ -1003,8 +1153,28 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
             ...(state.lynchTarget ? { targetId: state.lynchTarget } : {})
           }));
         } else {
-          state.steps.unshift(step(state, "day", "lynch-kill", "Kill the selected player and resolve death-triggered abilities.", "gm", { required: true, ...(state.lynchTarget ? { targetId: state.lynchTarget } : {}) }));
+          const kill = step(state, "day", "lynch-kill", "Kill the selected player and resolve death-triggered abilities.", "gm", { required: true, ...(state.lynchTarget ? { targetId: state.lynchTarget } : {}) });
+          state.steps.unshift(
+            ...(undraftedRole(state, "judge") ? [pretendRoleStep(state, "judge", "Pause for the Judge to consider intervening before the lynch death.", "day")] : []),
+            kill
+          );
         }
+      }
+      break;
+    case "fool-reveal":
+      if (current.targetId && state.seats[current.targetId]?.role === "fool") {
+        state.seats[current.targetId].publiclyRevealed = true;
+        addEvent(state, `${state.seats[current.targetId].username} reveals themselves as the Fool.`);
+      }
+      break;
+    case "fool-win":
+      if (current.actorId && state.seats[current.actorId]?.role === "fool") {
+        if (state.mayorId === current.actorId && targetId) {
+          state.mayorId = targetId;
+          addEvent(state, `${state.seats[targetId].username} becomes mayor, chosen by the Fool.`);
+        }
+        if (!state.individualWinners.includes(current.actorId)) state.individualWinners.push(current.actorId);
+        addEvent(state, `${state.seats[current.actorId].username}, the Fool, wins individually without dying and is now out of play. Play continues.`);
       }
       break;
     case "judge-intervention":
@@ -1014,7 +1184,7 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
         state.mayorId = current.actorId;
         state.lynchTarget = null;
         addEvent(state, "The Judge reveals their role, becomes mayor, and restarts the lynch vote.");
-        state.steps.unshift(step(state, "day", "lynch-start", "The Judge restarts the lynch vote.", "gm"));
+        state.steps.unshift(step(state, "day", "lynch-start", "The Judge restarts the lynch vote. They're the mayor now.", "gm"));
       } else {
         state.steps.unshift(step(state, "day", "lynch-kill", "Kill the selected player and resolve death-triggered abilities.", "gm", { required: true, ...(current.targetId ? { targetId: current.targetId } : {}) }));
       }
@@ -1039,13 +1209,14 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
     case "death-reveal": {
       const victimId = current.targetId;
       const victim = victimId ? state.seats[victimId] : undefined;
-      if (!victim || !victim.alive) break;
+      if (!victim || !isAlive(state, victimId)) break;
       const reason = String(current.data?.reason ?? "unknown");
+      const factionAtDeath = factionOf(state, victim.id);
       victim.alive = false;
-      const death = { userId: victim.id, reason, order: state.deaths.length, revealedRole: state.buried ? undefined : victim.role };
+      const death = { userId: victim.id, reason, order: state.deaths.length, revealedRole: state.buried ? undefined : victim.role, factionAtDeath };
       state.deaths.push(death);
       if (!state.buried) victim.publiclyRevealed = true;
-      addEvent(state, `${victim.username} dies${state.buried ? "." : ` as the ${victim.role ? ROLE_INFO[victim.role].name : "unknown role"}.`}`);
+      addEvent(state, `${victim.username} dies (${deathCause(state, victim.id, reason)})${state.buried ? "." : ` as the ${victim.role ? ROLE_INFO[victim.role].name : "unknown role"}.`}`);
       if (victim.id === state.mayorId) state.mayorId = null;
       if (victim.role === "elder" && reason !== "Werewolves") {
         state.villagerAbilitiesLost = true;
@@ -1089,11 +1260,9 @@ function resolveStep(state: WerewolvesState, current: Step, value: ActionValue |
       }
       break;
     case "bearman-growl": {
-      const bearmanId = roleHolderId(state, "bearman");
-      const neighbors = bearmanId ? [circularNeighbor(state, bearmanId, -1), circularNeighbor(state, bearmanId, 1)].filter(Boolean) : [];
-      const wolves = neighbors.filter(player => player && isWolfAligned(state, player.id) && player.role !== "cloaked-wolf");
-      state.actions.bearman = { growl: wolves.length > 0, neighbors: neighbors.map(player => player?.id), wolfIds: wolves.map(player => player?.id) };
-      addEvent(state, wolves.length ? "The Bearman's bear growls." : "The Bearman's bear does not growl.");
+      const report = bearmanReport(state);
+      state.actions.bearman = report;
+      addEvent(state, report.growl ? "The Bearman's bear growls." : "The Bearman's bear does not growl.");
       break;
     }
     case "discussion":
@@ -1129,39 +1298,52 @@ function daySteps(state: WerewolvesState): Step[] {
   const day = state.day;
   state.moonOffers = state.settings.moonCards ? shuffle(moonEligibility(state)).slice(0, 3) : [];
   const result = [step(state, "day", "day-check", "Check whether either faction has won and show the GM why play continues.", "gm")];
-  if (roleAlive(state, "bearman")) result.push(step(state, "day", "bearman-growl", "Report whether the Bearman's bear growls and why.", "gm"));
+  if (bearmanActive(state)) result.push(step(state, "day", "bearman-growl", "Report whether the Bearman's bear growls and why.", "gm"));
+  else if (undraftedRole(state, "bearman")) result.push(pretendRoleStep(state, "bearman", "Pause as if checking the bear's reaction; do not announce a growl result.", "day"));
   if (state.settings.moonCards) result.push(step(state, "day", "moon-offer", "Offer up to three eligible Moon cards; the mayor chooses one.", "mayor", {
     optional: state.moonOffers.length === 0,
     required: state.moonOffers.length > 0
   }));
   result.push(step(state, "day", "discussion", "Let the players discuss. Advance when discussion is no longer productive or time is up.", "gm"));
-  if (roleAlive(state, "big-bad-wolf") && !state.bigBadUsed) {
-    result.push(step(state, "day", "big-bad-wolf", "The Big Bad Wolf may reveal their role and kill a player before voting, or pass.", "role", {
-      role: "big-bad-wolf",
-      actorId: roleHolderId(state, "big-bad-wolf"),
-      optional: true
-    }));
+  if (!state.bigBadUsed) {
+    pushRoleStep(state, result, "big-bad-wolf", "big-bad-wolf", "The Big Bad Wolf may reveal their role and kill a player before voting, or pass.", "day", { required: false, optional: true });
   }
   if (state.settings.skipLynch) result.push(step(state, "day", "skip-vote", "All living players vote whether to skip lynching. The lynch is skipped only if every living player votes yes.", "living", { required: true }));
   result.push(step(state, "day", "lynch-start", "Begin the lynch vote.", "gm"));
   return result.map(item => ({ ...item, day }));
 }
 
+function dayForecast(state: WerewolvesState): string[] {
+  return [
+    "Check faction win conditions",
+    ...(bearmanActive(state) ? ["Report the Bearman's growl"] : undraftedRole(state, "bearman") ? ["Pretend: Bearman's report"] : []),
+    ...(state.settings.moonCards ? ["Mayor chooses an eligible Moon card"] : []),
+    "Discussion",
+    ...(!state.bigBadUsed && (roleAlive(state, "big-bad-wolf") || undraftedRole(state, "big-bad-wolf")) ? [undraftedRole(state, "big-bad-wolf") ? "Pretend: Big Bad Wolf may act before voting" : "Big Bad Wolf may act before voting"] : []),
+    ...(state.settings.skipLynch ? ["Unanimous skip-lynch vote"] : []),
+    "Lynch vote"
+  ];
+}
+
 function nightForecast(state: WerewolvesState): string[] {
-  const forecast: string[] = [];
-  const aliveRole = (role: RoleId) => roleAlive(state, role);
-  if (!state.villagerAbilitiesLost) {
-    if (aliveRole("old-knight")) forecast.push("Old Knight: choose protection");
-    if (aliveRole("guard")) forecast.push("Guard: check a player");
-    if (aliveRole("seer")) forecast.push("Seer: view a role");
-  }
-  if (aliveRole("sniffer")) forecast.push("Sniffer: check a role");
+  const forecast: string[] = ["Tell everyone to close their eyes and go to sleep."];
+  const aliveRole = (role: RoleId) => state.settings.rolePool.includes(role) && (roleAlive(state, role) || undraftedRole(state, role));
+  if (aliveRole("old-knight")) forecast.push("Old Knight: choose protection");
+  if (aliveRole("guard")) forecast.push("Guard: check a player", "Guard: reveal the result and acknowledge");
+  if (aliveRole("seer")) forecast.push("Seer: view a role", "Seer: reveal the result and wait for acknowledgement");
+  if (aliveRole("sniffer")) forecast.push("Sniffer: check a role", "Sniffer: reveal the result and acknowledge");
   if (aliveSeats(state).some(player => isWolfAligned(state, player.id) && !isAbsent(state, player.id))) forecast.push("Werewolves: agree on a target");
+  else if (undraftedPackRole(state)) forecast.push("Pretend: Werewolves agree on a target");
   if (aliveRole("throatcutter") && !state.throatcutterUsed) forecast.push("Throatcutter: optional silence");
   if (aliveRole("alchemist") && (state.potionAvailable || state.poisonAvailable)) forecast.push("Alchemist: optional potion and/or poison");
-  if (!state.villagerAbilitiesLost && aliveRole("little-girl")) forecast.push("Little Girl: check whether a player visited");
-  forecast.push("GM: resolve and reveal night deaths");
-  return forecast;
+  if (aliveRole("little-girl")) forecast.push("Little Girl: check whether a player visited", "Little Girl: privately reveal visits and acknowledge");
+  return forecast.filter(text => {
+    const role = (Object.keys(ROLE_INFO) as RoleId[]).find(role => text.startsWith(`${ROLE_INFO[role].name}:`));
+    return !role || !undraftedRole(state, role) || !text.includes("reveal");
+  }).map(text => {
+    const role = (Object.keys(ROLE_INFO) as RoleId[]).find(role => text.startsWith(`${ROLE_INFO[role].name}:`));
+    return role && undraftedRole(state, role) ? `Pretend: ${text}` : text;
+  });
 }
 
 function canActAsGM(state: WerewolvesState, actorId: string) {
@@ -1192,6 +1374,7 @@ function startGame(state: WerewolvesState) {
   state.nightActive = false;
   state.steps = [];
   state.submissions = {};
+  state.stepHistory = [];
   state.overrides = {};
   state.actions = {};
   state.privateResults = {};
@@ -1298,6 +1481,9 @@ export const werewolves: GameModule<WerewolvesState> = {
       if (state.settings[key] === undefined) (state.settings as any)[key] = fresh.settings[key];
     }
     if (!Array.isArray(state.steps)) state.steps = [];
+    for (const pending of state.steps) {
+      if (pending.kind === "night-deaths") pending.phase = "day";
+    }
     if (!state.submissions || typeof state.submissions !== "object") state.submissions = {};
     if (!state.overrides || typeof state.overrides !== "object") state.overrides = {};
     if (!state.actions || typeof state.actions !== "object") state.actions = {};
@@ -1313,6 +1499,8 @@ export const werewolves: GameModule<WerewolvesState> = {
     for (const key of Object.keys(fresh.night) as (keyof WerewolvesState["night"])[]) {
       if (state.night[key] === undefined) (state.night as any)[key] = fresh.night[key];
     }
+    skipUnavailableBearman(state);
+    ensureThroatcutterReveal(state);
   },
 
   handle(state, actor, message, context) {
@@ -1389,6 +1577,10 @@ export const werewolves: GameModule<WerewolvesState> = {
         if (!value) return { error: "Provide a current choice." };
         const draftError = validateDraft(value);
         if (draftError) return { error: draftError };
+        if (["sniffer-result", "seer-result", "guard-result", "little-girl-result", "feeling-watched", "wolf-target", "fool-win", "silence-target"].includes(current.kind) || targetsRetiredFool(state, value)) {
+          const error = validateValue(state, current, value, actor.userId);
+          if (error) return { error };
+        }
         const targetId = current.voterId;
         const groupSubstitute = current.actorMode === "living"
           && typeof message.forUserId === "string"
@@ -1410,9 +1602,12 @@ export const werewolves: GameModule<WerewolvesState> = {
       }
       case "gm_action": {
         if (state.phase !== "playing" || !current || !canActAsGM(state, actor.userId)) return "ignore";
+        if (current.kind === "pretend-role") return { error: "Pretend steps have no choices. Confirm the step to continue." };
+        if (current.kind === "throatcutter-reveal") return { error: "The Throatcutter target is already determined. Confirm the reveal to continue." };
+        if (current.kind === "lynch-result" && current.targetId) return { error: "The lynch target is already determined and cannot be changed." };
         const value = requireRecord(message.value);
         if (!value) return { error: "Provide an action value to override or record." };
-        if ((current.actorMode === "living" || current.actorMode === "voter")
+        if ((current.actorMode === "living" || current.actorMode === "voter" || current.kind === "wolf-target")
           && typeof value.forUserId === "string") {
           const vote = requireRecord(value.vote);
           if (!vote || !actorsForStep(state, current).includes(value.forUserId)) return { error: "Choose a participant who must vote and provide their vote." };
@@ -1420,6 +1615,7 @@ export const werewolves: GameModule<WerewolvesState> = {
           if (voteError) return { error: voteError };
           state.submissions[current.id] ??= {};
           state.submissions[current.id][value.forUserId] = { ...vote, userId: value.forUserId };
+          delete state.overrides[current.id];
           return "save";
         }
         const error = validateValue(state, current, value, current.actorId ?? current.voterId ?? state.gmId ?? actor.userId);
@@ -1445,6 +1641,10 @@ export const werewolves: GameModule<WerewolvesState> = {
         }
         const chosen = getSubmission(state, current);
         const saved = state.submissions[current.id] ?? {};
+        if (chosen && (current.kind === "wolf-target" || current.kind === "fool-win" || current.kind === "silence-target" || targetsRetiredFool(state, chosen))) {
+          const error = validateValue(state, current, chosen, current.actorId ?? current.voterId ?? actor.userId);
+          if (error) return { error };
+        }
         if (!state.overrides[current.id]) {
           for (const [userId, selection] of Object.entries(saved)) {
             const error = validateValue(state, current, selection, userId);
@@ -1457,13 +1657,23 @@ export const werewolves: GameModule<WerewolvesState> = {
           }
         }
         state.steps.shift();
+        const historyEntry = {
+          step: structuredClone(current),
+          submissions: structuredClone(saved),
+          override: structuredClone(state.overrides[current.id] ?? null),
+          chosen: structuredClone(chosen ?? null),
+          names: Object.fromEntries(Object.values(state.seats).map(player => [player.id, player.username]))
+        };
         const resolved = resolveStep(state, current, chosen, saved);
         if (resolved) {
           state.steps.unshift(current);
           return { error: resolved };
         }
+        (state.stepHistory ??= []).push(historyEntry);
         delete state.submissions[current.id];
         delete state.overrides[current.id];
+        skipUnavailableBearman(state);
+        ensureThroatcutterReveal(state);
         ensureMayorStep(state);
         if (state.phase === "playing" && state.steps.length === 0) {
           if (current.kind === "town-name") startNight(state);
@@ -1490,10 +1700,20 @@ export const werewolves: GameModule<WerewolvesState> = {
         addEvent(state, `${state.seats[String(userId)].username} interrupts and loses their vote; the mayor controls it.`);
         return "save";
       }
+      case "abort": {
+        if (!actor.isHost) return { error: "Only the host can exit the game." };
+        if (state.phase !== "playing") return { error: "No game is in progress." };
+        const settings = state.settings;
+        Object.assign(state, werewolves.create(), { settings });
+        delete state.stepHistory;
+        delete state.resultRecorded;
+        return "save";
+      }
       case "close_results":
         if (state.phase !== "results" || !actor.isAdmin) return "ignore";
         state.phase = "lobby";
         state.steps = [];
+        state.stepHistory = [];
         for (const player of Object.values(state.seats)) delete player.role;
         state.seats = {};
         state.gmId = null;
@@ -1534,26 +1754,40 @@ export const werewolves: GameModule<WerewolvesState> = {
     const isGM = viewerId === state.gmId;
     const viewer = state.seats[viewerId];
     const viewerIsWolf = !!viewer && isWolfAligned(state, viewerId);
+    const current = getStep(state);
+    const packVisible = state.phase === "playing" && current?.kind === "wolf-target"
+      && activeRoleActionsAllowed(state, viewerId, current);
     const seats = Object.values(state.seats).sort((a, b) => a.order - b.order).map(player => {
       const result: Record<string, unknown> = {
         id: player.id,
         username: player.username,
         order: player.order,
-        alive: player.alive,
+        alive: isAlive(state, player.id),
+        inactive: retiredFool(state, player.id),
         connected: connected.has(player.id),
         mayor: player.id === state.mayorId,
-        silenced: (isGM || player.id === viewerId) && state.silencedId === player.id,
+        silenced: (isGM || player.id === viewerId || state.actions.silence?.revealed === true) && state.silencedId === player.id,
+        throatCut: state.silencedId === player.id && state.actions.silence?.day === state.day
+          && state.actions.silence?.revealed === true && current?.phase === "day",
         absent: isAbsent(state, player.id),
         publiclyRevealed: !!player.publiclyRevealed
       };
+      if (packVisible && player.alive && !isAbsent(state, player.id) && isWolfAligned(state, player.id)) {
+        result.packRevealed = true;
+        result.role = player.role ?? null;
+      }
       if (isGM || player.id === viewerId) result.role = player.role ?? null;
       else if (player.publiclyRevealed || state.phase === "results") result.role = player.role ?? null;
-      if (isGM && player.role) result.faction = factionOf(state, player.id);
+      if (result.role) result.faction = factionOf(state, player.id);
       return result;
     });
     const ownPrivateResults = state.privateResults[viewerId] ?? {};
-    const current = getStep(state);
-    const ownSubmission = current ? state.submissions[current.id]?.[viewerId] ?? null : null;
+    const individualActor = current?.actorId ?? current?.voterId ?? (current?.actorMode === "mayor" ? state.mayorId : null);
+    const ownSubmission = current
+      ? current.actorMode !== "living" && current.actorMode !== "wolves" && individualActor === viewerId
+        ? getSubmission(state, current) ?? null
+        : state.submissions[current.id]?.[viewerId] ?? null
+      : null;
     const wolvesTargets = current?.kind === "wolf-target" && viewerIsWolf
       ? currentWolfSubmissions(state, current)
       : [];
@@ -1568,7 +1802,11 @@ export const werewolves: GameModule<WerewolvesState> = {
       "lynch-start": "The lynch vote begins.",
       "lynch-spare": "The village is voting.",
       "lynch-result": "The lynch result is ready.",
+      "fool-reveal": "The selected player reveals themselves as the Fool.",
+      "fool-win": "The GM announces the Fool's individual victory. Play continues.",
       "death-reveal": "The GM is resolving a death.",
+      "night-deaths": "Dawn breaks. The GM resolves the night's events.",
+      "throatcutter-reveal": "The GM announces whose throat was cut today.",
       "day-end": "The day is ending."
     };
     const publicStep = current
@@ -1590,24 +1828,27 @@ export const werewolves: GameModule<WerewolvesState> = {
     const upcomingSteps = isGM && current
       ? current.phase === "night"
         ? [{ phase: "day", steps: [
-            "Check faction win conditions",
-            ...(roleAlive(state, "bearman") ? ["Report the Bearman's growl"] : []),
-            ...(state.settings.moonCards ? ["Mayor chooses an eligible Moon card"] : []),
-            "Discussion",
-            ...(!state.bigBadUsed && roleAlive(state, "big-bad-wolf") ? ["Big Bad Wolf may act before voting"] : []),
-            ...(state.settings.skipLynch ? ["Unanimous skip-lynch vote"] : []),
-            "Lynch vote"
+            ...(state.silencedId && state.actions.silence?.day === state.day ? ["Reveal the Throatcutter's victim"] : []),
+            "Resolve and reveal night deaths at dawn",
+            ...dayForecast(state)
           ] }]
         : current.phase === "day"
-          ? [{ phase: "night", steps: nightForecast(state) }]
+          ? [
+              ...(["night-deaths", "throatcutter-reveal"].includes(current.kind) ? [{ phase: "day", current: true, steps: ["Reveal night deaths", ...dayForecast(state)] }] : []),
+              { phase: "night", steps: nightForecast(state) }
+            ]
           : current.phase === "before-first-night"
             ? [{ phase: "night", steps: [
-                ...(state.firstNight && roleAlive(state, "cupido") ? ["Cupido: choose lovers"] : []),
-                ...(state.firstNight && roleAlive(state, "wolfchild") ? ["Wolfchild: choose imitation target"] : []),
-                ...nightForecast(state)
+                "Tell everyone to close their eyes and go to sleep.",
+                ...(state.firstNight && (roleAlive(state, "cupido") || undraftedRole(state, "cupido")) ? [undraftedRole(state, "cupido") ? "Pretend: Cupido chooses lovers" : "Cupido: choose lovers"] : []),
+                ...(state.firstNight && (roleAlive(state, "wolfchild") || undraftedRole(state, "wolfchild")) ? [undraftedRole(state, "wolfchild") ? "Pretend: Wolfchild chooses an imitation target" : "Wolfchild: choose imitation target"] : []),
+                ...nightForecast(state).slice(1)
               ] }]
             : []
       : [];
+    const privateStepData = (item: Step) => item.kind === "silence-target"
+      ? { ...item.data, eligibleTargetIds: aliveSeats(state).filter(player => !isAbsent(state, player.id) && factionOf(state, player.id) === "villager").map(player => player.id) }
+      : item.data;
     const gmSteps = isGM ? state.steps.map(item => ({
       ...item,
       submissions: state.submissions[item.id] ?? {},
@@ -1618,7 +1859,7 @@ export const werewolves: GameModule<WerewolvesState> = {
       ),
       data: item.kind === "executioner-tie"
         ? { ...item.data, candidates: item.data?.candidates ?? [] }
-        : item.data
+        : privateStepData(item)
     })) : undefined;
     const currentWinCheck = current && [
       "day-check", "day-check-after-lynch", "day-check-after-big-bad", "day-check-after-mistrust"
@@ -1628,7 +1869,7 @@ export const werewolves: GameModule<WerewolvesState> = {
       return {
         userId: death.userId,
         username: player?.username,
-        reason: isGM ? death.reason : undefined,
+        reason: deathCause(state, death.userId, death.reason),
         role: death.revealedRole,
         order: death.order
       };
@@ -1655,7 +1896,7 @@ export const werewolves: GameModule<WerewolvesState> = {
       wolfCount: state.settings.wolfCount,
       gm: state.gmId ? { id: state.gmId, username: state.gmName ?? "Game Master", connected: connected.has(state.gmId) } : null,
       isGM,
-      viewer: viewer ? { id: viewer.id, role: viewer.role ?? null, alive: viewer.alive, faction: viewer.role === "wolfchild" ? factionOf(state, viewerId) : (viewer.role ? ROLE_INFO[viewer.role].faction : null) } : null,
+      viewer: viewer ? { id: viewer.id, role: viewer.role ?? null, alive: isAlive(state, viewerId), faction: viewer.role === "wolfchild" ? factionOf(state, viewerId) : (viewer.role ? ROLE_INFO[viewer.role].faction : null) } : null,
       seats,
       villageCapacity: state.settings.rolePool.length,
       villageCount: Object.keys(state.seats).length,
@@ -1663,15 +1904,19 @@ export const werewolves: GameModule<WerewolvesState> = {
       mayorId: state.mayorId,
       mayorCandidates: state.mayorCandidates,
       lovers: isGM ? state.lovers : state.lovers?.includes(viewerId) ? state.lovers : null,
-      wolfchildTarget: isGM || viewer?.role === "wolfchild" ? state.wolfchildTarget : null,
+      wolfchildTarget: isGM || ((viewer?.role === "wolfchild" || viewerId === state.wolfchildTarget)
+        && Object.values(state.seats).some(player => player.role === "wolfchild" && isAlive(state, player.id)))
+        ? state.wolfchildTarget : null,
       publicStep,
-      privatePrompt: isGM || (!!current && activeRoleActionsAllowed(state, viewerId, current))
-        ? current ? { id: current.id, kind: current.kind, prompt: current.prompt, role: current.role ?? null, data: current.data } : null
+      privatePrompt: isGM || (!!current && (activeRoleActionsAllowed(state, viewerId, current)
+        || current.kind === "lovers-meet" && !!state.lovers?.includes(viewerId)))
+        ? current ? { id: current.id, kind: current.kind, prompt: current.prompt, role: current.role ?? null, data: privateStepData(current) } : null
         : null,
       sparedPlayerIds: current?.kind === "lynch-spare"
         ? aliveVoters(state).filter(player => !state.lynchRemaining.includes(player.id)).map(player => player.id)
         : [],
       currentStep: isGM ? gmSteps?.[0] ?? null : null,
+      stepHistory: isGM ? state.stepHistory ?? [] : undefined,
       stepsRemaining: gmSteps,
       upcomingSteps,
       canAct: !!current && !isGM && activeRoleActionsAllowed(state, viewerId, current),
@@ -1679,7 +1924,14 @@ export const werewolves: GameModule<WerewolvesState> = {
       privateResults: ownPrivateResults,
       gmPrivateResults: isGM ? state.privateResults : undefined,
       gmActions: isGM
-        ? { ...state.actions, ...(currentWinCheck ? { lastWinCheck: currentWinCheck } : {}) }
+        ? { ...state.actions, ...(currentWinCheck ? { lastWinCheck: currentWinCheck } : {}),
+            ...(current?.kind === "bearman-growl" ? { bearman: bearmanReport(state) } : {}) }
+        : undefined,
+      nightDeathPreview: isGM && current?.kind === "night-deaths"
+        ? (() => {
+            const { deaths, notes } = nightDeathOutcome(state);
+            return { deaths, notes };
+          })()
         : undefined,
       nightResolution: isGM ? state.night : viewer?.role === "alchemist" ? {
         wolfTarget: state.night.wolfTarget,

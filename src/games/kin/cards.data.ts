@@ -432,7 +432,7 @@ export const CARDS: readonly CardDef[] = [
     "stats": {
       "shape": "⨺",
       "icons": [
-        "🪚",
+        "🪓",
         "⛏️",
         "🪏"
       ],
@@ -446,7 +446,8 @@ export const CARDS: readonly CardDef[] = [
     "notes": [
       "If the adjacent tile is farmland: The Worksite is a Farm 🪏 that produces 1 food.",
       "If the adjacent tile is a mountain: The Worksite is a Quarry ⛏️ that produces 1 stone.",
-      "If the adjacent tile is forest: The Worksite is a Lumberyard 🪚 that produces 1 lumber."
+      "If the adjacent tile is forest: The Worksite is a Lumberyard 🪓 that produces 1 lumber.",
+      "Deep Ones' Worksites are called Shrines 🪬. On ocean tiles, Underwater Cult makes them produce their tile building's dedicated resource."
     ]
   },
   {
@@ -1415,11 +1416,12 @@ export const CARDS: readonly CardDef[] = [
     "id": "underwater-cult",
     "kind": "faction",
     "name": "Underwater Cult",
-    "text": "You can only [[Build]] [[villages]] on [[ocean]]s. Villages on ocean tiles must be dedicated to a [[resource]]. [[Worksite]]s on ocean tiles can be built in your villages and cities regardless of what tile is adjacent. Those Worksites [[produce]] the dedicated resource of their tile building, instead of what they would usually produce.",
+    "text": "You can only [[Build]] [[villages]] on [[ocean]]s. Villages on ocean tiles must be dedicated to a [[resource]]. Your [[Worksite]]s are called Shrines 🪬. [[Worksite|Shrines]] on ocean tiles can be built in your villages and cities regardless of what tile is adjacent. Those Shrines [[produce]] the dedicated resource of their tile building, instead of what they would usually produce.",
     "kin": "deepones",
     "form": "passive",
     "core": false,
     "notes": [
+      "Shrines use the Worksite blueprint, costs and starting-setup building ID; their name and icon are Shrine 🪬.",
       "1 - Trigger: Build, when checking the Building Conditions.",
       "1 - Effect: Ocean is the only allowed tile for building the village.",
       "2 - Condition: You are building a village on an ocean tile.",
@@ -1428,10 +1430,10 @@ export const CARDS: readonly CardDef[] = [
       "2 - Effect: the chosen resource becomes the dedicated resource of that village. Show an icon on the village to indicate what it is dediated to.",
       "3 - Condition: a worksite is chosen for the Build action card",
       "3 - Trigger: Build, when checking the Building Conditions for which building blueprints are allowed for that tile.",
-      "3 - Effect: Worksites can be built in villages and cities regardless of the adjacent tile.",
+      "3 - Effect: Shrines can be built in villages and cities regardless of the adjacent tile.",
       "4 - Condition: A Worksite is on an ocean tile in one of your tile buildings.",
       "4 - Trigger: Seasons Change, before effects.",
-      "4 - Effect: The Worksite produces 1 resource of the type that the tile building, it is on is dedicated to."
+      "4 - Effect: The Shrine produces 1 resource of the type that the tile building, it is on is dedicated to."
     ]
   },
   {
