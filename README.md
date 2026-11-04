@@ -5,10 +5,10 @@ Cloudflare Worker + D1 + Durable Objects backend for Voedgoem.
 - `src/index.ts` – HTTP API (auth, lobbies, admin) and WebSocket entry point.
 - `src/lobby.ts` – generic `Lobby` Durable Object: one per lobby. Owns sockets, the host and broadcasting, and delegates game rules to the lobby's game module.
 - `src/games/types.ts` – the `GameModule` interface every game implements.
-- `src/games/registry.ts` – the only place games are listed.
-- `src/games/<game>/` – one folder per game (`tetris/`, `codenames/`, `thirtyone/`, `blokus/`, `pass-time/`). Codenames word lists are in `src/games/codenames/words/*.txt`; 31 Seconds easy and hard lists are in `content/31seconds/`. `npm run words` (run automatically before typecheck, build and deploy) bundles the lists into generated TypeScript.
+- `src/games/registry.ts` – exports game modules and their public game info.
+- `src/games/<game>/` – one folder per game, with its `index.ts` exporting one `GameModule`. The registry is generated from these folders, so adding a game does not require editing a shared list. Codenames word lists are in `src/games/codenames/words/*.txt`; 31 Seconds easy and hard lists are in `content/31seconds/`. `npm run words` bundles the lists into generated TypeScript.
 
-To add a game: create `src/games/<id>/index.ts` exporting a `GameModule` (with `info`), then add it to `src/games/registry.ts`.
+To add a game: create `src/games/<id>/index.ts` exporting exactly one const typed as `GameModule` (with `info`). The generated game registry is refreshed automatically by `npm run dev`, `npm run typecheck`, `npm test`, `npm run build`, and `npm run deploy`; do not edit the generated file.
 - `src/auth.ts` – PBKDF2 password hashing, bearer-token sessions, recovery keys (only hashes are stored).
 - `migrations/` – D1 schema.
 
