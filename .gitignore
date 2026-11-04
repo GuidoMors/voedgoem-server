@@ -3,3 +3,4 @@ node_modules
 .dev.vars
 dist
 /src/games/modules.generated.ts
+/src/games/wordle-pvp/words.generated.ts
