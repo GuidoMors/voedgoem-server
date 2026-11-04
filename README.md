@@ -44,6 +44,12 @@ npm run db:migrate:local
 npm run dev
 ```
 
+## Tests
+
+Run `npm test`. The runner automatically discovers all `*.test.ts` and `*.test.mjs` files recursively under `src/` and `scripts/`, including new game directories. Add test files there without editing `package.json` or a shared test list. No shell glob expansion is required, so the same command works on Windows and other platforms.
+
+Node test-runner options can be forwarded, for example `npm test -- --test-name-pattern=Exploration`. Test failures produce a nonzero exit code.
+
 ## Live deployment
 
 migrations:
