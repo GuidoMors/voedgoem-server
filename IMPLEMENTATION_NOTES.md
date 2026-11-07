@@ -43,13 +43,13 @@ src/
   api.ts                      HTTP API and WebSocket URL
   useLobbyConnection.ts       lobby WebSocket, snapshots, notices, avatars
   types.ts                    app/user/lobby snapshot types
-  styles.css                  global styles and game-specific themes
+  styles.css                  shared styles
   avatar/                     avatar model, generated part metadata, canvas render, React view
   components/                 Modal, history, display QR, host kick UI
   games/
     registry.tsx              game-specific lobby dispatcher
     types.ts                  common snapshot and lobby props
-    <game>/                   game lobby and snapshot types
+    <game>/                   game lobby, snapshot types and game-specific styles.css
   pages/
     AuthPage.tsx, HubPage.tsx, LobbyPage.tsx
     AdminPage.tsx, ProfilePage.tsx, StatsPage.tsx

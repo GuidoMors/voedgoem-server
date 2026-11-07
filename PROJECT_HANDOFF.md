@@ -134,7 +134,7 @@ The detailed file map is in [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md)
 - Database schema history: `voedgoem-server/migrations/`.
 - Frontend app/nav: `voedgoem/src/App.tsx`.
 - Frontend game dispatch: `voedgoem/src/games/registry.tsx`.
-- Frontend CSS: `voedgoem/src/styles.css`.
+- Frontend shared CSS: `voedgoem/src/styles.css`; game-specific CSS: `voedgoem/src/games/<id>/styles.css`.
 - Generated and source avatar assets: `voedgoem/public/avatars/`, `voedgoem/src/avatar/`.
 - Bundled word-list source: `voedgoem-server/src/games/{codenames,thirtyone}/words/`.
 
