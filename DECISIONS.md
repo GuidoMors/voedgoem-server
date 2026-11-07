@@ -12,7 +12,7 @@ This is a living record of decisions that shape the server. It describes the cur
 
 ## Games plug into a shared module contract
 
-**Decision:** Each game implements `GameModule` and is listed in `src/games/registry.ts`.
+**Decision:** Each game implements `GameModule`; the module map used by `src/games/registry.ts` is generated from the game folders.
 
 **Rationale:** The shared lobby can dispatch actions, track participants, take snapshots, handle disconnects, run optional ticks, and persist results consistently. Game-specific state and rules remain isolated.
 
@@ -34,7 +34,7 @@ This is a living record of decisions that shape the server. It describes the cur
 
 **Decision:** Game snapshots receive a viewer ID and connected-player set; modules declare whether their snapshot varies per viewer.
 
-**Rationale:** Codenames and similar games have hidden information. The transport can send each user the correct view and cache only snapshots that are safe to share.
+**Rationale:** Games can have hidden information or viewer-specific identity and state. The transport sends each user the correct view and caches only snapshots that are identical for all ordinary viewers.
 
 **Display exception:** Display accounts receive a reserved `DISPLAY_VIEWER` identity. This allows a game to grant narrowly-scoped spectator information without impersonating a player. In 31 Seconds, the display identity reveals a card only during the opposing captain's scoring period.
 

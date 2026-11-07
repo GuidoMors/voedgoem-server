@@ -30,6 +30,33 @@ Chronological summary of important changes and requirements. This log is based o
 - **Hoster role:** Added a separate, admin-managed Hoster role. Hosters retain ordinary player access and can create and host lobbies, but do not receive admin dashboard/API or test-bot permissions. Admins can grant or revoke the role for non-admin, non-display accounts. Migrations `0006_hoster.sql` and `0007_clear_admin_hoster.sql` add the role and ensure admins aren't marked as hosters.
 - **Password-protected lobbies:** Admins and Hosters can set an optional lobby password. Lobby passwords are hashed in D1, and the Durable Object withholds snapshots/actions until the password is verified. Public lobbies remain password-free by default.
 
+## Subsequent session work (exact dates not retained)
+
+- Added shared bot seating and Autopilot hooks, plus game-specific bot behavior.
+- Expanded Kin setup generation, Barter, and Commonwealth, Kingdom and
+  Exploration chapter flows; added focused engine and UI checks.
+- Reworked Werewolves GM choices and read-only history, private result
+  acknowledgements, role-pool pretend steps, dawn reveals and faction outcomes.
+- Replaced the manually maintained server test list with recursive test
+  discovery. Historical full-suite runs had some existing Kin setup failures;
+  focused tests and isolated browser fixtures passed for relevant changes.
+
+## 2026-11-04
+
+- Deployed the API and frontend, including personalized Kin snapshots and
+  clearer Barter submission errors. Verified the new frontend bundle and API
+  health. A later frontend deployment corrected player labels in ability
+  selectors and was also checked for the updated bundle.
+- The live Barter report was investigated read-only; the precise cause of that
+  specific missing offer was not established.
+
+## 2026-11-07
+
+- Reorganized the frontend and server documentation around shared guidance and
+  game-specific guides; corrected stale registry, testing and deployment notes.
+
 ## Deployment notes
 
-Several feature changes above were deployed to the production Worker(s) according to the conversation history. No git commits were created for those deployments. For the latest confirmed deployment and verification details, see [CURRENT_STATUS.md](./CURRENT_STATUS.md).
+Deployments above are historical observations, not proof of the current Worker
+version. See [CURRENT_STATUS.md](./CURRENT_STATUS.md) and verify production only
+when authorized.

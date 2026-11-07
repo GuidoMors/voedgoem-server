@@ -1,6 +1,6 @@
 # Voedgoem Server: Project Context
 
-For a complete transfer to a new AI session, start with [PROJECT_HANDOFF.md](./PROJECT_HANDOFF.md). Then use this file as the short repository orientation and consult [ARCHITECTURE.md](./ARCHITECTURE.md), [REQUIREMENTS.md](./REQUIREMENTS.md), [DECISIONS.md](./DECISIONS.md), [CURRENT_STATUS.md](./CURRENT_STATUS.md), [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md), [DEVELOPMENT_TIMELINE.md](./DEVELOPMENT_TIMELINE.md), and [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md) as needed.
+Start with this orientation and the [README](./README.md). Consult [ARCHITECTURE.md](./ARCHITECTURE.md), [REQUIREMENTS.md](./REQUIREMENTS.md), [DECISIONS.md](./DECISIONS.md), and [CURRENT_STATUS.md](./CURRENT_STATUS.md) for current guidance. [PROJECT_HANDOFF.md](./PROJECT_HANDOFF.md) and [DEVELOPMENT_TIMELINE.md](./DEVELOPMENT_TIMELINE.md) are dated historical snapshots, not current status; [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md) and [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md) provide additional context.
 
 ## Purpose
 
@@ -10,13 +10,8 @@ The separate frontend repository is the sibling `../voedgoem` project. It owns t
 
 ## Games
 
-The game registry currently includes:
-
-- **Tetrys** — solo and team modes.
-- **Woerdgoem** — red/blue teams, spymasters and operatives, clues, private spymaster hints, operative word tags, and timed turns with a time bank.
-- **31 Seconds** — teams, captains and players; the describer opens a six-word card (four easy, then two hard) for a 31-second turn and the opposing captain scores it. Players can report or recommend words for admin review.
-- **Blokus** — standard four-player, 20×20 board with 21 rotatable/reflectable pieces per color, corner-only same-color contact, and basic unplaced-square scoring.
-- **Dworf** — tunnel placement and ability-card play.
+The generated registry contains Blokus, Codenames, Dworf, Kin, Pass Time,
+Tetris, 31 Seconds, Werewolves and Wordle PvP. See the [game guides](./README.md#game-specific-guides) for game-specific rules and technical behavior.
 
 The game-specific rules and persisted state live in `src/games/<game>/index.ts`. Player-facing presentation is in the frontend.
 
@@ -55,7 +50,7 @@ See [README.md](./README.md) for admin management and available scripts. See [CU
 | `src/auth.ts` | Password hashing, sessions, recovery-key helpers |
 | `src/lobby.ts` | Generic per-lobby Durable Object, WebSockets, broadcasting, results |
 | `src/games/types.ts` | Shared game-module and game-result contracts |
-| `src/games/registry.ts` | Registry of playable game modules |
+| `src/games/registry.ts` | Exposes the generated registry of playable modules |
 | `src/games/<game>/` | Game state, rules, validation, snapshots, and word lists |
 | `src/stats.ts` | Per-game statistics definitions |
 | `migrations/` | D1 schema history |

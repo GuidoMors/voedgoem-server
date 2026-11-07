@@ -2,6 +2,10 @@
 
 This timeline reconstructs major work from the full conversation as summarized in retained checkpoints, the current visible conversation, and repository state. It is not a complete transcript. Prompt fragments are quoted exactly only when exact wording was preserved; other entries are explicitly summaries.
 
+This is a historical record: dated descriptions of counts, tools, pending work
+and deployment status are not current status. See [CURRENT_STATUS.md](./CURRENT_STATUS.md)
+and current source for present-day facts.
+
 ## Earlier project: CommonTime (separate from current work)
 
 The first checkpoints concern a schedule planner with a React/Vite frontend and Cloudflare Worker/D1 backend. This is historical context only; do not modify those repositories for Voedgoem work.

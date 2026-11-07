@@ -28,76 +28,20 @@ This document records agreed behavior for the Voedgoem backend and important cro
 
 ## Games
 
-### Tetrys
-
-- Supports solo and team play.
-- Scoring and piece/game rules are enforced by the server; team mode uses the lobby's real-time game tick mechanism.
-- Solo play gives each player an individual board with a shared seeded piece sequence and visible opponents.
-- Team mode supports host configuration of 0-8 teams. Players can join/switch teams and the host can shuffle them.
-- Each teammate's spawn lane occupies a ten-column segment of a shared team board. Team members' pieces can block one another; full-width rows clear together and the team shares score, lines, and level.
-- A team tops out if a new piece cannot enter its assigned lane. When the last active player/team tops out, show results to everyone; the host can return to the lobby.
-
-### Woerdgoem
-
-- Game roles are spymaster and operative, assigned to the red or blue team.
-- Lobby seating lets players choose a team and role. The host can configure word count/hint allowance; the game uses a draft phase before play.
-- The host can scramble all connected players into one spymaster per team and balanced operative teams, or scramble only the two spymasters while preserving other team assignments.
-- Board words are selected by category: shuffle categories, take a random 3–6 words from each, and continue through different categories until the configured board word count is reached.
-- Red starts first. The key contains one more starting-team agent than the other team's count, plus one assassin and neutral words. The server shuffles the key and words.
-- Spymasters can see the key; operatives do not see unrevealed card colours.
-- A spymaster hint can target only an unrevealed word belonging to the *opposing* team. It is sent to one random connected operative on the spymaster's team and is private to that operative and the giving spymaster.
-- The operative's hint tint marks a word to avoid. It must not reveal that word's colour to other viewers.
-- A turn has a two-minute base timer. Red receives a one-minute bonus on its first turn. Unused time when a turn ends early is halved and banked for that team's next turn; a timed-out turn banks no time.
-- The active operative team can end its turn early once a clue has been given.
-- During play, the host can assign a connected spectator to either team as an operative.
-- A clue is a single word plus a number or unlimited. The server rejects clues that occur on the board, including components of multi-word board entries. A numbered clue allows up to number + 1 guesses.
-- Correct-team agents allow continued guesses until the guess limit; an opposing agent or neutral ends the turn; the assassin loses the game immediately. Revealing all agents for a team wins the game. The results view shows the key and the host can return the game to the lobby.
-- Operatives can tag unrevealed words they want to guess. A player's tag can be toggled off by tagging the same card again. Tags are visible to all players and spectators, show each tagger's username, and clear when the turn ends or the card is revealed.
-- Tags are a coordination signal, not a guess; they do not reveal card colours or change scoring.
-- The frontend uses right-click to tag on desktop and a press-and-hold to tag on touch devices.
-
-### 31 Seconds
-
-- The game uses six-word cards (four easy words followed by two hard words) and 31-second describing turns, with a configurable grace period and target score.
-- The host can scramble all connected players into one captain per team and balanced player teams, or scramble only the two captains while preserving other team assignments.
-- Red takes the first turn; the captain/player draft may be randomized. A describer opens the card to start the clock, may end the clock early, or can pass an unopened card to a teammate.
-- A captain from the opposing team scores the words after the timer and grace period. A connected teammate can substitute if that captain is unavailable.
-- During play, the host can assign a connected spectator to either team as a player.
-- Display accounts may see the words only once the opposing captain has entered the scoring period. They must not see them during lobby/draft, while describing, or during the clock/grace period. The words disappear again when the card is no longer being scored.
-- The first team to the configured target normally wins. If the first team to reach target does not have a lead greater than the other team's remaining potential (six points), allow the opposing team its last card. A tie at or above target continues through sudden death until a full round ends with different scores.
-- Players can submit existing words for review or recommend additions. Submissions do not automatically remove or add words; admins can review and dismiss reported/recommended entries.
-- The host can abort with confirmation; the finished score/history and per-player results are recorded.
-
-### Dworf
-
-- Supports 4-14 players with a 7x13 board, ladder start, three goal positions, and role-specific win conditions.
-- Tunnel placement must connect to the reachable path and match each adjacent tunnel/ladder edge. A placement can reveal a goal. Gold gives explorers an immediate win; monsters move toward the ladder at turn end and reaching it gives cultists the win.
-- Includes gems and a face-up ability-card shop; gem placements can let the player gift a shop card to another player.
-- Includes pickaxe/lantern break and repair, tunnel destruction, private goal/role peeks, and host force-skip when the active player is offline.
-- Tunnel rotation is 180 degrees only. Symmetric tunnels (cross, vertical, and horizontal) do not need rotation.
-- When the tunnel deck is empty and no player holds a tunnel, the game ends under the current "all tunnels played" rule. Treat this interpretation as an established implementation decision unless the user changes it.
-- Turn state and legal actions are validated by the game module.
-
-### Blokus
-
-- Standard play uses four players on a 20×20 board. Colors and fixed turn order are Blue, Yellow, Red, Green.
-- Each player has the 21 unique polyomino pieces made from one to five squares, with rotations and mirror flips allowed. Pieces cannot be moved after placement.
-- A first piece must cover an unoccupied board corner. Every later piece must cover only empty board squares, corner-touch at least one piece of its own color, and never edge-touch its own color. Contact with other colors is unrestricted.
-- A player must place a piece whenever any legal placement exists. When no legal placement remains, that player is permanently out; play continues until every player is out.
-- Basic scoring counts unplaced unit squares; the player with the fewest wins and tied scores share victory. Two/three-player variants, Blokus Duo, and optional advanced scoring are not part of the standard implementation.
+Game-specific rules and implementation notes are maintained in their [game folders](./README.md#game-specific-guides). Source and tests remain authoritative.
 
 ## Cross-game UI and interaction requirements
 
-- The hub lists active lobbies with game/name/host and join action. Admins create lobbies and may close them; hosts may close their own lobby.
-- Every new game receives a game-themed hub bar and its supplied favicon. Check `content/favicons/`, copy the matching asset to the frontend's `public/favicons/`, and register it in `src/gameFavicon.ts` there. Verify the hub image and in-lobby browser icon. Hub Join/Show actions stay green with game-appropriate styling.
+- The hub lists active lobbies with game/name/host and join action. Admins and hosters create lobbies; admins may close any lobby and hosts may close their own.
+- Every new game receives a game-themed hub bar and its supplied favicon. Check `content/favicons/`, copy the matching asset to the frontend's `public/favicons/`, and register it in `src/gameFavicon.ts` there. Verify the hub image and in-lobby browser icon. Hub Join/Show and Close actions retain the shared hub button styling.
 - Everyone can spectate; seated users join the relevant game's roles/team.
 - A host-only kick control is available next to seated positions in the lobby/draft phases allowed by each game's server rules. Kicking returns the user to spectator; there is no ban and they can re-seat.
 - Admins can add/remove/control up to 20 test bots in a lobby. Bot snapshots must not be substituted for a real user's view.
 - Display accounts are read-only, cannot claim a seat, and exclude themselves from connected-player/game logic. Their QR code supports showing/joining a display URL.
 - User profiles support an avatar composed of a body, face, and hat, with a separate colour per part. Avatar data is persisted; processed mask/outline assets are bundled with the frontend.
 - Statistics are a modal tab while in the game shell. Each game has 3-6 stats including games played and win percentage; the player's row/stats appear first/highlighted, followed by a compact all-player table.
-- History is opened in a modal and uses game-specific entries; Dworf's tab is labelled "Log". Tetrys has no History tab.
-- On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports. In Dworf the active player's tab appears above the map only on mobile.
+- History is opened in a modal and uses game-specific entries where supported.
+- On mobile, navigation collapses to a hamburger; relevant game controls and status are repositioned for narrow viewports.
 - Per-game visual themes are scoped to the current game's body state. Shared disabled styling must not mute interactive game tiles/cards or hide a disabled state that needs strong contrast.
 - Modals must preserve the active game rather than navigate away; the Hub/Game tab and brand are inert while a lobby is active where previously requested.
 
@@ -141,6 +85,13 @@ The current routes are implemented in `src/index.ts`. Principal routes:
 | `GET` | `/api/lobbies/:id/ws` | Authenticated WebSocket connection; protected lobbies require the password before lobby data is sent |
 | `DELETE` | `/api/lobbies/:id` | Host or admin closes lobby |
 | `GET` | `/api/stats/:game` | Read game statistics |
+| `GET` | `/api/chat/hub/ws` | Authenticated hub chat WebSocket |
+| `POST` | `/api/word-feedback` | Non-display user reports or recommends a word |
+| `GET` | `/api/admin/word-feedback` | Admin reads feedback |
+| `DELETE` | `/api/admin/word-feedback` | Admin removes feedback by word key |
+| `GET` | `/api/pass-time/clocks` | Read the clock catalog; seeds missing starters |
+| `POST` | `/api/admin/pass-time/clocks` | Admin adds a custom clock |
+| `PUT`, `DELETE` | `/api/admin/pass-time/clocks/:id` | Admin edits or removes a custom clock |
 | `GET` | `/api/admin/users` | Admin lists accounts |
 | `POST` | `/api/admin/displays` | Admin creates a display account |
 | `POST` | `/api/admin/users/:id/recovery-key` | Admin generates/replaces recovery key |

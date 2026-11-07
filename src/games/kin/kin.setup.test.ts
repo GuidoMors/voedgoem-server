@@ -5,11 +5,28 @@ import { kin } from "./index";
 import { createRng, nextInt } from "./rng";
 import { setupChoices } from "./setup";
 import { START_SETUPS, cardById, type StartingSetup } from "./cards.data";
-import { production } from "./buildings";
+import { produce, production } from "./buildings";
 import type { Action, KinState } from "./types";
 import { sideEdge, sideNeighbor, tileDistance } from "./world";
 
 const act = (type: string, id: string, extra: Record<string, unknown> = {}): Action => ({ type, actor: { id, username: id, isHost: id === "p1" }, ...extra });
+
+test("Lumon's starting Market produces one gold without a river and reports it in the snapshot", () => {
+  const state = atKin(["lumon"]);
+  state.world!.rivers = {};
+  pickAll(state, ["lumon"]);
+  runSetup(state);
+  const markets = state.buildings.filter(building => building.def === "market");
+  assert.equal(markets.length, 1);
+  assert.equal(markets[0].owner, "p1");
+  assert.equal(production(state, "p1").gold, 1);
+  const snapshot = kin.snapshot(state, "p1", new Set(["p1"]));
+  const seats = snapshot.seats as { id: string; production: Record<string, number> }[];
+  assert.equal(seats.find(player => player.id === "p1")?.production.gold, 1);
+  const before = state.players.p1.resources.gold ?? 0;
+  produce(state);
+  assert.equal(state.players.p1.resources.gold, before + 1);
+});
 
 function withSetup(kin: string, edit: (setup: StartingSetup) => void, check: () => void) {
   const original = START_SETUPS[kin];

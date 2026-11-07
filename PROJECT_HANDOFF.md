@@ -4,6 +4,12 @@
 **Active project:** Voedgoem  
 **Purpose:** Give a new AI session enough verified context to continue development without reconstructing the project or disturbing other work.
 
+> **Historical snapshot:** This package was prepared on 2026-10-26 and contains
+> dated observations, old game counts, worktree states and test/deployment
+> assumptions. It is retained for historical context, not as current status.
+> Start with [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md), [README.md](./README.md)
+> and [CURRENT_STATUS.md](./CURRENT_STATUS.md), then verify the source.
+
 ## Read this first
 
 This package describes the Voedgoem game hub. The authoritative code is in two separate local Git repositories:
@@ -45,10 +51,10 @@ The earlier CommonTime schedule planner is a separate project from the same broa
 
 ### Verified in the local source tree
 
-- Backend registry has five games: Tetrys, Woerdgoem, 31 Seconds (`thirtyone`), Dworf, and Blokus.
+- At the time of this handoff, the backend registry had five games: Tetrys, Woerdgoem, 31 Seconds (`thirtyone`), Dworf, and Blokus. See the [current game guides](./README.md#game-specific-guides) for the later registry.
 - Frontend has corresponding game lobby components and a union of lobby snapshot types.
 - Account/auth/profile/avatar, admin, display account, QR, game stats, history modal, and kick-button components are present.
-- Server migrations `0001_init.sql` through `0008_lobby_password.sql` are present. Hoster is a separate role that admins can grant to non-admin, non-display accounts; hosters can create and host lobbies but do not gain admin dashboard/API access. Lobby creation also supports optional password protection; joiners must authenticate before receiving game snapshots.
+- At handoff, server migrations `0001_init.sql` through `0008_lobby_password.sql` were present; later migrations are documented in [IMPLEMENTATION_NOTES.md](./IMPLEMENTATION_NOTES.md). Hoster is a separate role that admins can grant to non-admin, non-display accounts; hosters can create and host lobbies but do not gain admin dashboard/API access. Lobby creation also supports optional password protection; joiners must authenticate before receiving game snapshots.
 - Server configuration names the Worker `voedgoem-api`; frontend configuration names the assets Worker `voedgoem`.
 - Frontend has a production API base URL in `.env.production`.
 - At handoff inspection, the backend worktree had a modified `CURRENT_STATUS.md`; the frontend worktree showed no tracked/untracked changes. No source-code changes for this handoff were made. The new handoff files themselves are uncommitted.
@@ -63,7 +69,7 @@ This is historical evidence, not proof of the currently running production versi
 
 - No end-to-end browser or physical mobile validation was recorded for the recent Codenames tag/hint/timer changes, 31 Seconds display scoring visibility, Dworf presentation, QR, or mobile layouts.
 - The hourly debug-account cleanup was tested by manually running its SQL but not observed running as a scheduled cron.
-- The current `voedgoem/README.md` is stale: it mentions Pages and only the initial games, despite the actual Worker config and four-game source. It also shows malformed text in the avatar import command/migration sentence. Use code/config as authority; update the README when appropriate.
+- At handoff, the frontend README had stale hosting, game and avatar instructions. It has since been revised; use the [frontend README](../voedgoem/README.md) and current code/config instead.
 - Production admin account notes conflict: one recorded action promoted account `Admin`; another later note says the remaining production accounts were `Groomp` (admin) and `TV` (display). Do not assume which admin usernames exist now. Confirm from the admin UI or database only when authorized.
 - A historic visual reference, `styling guide.css`, and original raw avatar source directories `bodies`, `faces`, and `hats` were not present in the checked workspace root at handoff time. The imported avatar artwork is present under the frontend's `public/avatars/`, so runtime rendering does not depend on the raw copies.
 
@@ -186,7 +192,7 @@ For the next AI session:
 3. For a behavior change, trace the full path: frontend interaction → WebSocket/API payload → server validation/state transition → viewer-specific snapshot → frontend rendering.
 4. Search for existing helpers and patterns before adding code.
 5. Add a migration only when needed, and apply it to a local database first. Remote migrations and deployments require user authorization.
-6. Validate with existing scripts: server `npm.cmd run typecheck` and `npm.cmd run build`; frontend `npm.cmd run build`. Run targeted simulations/tests for rule engines where appropriate. No existing test script was found in the inspected package manifests.
+6. Validate with existing scripts: server `npm.cmd test`, `npm.cmd run typecheck` and `npm.cmd run build`; frontend `npm.cmd test` and `npm.cmd run build`, as appropriate. The server test script was added after this handoff; see the [current test instructions](./README.md#tests).
 7. Never deploy a frontend before its build succeeds. Check backend and frontend API origins/configuration.
 8. Keep temporary files out of the repository and clean up only those created for the task.
 9. If deployment is requested, deploy the API before frontend when the frontend depends on new API behavior, then verify health/build version and explain what was and was not tested.

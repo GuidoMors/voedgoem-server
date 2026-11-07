@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createState, dispatch, tilePlacer } from "./engine";
+import { kin } from "./index";
 import { eligibleCharacters, characterPicker, characterRound } from "./draft";
 import { addItem, hasCard } from "./cards";
 import { legalSteps, sourcesFor } from "./play";
@@ -130,6 +131,24 @@ const tap = (state: KinState) => { for (const card of Object.values(state.cards)
 const give = (state: KinState, player: string, def: string, giver?: string) => addItem(state, def, `court:${player}`, player, giver);
 const courtOf = (state: KinState, player: string, def: string) => state.items.filter(item => item.def === def && item.zone === `court:${player}`);
 
+test("Kin sends each viewer their own identity and a pending barter offer to its recipient", () => {
+  const state = playing("hammers");
+  state.seats.push("p2");
+  assert.equal(kin.perViewer, true);
+  assert.equal(dispatch(state, act("barter", "p1", {
+    ...tap(state), to: "p2", give: { resources: { gold: 4 } }, take: {}
+  })), null);
+  for (const id of ["p1", "p2"]) {
+    const snapshot = kin.snapshot(state, id, new Set(["p1", "p2"]));
+    assert.equal((snapshot.you as { id: string }).id, id);
+    const world = snapshot.world as { play: { barter: { from: string; to: string } } };
+    assert.equal(world.play.barter.from, "p1");
+    assert.equal(world.play.barter.to, "p2");
+  }
+  assert.equal(kin.snapshot(state, "spectator", new Set()).you, null);
+  assert.match(dispatch(state, act("pass", "p1")) ?? "", /answer/);
+});
+
 test("an accepted Barter moves resources, and a declined one only taps the card", () => {
   const state = playing("hammers");
   const source = tap(state);
@@ -253,6 +272,27 @@ test("Tradegoods belong to the Syndicate and convert in either direction of a Ba
     assert.equal(state.players[owner].resources.tradegood, 1);
     assert.equal(state.players[receiver].resources.food, food + 2);
     assert.equal(state.players[receiver].resources.tradegood ?? 0, 0);
+  }
+});
+
+test("another Kin can request Syndicate tradegoods and choose each basic resource", () => {
+  for (const resource of ["gold", "lumber", "stone", "food"]) {
+    const state = playing("hammers");
+    give(state, "p2", "tradegoods");
+    state.players.p2.resources.tradegood = 3;
+    const source = tap(state);
+    const take = { resources: { tradegood: 2 } };
+    assert.match(dispatch(state, act("barter", "p1", { ...source, to: "p2", take })) ?? "", /Choose which basic resource/);
+    assert.equal(state.play!.barter, null);
+    assert.equal(dispatch(state, act("barter", "p1", {
+      ...source, to: "p2", take: { ...take, tradegoodAs: resource }
+    })), null);
+    assert.equal(state.play!.barter!.take.tradegoodAs, resource);
+    const before = state.players.p1.resources[resource] ?? 0;
+    assert.equal(dispatch(state, act("barterRespond", "p2", { accept: true })), null);
+    assert.equal(state.players.p1.resources[resource], before + 2);
+    assert.equal(state.players.p1.resources.tradegood ?? 0, 0);
+    assert.equal(state.players.p2.resources.tradegood, 1);
   }
 });
 

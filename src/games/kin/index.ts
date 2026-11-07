@@ -42,7 +42,7 @@ export const kin: GameModule<KinState> = {
     maxPlayers: MAX_PLAYERS,
     maxUsers: MAX_USERS
   },
-  perViewer: false,
+  perViewer: true,
 
   create: () => createState(),
 

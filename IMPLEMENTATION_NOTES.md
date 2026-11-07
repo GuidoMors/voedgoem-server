@@ -7,7 +7,8 @@ Practical companion to [PROJECT_HANDOFF.md](./PROJECT_HANDOFF.md). Paths below a
 - Backend: TypeScript Cloudflare Worker, D1, Durable Objects, WebSockets and Wrangler. Checked manifest versions: Wrangler `^4.151.3`, TypeScript `^5.7.3`, Cloudflare Worker types `^5.20261021.1`.
 - Frontend: React/React DOM `^19.0.0`, Vite `^6.1.0`, TypeScript `^5.7.3`, and `qrcode-generator ^2.0.4`.
 - The frontend manifest has no component/UI framework. CSS and project components provide the UI.
-- No test script was present in either inspected package manifest.
+- Both repositories have test scripts. The server discovers `*.test.ts` and
+  `*.test.mjs` recursively under `src/` and `scripts/`; see [README.md](./README.md#tests).
 
 ## Repository layout
 
@@ -24,15 +25,13 @@ src/
   viewer.ts                   reserved display snapshot identity
   games/
     types.ts                  GameModule, Actor, Context, GameResult contracts
-    registry.ts               authoritative game registry
-    codenames/index.ts        Codenames engine and snapshots
-    dworf/index.ts         Dworf engine and snapshots
-    tetris/index.ts solo/team Tetrys module
-    tetris/team.ts            server simulation for team mode
-    thirtyone/index.ts        31 Seconds engine and snapshots
-migrations/                   append-only D1 migrations 0001–0008
+    registry.ts               exports the generated module registry
+    <game>/index.ts           game engine and snapshots
+migrations/                   append-only D1 migrations
 scripts/
   build-words.mjs             build-time word bundling
+  build-game-registry.mjs     generates the module map
+  test.mjs                    discovers and runs server tests
   set-admin.mjs               console/local/remote admin grant/revoke
 ```
 
@@ -50,7 +49,7 @@ src/
   games/
     registry.tsx              game-specific lobby dispatcher
     types.ts                  common snapshot and lobby props
-    {codenames,dworf,tetris,thirtyone}/
+    <game>/                   game lobby and snapshot types
   pages/
     AuthPage.tsx, HubPage.tsx, LobbyPage.tsx
     AdminPage.tsx, ProfilePage.tsx, StatsPage.tsx
@@ -73,6 +72,9 @@ Migration history:
 6. `0006_hoster.sql`: separate Hoster role flag.
 7. `0007_clear_admin_hoster.sql`: clear Hoster flags from admin accounts.
 8. `0008_lobby_password.sql`: optional password hash on lobbies.
+9. `0009_word_feedback.sql`: player reports and recommendations.
+10. `0010_pass_time_clocks.sql`: starter/custom clock catalog.
+11. `0011_wordle_player_stats.sql`: additional per-player guess and discovery result fields.
 
 Read migrations before changing schema. Do not edit already-applied migrations; add a new one.
 
@@ -99,6 +101,9 @@ Implemented in `src/index.ts`:
 - `/api/stats/:game`
 - `/api/admin/users`, `/api/admin/displays`, `/api/admin/users/:id/recovery-key`
 - `/api/admin/users/:id/hoster` (admin-only role grant/revoke)
+- `/api/chat/hub/ws` (authenticated hub chat WebSocket)
+- `/api/word-feedback` and `/api/admin/word-feedback` (submission and admin review)
+- `/api/pass-time/clocks` and `/api/admin/pass-time/clocks` (catalog and admin changes)
 
 Check source for exact methods and request/response shapes before extending the API. CORS currently permits GET, POST, PUT, DELETE, OPTIONS and Authorization/Content-Type.
 
@@ -106,7 +111,7 @@ Check source for exact methods and request/response shapes before extending the 
 
 1. Worker authenticates HTTP/WebSocket requests and forwards identity headers to the `Lobby` Durable Object.
 2. DO loads persisted lobby shell state; game state sits under `data`. Older flat state is migrated and game-specific `migrate()` runs.
-3. Each non-display message is parsed, then routed to the game handler with `{userId, username, isHost}` and connected-player context.
+3. Each non-display game message is parsed, then routed to the game handler with `{userId, username, isHost, isAdmin}` and connected-player context.
 4. Result is `ignore`, `save`, `volatile`, or `{error}`. `commit()` persists, calls `takeResult()` and inserts non-bot results once, then broadcasts.
 5. Per-viewer modules generate distinct snapshots. `perViewer` must be true if the resulting snapshot depends on identity. Admins with bots get bot-specific views; displays get `DISPLAY_VIEWER`.
 6. Avatar updates use a separate `{type:"avatars"}` message to avoid including avatar maps in every frequent snapshot.
@@ -116,37 +121,7 @@ When adding state fields, update `create()` and `migrate()` for persisted older 
 
 ## Game behavior and client rules
 
-### Codenames
-
-- Roles: red/blue spymaster and operatives. Red starts; red's first timer gets a +1-minute bonus.
-- Team turn = spymaster clue and operative guessing; 2-minute base with any previous bank. Early finish carries half the remaining time; timeout carries none.
-- Spymaster sees the key; other players see unrevealed colours only after reveal.
-- Hint is a secret notification to one random connected friendly operative, but the selected card must be an unrevealed opposing-colour agent (word to avoid).
-- Operatives can end turn after clue. Operatives can tag unrevealed words during the active clue turn; tags are public and show a per-player username box in team colour.
-- Desktop tag: right-click. Touch: hold. A tag toggles for that user; tags do not reveal the key or count as a guess. Tags clear on turn end and when a word is revealed.
-- The current frontend has a side player panel, mobile word-fit logic, a status/count bar, history, and theme-specific card styling.
-
-### 31 Seconds
-
-- Seven words per card, 31-second timer, host-set grace interval/target score.
-- Red plays first; captain draft can remain randomized.
-- Describer opens the card; opposing captain marks guessed words after timer/grace. A connected teammate can step in when captain offline.
-- Display-only account sees the words only in the opposing captain's scoring phase. Lobby tick broadcasts this transition without a player action.
-- Overtime continues until a full round concludes with non-tied scores under the target rules. Abort is at the bottom with confirmation.
-
-### Dworf
-
-- 7x13 board, ladder at row 3/column 3, three goal locations in far column, six gems, tunnel placements and role-specific objectives.
-- Engine was separately simulated across random player counts/game outcomes. Historical assumptions about counts/edge cases are in [CURRENT_STATUS.md](./CURRENT_STATUS.md) and the 2026-10-24 checkpoint.
-- Tunnels rotate only 180 degrees. Cross, vertical and horizontal cards are symmetric and their rotation controls are disabled.
-- The UI has separate tunnel/ability hand areas, a Shop of face-up cards, monster move arrows between cells, player turn/history panels, mobile turn banner, and game-specific dirt/stone theme.
-
-### Tetrys
-
-- Solo game state is client-oriented; team mode uses a server-side shared board simulation.
-- Team configuration includes 0–8 teams. Players may join/switch teams; host can shuffle teams.
-- Team board width scales by member lanes; a failed spawn ends the team. Score/lines/level are shared.
-- Network feel and mobile control layout have historical changes but were not fully verified in live gameplay/mobile.
+Game-specific behavior has moved to the [game guides](./README.md#game-specific-guides). The historical timeline retains dated context.
 
 ## Avatars
 
@@ -190,9 +165,11 @@ npm.cmd run deploy
 npx.cmd wrangler deploy
 ```
 
-The production API URL is baked into the frontend at build time via `.env.production`. Confirm this file and Vite output before deployment. The frontend Wrangler config deploys `dist` as an assets Worker (not Pages), despite the stale README.
+The production API URL is baked into the frontend at build time via `.env.production`. Confirm this file and Vite output before deployment. The frontend Wrangler config deploys `dist` as an assets Worker; see the frontend README for current instructions.
 
-No test script appeared in the inspected `package.json` files. Older random game simulations were temporary and removed; create focused tests/simulations for game logic when warranted, then clean up.
+Run `npm test` for discovered server tests, or narrow it with
+`npm test -- --test-name-pattern=Exploration`. The frontend has its own
+`npm test`; run relevant focused tests in both repositories when necessary.
 
 ## Troubleshooting history
 

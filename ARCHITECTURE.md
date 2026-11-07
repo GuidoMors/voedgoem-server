@@ -40,6 +40,8 @@ Schema evolution is recorded in `migrations/`:
 - `sessions`: hashed bearer token, account reference, expiration.
 - `lobbies`: lobby ID, game ID, display name, host, optional password hash, creation time.
 - `gameResults`: per-player completed-game role, result flags, score and extra fields.
+- `wordFeedback`: player reports and recommendations for administrative review.
+- `passTimeClocks`: starter and custom clock catalog entries.
 
 Foreign-key cascades remove associated sessions/results when a user is deleted. Lobby game state itself is not a D1 row; it is held by the lobby Durable Object.
 
@@ -60,8 +62,21 @@ The Durable Object handles connect/disconnect, serializes actions, manages host/
 - `snapshot()` for the audience-specific data sent to clients.
 - Optional `tickMs()` / `tick()` for timed progression.
 - Optional `takeResult()` for one-time per-player final outcomes.
+- Optional `connect()`, `openSpots()` and `botMove()` for connected-player
+  handling, available bot seats and legal Autopilot moves. `volatileMs` can
+  customize the volatile broadcast interval.
 
-`src/games/registry.ts` maps game IDs to modules. Add a game by creating a module and registering it there. Word lists are maintained under game-specific `words/` directories and compiled by `scripts/build-words.mjs`.
+`src/games/registry.ts` exposes the generated module map. Add a typed module
+under `src/games/<id>/`; `scripts/build-game-registry.mjs` generates
+`modules.generated.ts` via the package lifecycle scripts. Do not edit the
+generated registry manually. Game-specific data generators and word sources
+are described in their game guides.
+
+Admins add and remove bots in the lobby; added bots start as spectators.
+`openSpots()` offers legal join messages for seating bots, and `botMove()`
+supplies actions for Autopilot. Manual control submits normal actions as the
+bot, using a snapshot generated for that bot. Bot moves still pass through
+game validation; results for bots are excluded from persisted statistics.
 
 ### Action flow
 
@@ -77,6 +92,12 @@ The frontend is not an authority for roles, legal actions, turn timing, or scori
 ## Snapshot privacy and broadcasting
 
 The Durable Object obtains one `snapshot(state, viewerId, connected)` per viewer when information is private. Modules that mark `perViewer` false can share a cached snapshot. Admins with test bots receive their normal snapshot plus each bot's own view.
+
+Set `perViewer: true` whenever *any* snapshot field depends on the viewer,
+including the viewer's own identity, resources or choices, even if the rest
+of the state is public. Reusing the first viewer's cached snapshot for others
+previously caused incorrect personalized Kin views. Test player, opponent,
+spectator, display and controlled-bot snapshots whenever changing visibility.
 
 Display viewers are passed the reserved `DISPLAY_VIEWER` identity defined in `src/viewer.ts`. This is distinct from a real user ID and gives modules a way to grant a display-specific spectator view. For example, 31 Seconds reveals its card to this viewer only when scoring has started. Avoid using a player's identity to implement public-screen access.
 
