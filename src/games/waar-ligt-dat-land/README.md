@@ -38,9 +38,11 @@ sibling frontend guide at
   finish the game. Highest score wins; all players tied for highest score are
   winners.
 
-Keep question data and answer keys server-side. The extracted country/question
-bank is in `questions.ts`; review its accuracy before release. Country IDs
-must agree with the frontend's map dataset.
+Keep question data and answer keys server-side. The Dutch question bank is in
+`questions.ts`; `questions-en.ts` contains the English questions and answers
+for all 195 countries, keyed by the same six categories. Review both banks for
+accuracy before release. Country IDs must agree with the frontend's map
+dataset.
 
 ## Module, snapshots, and validation
 

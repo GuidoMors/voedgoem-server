@@ -15,14 +15,19 @@ test("the game is listed as Plenet", () => {
   assert.equal(waarLigtDatLand.info.name, "Plenet");
 });
 
-test("English country and trivia translations cover their advertised content", () => {
+test("English country and trivia translations cover every country and preserve question types", () => {
   assert.deepEqual(Object.keys(COUNTRIES).filter(countryId => !COUNTRY_NAMES_EN[countryId]), []);
-  assert.equal(Object.keys(QUESTIONS_EN).length, 13);
+  assert.deepEqual(Object.keys(QUESTIONS_EN).sort(), Object.keys(QUESTIONS).sort());
   for (const [countryId, translations] of Object.entries(QUESTIONS_EN)) {
-    assert.equal(translations.length, QUESTIONS[countryId as keyof typeof QUESTIONS].q.length);
-    translations.forEach(([question, answer]) => {
+    const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS].q;
+    assert.equal(translations.length, dutchQuestions.length);
+    translations.forEach(([question, answer], category) => {
       assert.ok(question.length > 0);
       assert.ok(answer.length > 0);
+      const englishTrueFalse = /^Is it true\b/.test(question) && /^(True|False)/.test(answer);
+      const [dutchQuestion, dutchAnswer] = dutchQuestions[category]!;
+      const dutchTrueFalse = /^Klopt het\b/.test(dutchQuestion) && /^(Waar|Niet waar)/.test(dutchAnswer);
+      assert.equal(englishTrueFalse, dutchTrueFalse, `${countryId} category ${category + 1}`);
     });
   }
 });
@@ -59,13 +64,18 @@ test("country guess and trivia scoring finish with a private target and a result
     assert.equal(state.players.host.score, 2);
 
     const question = state.trivia!;
+    assert.equal(question.questionEn, QUESTIONS_EN[target]?.[question.category]?.[0]);
+    assert.equal(question.answerEn, QUESTIONS_EN[target]?.[question.category]?.[1]);
     if (question.trueFalse) {
-      assert.equal(waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId])).trivia?.answer, null);
+      const hiddenAnswerSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
+      assert.equal(hiddenAnswerSnapshot.trivia?.answer, null);
+      assert.equal(hiddenAnswerSnapshot.trivia?.answerEn, null);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "answer", correct: question.answer.startsWith("Waar") }, context), "save");
       const answerSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
       assert.equal(answerSnapshot.step, "turnComplete");
       assert.equal(answerSnapshot.trivia?.answer, question.answer);
-      assert.equal(answerSnapshot.trivia?.questionEn, QUESTIONS_EN[target]?.[question.category]?.[0] ?? null);
+      assert.equal(answerSnapshot.trivia?.questionEn, question.questionEn);
+      assert.equal(answerSnapshot.trivia?.answerEn, question.answerEn);
       assert.equal(answerSnapshot.trivia?.response, question.answer.startsWith("Waar"));
       assert.equal(answerSnapshot.trivia?.correct, true);
       assert.equal(answerSnapshot.reviewerId, null);
@@ -74,6 +84,7 @@ test("country guess and trivia scoring finish with a private target and a result
       assert.equal(waarLigtDatLand.handle(state, host, { type: "revealAnswer" }, context), "save");
       const triviaSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
       assert.equal(triviaSnapshot.trivia?.answer, question.answer);
+      assert.equal(triviaSnapshot.trivia?.answerEn, question.answerEn);
       assert.equal(triviaSnapshot.reviewerId, host.userId);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "grade", correct: true }, context), "save");
     }
