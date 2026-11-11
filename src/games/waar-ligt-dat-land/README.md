@@ -37,6 +37,9 @@ sibling frontend guide at
 - After feedback, advance to the next participant/turn. After the final turn,
   finish the game. Highest score wins; all players tied for highest score are
   winners.
+- The host may quit an active game from host controls. Return all participants
+  to the lobby, clear the unfinished match and its scores, and do not record
+  results for the cancelled game.
 
 Keep question data and answer keys server-side. The Dutch question bank is in
 `questions.ts`; `questions-en.ts` contains the English questions and answers

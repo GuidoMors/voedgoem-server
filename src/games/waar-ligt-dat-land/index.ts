@@ -364,12 +364,18 @@ export const waarLigtDatLand: GameModule<WorldState> = {
         return "save";
       }
       case "exit":
-        if (!actor.isHost || state.phase !== "results") return "ignore";
+        if (!actor.isHost || (state.phase !== "playing" && state.phase !== "results")) return "ignore";
         state.phase = "lobby";
         state.step = "draw";
         state.turnIndex = 0;
         state.deck = [];
         state.recorded = false;
+        for (const item of Object.values(state.players)) {
+          item.score = 0;
+          item.countriesFound = 0;
+          item.correctTrivia = 0;
+          item.guesses = 0;
+        }
         resetTurn(state);
         return "save";
       default:

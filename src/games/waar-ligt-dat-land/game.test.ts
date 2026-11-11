@@ -248,6 +248,32 @@ test("only the active joined player can act and a match disconnect preserves the
   assert.equal(waarLigtDatLand.openSpots(state, "bot-1").length, 0);
 });
 
+test("the host can quit an active game and return all players to the lobby", () => {
+  const state = waarLigtDatLand.create();
+  waarLigtDatLand.handle(state, host, { type: "join" }, context);
+  waarLigtDatLand.handle(state, guest, { type: "join" }, context);
+  waarLigtDatLand.handle(state, host, { type: "start" }, context);
+  state.deck = ["NLD"];
+  waarLigtDatLand.handle(state, host, { type: "draw" }, context);
+  waarLigtDatLand.handle(state, host, { type: "guess", countryId: "NLD" }, context);
+  assert.equal(state.players.host.score, 3);
+
+  assert.equal(waarLigtDatLand.handle(state, guest, { type: "exit" }, context), "ignore");
+  assert.equal(state.phase, "playing");
+  assert.equal(waarLigtDatLand.handle(state, host, { type: "exit" }, context), "save");
+
+  assert.equal(state.phase, "lobby");
+  assert.equal(state.step, "draw");
+  assert.equal(state.turnIndex, 0);
+  assert.deepEqual(state.deck, []);
+  assert.equal(state.targetId, null);
+  assert.equal(state.trivia, null);
+  assert.equal(state.players.host.score, 0);
+  assert.equal(state.players.host.countriesFound, 0);
+  assert.deepEqual([...waarLigtDatLand.participants(state)], ["host", "guest"]);
+  assert.equal(waarLigtDatLand.takeResult(state), null);
+});
+
 test("the third wrong country reveals the target without awarding location points", () => {
   const state = waarLigtDatLand.create();
   waarLigtDatLand.handle(state, host, { type: "join" }, context);
