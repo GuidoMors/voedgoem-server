@@ -77,5 +77,12 @@ export const GAME_STATS: Record<string, StatDef[]> = {
     { key: "avgGuesses", label: "Average guesses per game", format: "number", sql: `ROUND(AVG("playerGuesses"))` },
     { key: "avgYellow", label: "Average new yellow letters per game", format: "number", sql: `ROUND(AVG("yellowDiscoveries"))` },
     { key: "avgGreen", label: "Average new green letters per game", format: "number", sql: `ROUND(AVG("greenDiscoveries"))` }
+  ],
+  "waar-ligt-dat-land": [
+    games,
+    winRate,
+    { key: "avgScore", label: "Average score", format: "number", sql: `ROUND(AVG("score"))` },
+    { key: "countriesFound", label: "Countries found", format: "number", sql: `SUM("extra")` },
+    { key: "avgTurns", label: "Average turns per game", format: "number", sql: `ROUND(AVG("playerGuesses"))` }
   ]
 };

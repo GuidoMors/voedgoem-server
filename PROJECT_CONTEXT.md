@@ -11,7 +11,9 @@ The separate frontend repository is the sibling `../voedgoem` project. It owns t
 ## Games
 
 The generated registry contains Blokus, Codenames, Dworf, Kin, Pass Time,
-Tetris, 31 Seconds, Werewolves and Wordle PvP. See the [game guides](./README.md#game-specific-guides) for game-specific rules and technical behavior.
+Tetris, 31 Seconds, Werewolves, Wordle PvP and Waar ligt dat land?. See the
+[game guides](./README.md#game-specific-guides) for game-specific rules and
+technical behavior.
 
 The game-specific rules and persisted state live in `src/games/<game>/index.ts`. Player-facing presentation is in the frontend.
 

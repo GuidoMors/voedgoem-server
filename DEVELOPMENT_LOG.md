@@ -55,6 +55,14 @@ Chronological summary of important changes and requirements. This log is based o
 - Reorganized the frontend and server documentation around shared guidance and
   game-specific guides; corrected stale registry, testing and deployment notes.
 
+## 2026-11-08
+
+- Added Waar ligt dat land? as a server-authoritative game and frontend lobby.
+  The game uses the supplied 195-country trivia bank, a simplified Natural
+  Earth world map, hidden answer snapshots, round scoring, results/statistics,
+  bot seating/manual control and responsive map selection. Autopilot is
+  disabled because open-ended answers are self-graded.
+
 ## Deployment notes
 
 Deployments above are historical observations, not proof of the current Worker

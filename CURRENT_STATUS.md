@@ -1,12 +1,13 @@
 # Current Status
 
-Last documentation review: 2026-11-07. This is a dated local-source review,
+Last documentation review: 2026-11-08. This is a dated local-source review,
 not a guarantee about the current production deployment or database.
 
 ## Local implementation
 
-- Nine game modules are in the generated registry: Blokus, Codenames, Dworf,
-  Kin, Pass Time, Tetris, 31 Seconds, Werewolves and Wordle PvP.
+- Ten game modules are in the generated registry: Blokus, Codenames, Dworf,
+  Kin, Pass Time, Tetris, 31 Seconds, Werewolves, Wordle PvP and Waar ligt dat
+  land? The latest game has not yet been validated by a local build/test run.
 - The shared server provides accounts, hoster and display roles, protected
   lobbies, chat, bot controls, viewer-specific snapshots and statistics.
 - Migrations `0001` through `0011` are present locally. Check the target

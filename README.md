@@ -96,7 +96,8 @@ for dated verification notes.
 
 ## Game-specific guides
 
-See [tetris](./src/games/tetris/README.md), [codenames](./src/games/codenames/README.md), [thirtyone](./src/games/thirtyone/README.md), [dworf](./src/games/dworf/README.md), [blokus](./src/games/blokus/README.md), [werewolves](./src/games/werewolves/README.md), [kin](./src/games/kin/README.md), [pass-time](./src/games/pass-time/README.md), and [wordle-pvp](./src/games/wordle-pvp/README.md). Game-specific rules and technical behavior belong in those game folders.
+See [tetris](./src/games/tetris/README.md), [codenames](./src/games/codenames/README.md), [thirtyone](./src/games/thirtyone/README.md), [dworf](./src/games/dworf/README.md), [blokus](./src/games/blokus/README.md), [werewolves](./src/games/werewolves/README.md), [kin](./src/games/kin/README.md), [pass-time](./src/games/pass-time/README.md), [wordle-pvp](./src/games/wordle-pvp/README.md), and [Plenet](./src/games/waar-ligt-dat-land/README.md). Game-specific rules and technical behavior belong in those game folders.
+
 
 ## Statistics, displays and cleanup
 
