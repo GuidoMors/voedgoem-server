@@ -21,11 +21,15 @@ test("English country and trivia translations cover every country and preserve q
   for (const [countryId, translations] of Object.entries(QUESTIONS_EN)) {
     const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS].q;
     assert.equal(translations.length, dutchQuestions.length);
-    translations.forEach(([question, answer], category) => {
+    translations.forEach(([question, answer, explanation], category) => {
       assert.ok(question.length > 0);
       assert.ok(answer.length > 0);
+      assert.ok(explanation.length > 0, `${countryId} category ${category + 1} has no explanation`);
+      assert.ok(!answer.includes("("), `${countryId} category ${category + 1} answer is not simple`);
       const englishTrueFalse = /^Is it true\b/.test(question) && /^(True|False)/.test(answer);
-      const [dutchQuestion, dutchAnswer] = dutchQuestions[category]!;
+      const [dutchQuestion, dutchAnswer, dutchExplanation] = dutchQuestions[category]!;
+      assert.ok(dutchExplanation.length > 0, `${countryId} category ${category + 1} has no Dutch explanation`);
+      assert.ok(!dutchAnswer.includes("("), `${countryId} category ${category + 1} Dutch answer is not simple`);
       const dutchTrueFalse = /^Klopt het\b/.test(dutchQuestion) && /^(Waar|Niet waar)/.test(dutchAnswer);
       assert.equal(englishTrueFalse, dutchTrueFalse, `${countryId} category ${category + 1}`);
     });
@@ -66,25 +70,36 @@ test("country guess and trivia scoring finish with a private target and a result
     const question = state.trivia!;
     assert.equal(question.questionEn, QUESTIONS_EN[target]?.[question.category]?.[0]);
     assert.equal(question.answerEn, QUESTIONS_EN[target]?.[question.category]?.[1]);
+    assert.equal(question.explanationEn, QUESTIONS_EN[target]?.[question.category]?.[2]);
+    assert.ok(question.explanation.length > 0);
     if (question.trueFalse) {
       const hiddenAnswerSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
       assert.equal(hiddenAnswerSnapshot.trivia?.answer, null);
       assert.equal(hiddenAnswerSnapshot.trivia?.answerEn, null);
+      assert.equal(hiddenAnswerSnapshot.trivia?.explanation, null);
+      assert.equal(hiddenAnswerSnapshot.trivia?.explanationEn, null);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "answer", correct: question.answer.startsWith("Waar") }, context), "save");
       const answerSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
       assert.equal(answerSnapshot.step, "turnComplete");
       assert.equal(answerSnapshot.trivia?.answer, question.answer);
       assert.equal(answerSnapshot.trivia?.questionEn, question.questionEn);
       assert.equal(answerSnapshot.trivia?.answerEn, question.answerEn);
+      assert.equal(answerSnapshot.trivia?.explanation, question.explanation);
+      assert.equal(answerSnapshot.trivia?.explanationEn, question.explanationEn);
       assert.equal(answerSnapshot.trivia?.response, question.answer.startsWith("Waar"));
       assert.equal(answerSnapshot.trivia?.correct, true);
       assert.equal(answerSnapshot.reviewerId, null);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "grade", correct: true }, context), "ignore");
     } else {
+      const hiddenAnswerSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
+      assert.equal(hiddenAnswerSnapshot.trivia?.answer, null);
+      assert.equal(hiddenAnswerSnapshot.trivia?.explanation, null);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "revealAnswer" }, context), "save");
       const triviaSnapshot = waarLigtDatLand.snapshot(state, host.userId, new Set([host.userId]));
       assert.equal(triviaSnapshot.trivia?.answer, question.answer);
       assert.equal(triviaSnapshot.trivia?.answerEn, question.answerEn);
+      assert.equal(triviaSnapshot.trivia?.explanation, question.explanation);
+      assert.equal(triviaSnapshot.trivia?.explanationEn, question.explanationEn);
       assert.equal(triviaSnapshot.reviewerId, host.userId);
       assert.equal(waarLigtDatLand.handle(state, host, { type: "grade", correct: true }, context), "save");
     }
@@ -119,6 +134,30 @@ test("question draws can select both true/false and open-ended trivia", () => {
   }
 });
 
+test("saved Dutch and English question edits are used for new Plenet matches", () => {
+  withRandom(0.1, () => {
+    const state = waarLigtDatLand.create();
+    waarLigtDatLand.handle(state, host, { type: "join" }, context);
+    waarLigtDatLand.handle(state, host, { type: "setOptions", roundsPerPlayer: 1 }, context);
+    waarLigtDatLand.handle(state, host, { type: "start" }, context);
+    state.deck = ["NLD"];
+    state.questionOverrides = {
+      NLD: {
+        nl: { 1: { question: "Klopt het dat deze Nederlandse tekst gewijzigd is?", explanation: "Nederlandse testuitleg." } },
+        en: { 1: { question: "Is it true that this English text was changed?", explanation: "English test explanation." } }
+      }
+    };
+    waarLigtDatLand.handle(state, host, { type: "draw" }, context);
+    waarLigtDatLand.handle(state, host, { type: "guess", countryId: "NLD" }, context);
+
+    assert.equal(state.trivia?.question, "Klopt het dat deze Nederlandse tekst gewijzigd is?");
+    assert.equal(state.trivia?.questionEn, "Is it true that this English text was changed?");
+    assert.equal(state.trivia?.answer, "Niet waar");
+    assert.equal(state.trivia?.explanation, "Nederlandse testuitleg.");
+    assert.equal(state.trivia?.explanationEn, "English test explanation.");
+  });
+});
+
 test("countries missing one trivia type receive a translated geography fallback", () => {
   const noTrueFalse = Object.keys(QUESTIONS).find(countryId =>
     !QUESTIONS[countryId as keyof typeof QUESTIONS].q.some(([question, answer]) =>
@@ -149,6 +188,8 @@ test("countries missing one trivia type receive a translated geography fallback"
       assert.equal(state.trivia?.category, 5);
       assert.ok(state.trivia?.questionEn);
       assert.ok(state.trivia?.answerEn);
+      assert.ok(state.trivia?.explanation);
+      assert.ok(state.trivia?.explanationEn);
     });
   }
 });
@@ -166,10 +207,18 @@ test("the next connected player reviews an open answer and only their decision s
 
     const question = state.trivia!;
     assert.equal(question.trueFalse, false);
+    const unrevealedSnapshot = waarLigtDatLand.snapshot(state, guest.userId, new Set([host.userId, guest.userId]));
+    assert.equal(unrevealedSnapshot.trivia?.answer, null);
+    assert.equal(unrevealedSnapshot.trivia?.answerEn, null);
+    assert.equal(unrevealedSnapshot.trivia?.explanation, null);
+    assert.equal(unrevealedSnapshot.trivia?.explanationEn, null);
     assert.equal(waarLigtDatLand.handle(state, host, { type: "revealAnswer" }, context), "save");
     const publicSnapshot = waarLigtDatLand.snapshot(state, guest.userId, new Set([host.userId, guest.userId]));
     assert.equal(publicSnapshot.reviewerId, guest.userId);
     assert.equal(publicSnapshot.trivia?.answer, question.answer);
+    assert.equal(publicSnapshot.trivia?.answerEn, question.answerEn);
+    assert.equal(publicSnapshot.trivia?.explanation, question.explanation);
+    assert.equal(publicSnapshot.trivia?.explanationEn, question.explanationEn);
     assert.equal(publicSnapshot.trivia?.response, null);
     assert.equal(waarLigtDatLand.handle(state, host, { type: "grade", correct: true }, context), "ignore");
     assert.equal(state.players.host.score, 3);
@@ -191,6 +240,11 @@ test("true/false answers are checked immediately and never need a reviewer", () 
     waarLigtDatLand.handle(state, host, { type: "guess", countryId: state.targetId }, context);
     assert.equal(state.trivia?.trueFalse, true);
 
+    const hiddenSnapshot = waarLigtDatLand.snapshot(state, guest.userId, new Set([host.userId, guest.userId]));
+    assert.equal(hiddenSnapshot.trivia?.answer, null);
+    assert.equal(hiddenSnapshot.trivia?.answerEn, null);
+    assert.equal(hiddenSnapshot.trivia?.explanation, null);
+    assert.equal(hiddenSnapshot.trivia?.explanationEn, null);
     const correctAnswer = state.trivia!.answer.startsWith("Waar");
     const scoreBefore = state.players.host.score;
     assert.equal(waarLigtDatLand.handle(state, host, { type: "answer", correct: !correctAnswer }, context), "save");
@@ -199,6 +253,9 @@ test("true/false answers are checked immediately and never need a reviewer", () 
     assert.equal(snapshot.reviewerId, null);
     assert.equal(snapshot.trivia?.correct, false);
     assert.equal(snapshot.trivia?.answer, state.trivia?.answer);
+    assert.equal(snapshot.trivia?.answerEn, state.trivia?.answerEn);
+    assert.equal(snapshot.trivia?.explanation, state.trivia?.explanation);
+    assert.equal(snapshot.trivia?.explanationEn, state.trivia?.explanationEn);
     assert.equal(state.players.host.score, scoreBefore);
     assert.equal(waarLigtDatLand.handle(state, guest, { type: "grade", correct: true }, context), "ignore");
   });

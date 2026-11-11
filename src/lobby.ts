@@ -54,6 +54,7 @@ const CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const VOLATILE_BROADCAST_MS = 100;
 
 export class Lobby extends DurableObject<Env> {
+  private readonly runtimeEnv: Env;
   private state: State | null = null;
   private chatMessages: ChatMessage[] = [];
   private lastChatByUser = new Map<string, number>();
@@ -62,6 +63,7 @@ export class Lobby extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    this.runtimeEnv = env;
     ctx.blockConcurrencyWhile(() => this.load());
   }
 
@@ -409,7 +411,15 @@ export class Lobby extends DurableObject<Env> {
       return;
     }
 
-    const outcome = game.handle(state.data, { userId: who.userId, username: who.username, isHost: who.userId === hostId, isAdmin: !!who.isAdmin }, message, context());
+    const actor = { userId: who.userId, username: who.username, isHost: who.userId === hostId, isAdmin: !!who.isAdmin };
+    try {
+      await game.prepare?.(state.data, actor, message, this.runtimeEnv);
+    } catch (error) {
+      console.error(`Could not prepare ${state.game} game action.`, error);
+      try { ws.send(JSON.stringify({ type: "error", message: "Could not load the latest game questions. Please try again." })); } catch { /* socket is going away */ }
+      return;
+    }
+    const outcome = game.handle(state.data, actor, message, context());
     if (outcome === "ignore") return;
     if (typeof outcome === "object") {
       try { ws.send(JSON.stringify({ type: "error", message: outcome.error })); } catch { /* socket is going away */ }

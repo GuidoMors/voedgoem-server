@@ -1,4 +1,5 @@
 import type { GameModule } from "../types";
+import type { Env } from "../../env";
 import { COUNTRIES } from "./countries";
 import { COUNTRY_NAMES_EN } from "./country-names-en";
 import { QUESTIONS_EN } from "./questions-en";
@@ -23,8 +24,17 @@ interface Trivia {
   questionEn: string | null;
   answer: string;
   answerEn: string | null;
+  explanation: string;
+  explanationEn: string | null;
   trueFalse: boolean;
 }
+
+interface QuestionEdit {
+  question: string;
+  explanation: string;
+}
+
+type QuestionOverrides = Record<string, Partial<Record<"nl" | "en", Partial<Record<number, QuestionEdit>>>>>;
 
 interface WorldState {
   phase: "lobby" | "playing" | "results";
@@ -41,6 +51,7 @@ interface WorldState {
   triviaAnswerRevealed: boolean;
   triviaResponse: boolean | null;
   triviaCorrect: boolean | null;
+  questionOverrides?: QuestionOverrides;
   turnMessage: string;
   recorded: boolean;
 }
@@ -132,9 +143,9 @@ function advanceTurn(state: WorldState) {
   finish(state);
 }
 
-function makeQuestion(countryId: string): Trivia {
+function makeQuestion(state: WorldState, countryId: string): Trivia {
   const questions = QUESTIONS[countryId as keyof typeof QUESTIONS].q;
-  const isTrueFalse = ([question, answer]: readonly [string, string]) =>
+  const isTrueFalse = ([question, answer]: readonly [string, string, string]) =>
     /^Klopt het/.test(question) && /^(Niet waar|Waar)/.test(answer);
   const desiredType = Math.random() < 0.5;
   const candidates = questions
@@ -145,39 +156,53 @@ function makeQuestion(countryId: string): Trivia {
   const countryNameEn = COUNTRY_NAMES_EN[countryId] ?? country.name;
   const latitude = Math.abs(country.lat).toFixed(1);
   const hemisphere = country.lat >= 0 ? "N" : "S";
-  const fallbackQuestion: readonly [string, string] = desiredType
+  const fallbackQuestion: readonly [string, string, string] = desiredType
     ? [
       `Klopt het dat het middelpunt van ${country.name} op het noordelijk halfrond ligt?`,
-      country.lat >= 0 ? "Waar" : "Niet waar"
+      country.lat >= 0 ? "Waar" : "Niet waar",
+      country.lat >= 0
+        ? `${country.name} ligt ten noorden van de evenaar.`
+        : `${country.name} ligt ten zuiden van de evenaar.`
     ]
     : [
       `Op welke breedtegraad ligt het middelpunt van ${country.name} ongeveer?`,
-      `${latitude}° ${hemisphere}`
+      `${latitude}° ${hemisphere}`,
+      "De breedtegraad geeft aan hoe ver een plek ten noorden of zuiden van de evenaar ligt."
     ];
   const questionPool = candidates.length
     ? candidates
     : [{ item: fallbackQuestion, category: 5 }];
   const selected = questionPool[Math.floor(Math.random() * questionPool.length)];
   if (!selected) throw new Error(`No trivia questions available for ${countryId}.`);
-  const [question, answer] = selected.item;
-  const translatedQuestion = QUESTIONS_EN[countryId]?.[selected.category];
+  const [baseQuestion, answer, baseExplanation] = selected.item;
   const trueFalse = isTrueFalse(selected.item);
   const category = selected.category;
-  const fallbackQuestionEn = desiredType
+  const dutchEdit = state.questionOverrides?.[countryId]?.nl?.[category];
+  const englishEdit = state.questionOverrides?.[countryId]?.en?.[category];
+  const question = dutchEdit?.question ?? baseQuestion;
+  const explanation = dutchEdit?.explanation ?? baseExplanation;
+  const fallbackQuestionEn: readonly [string, string, string] = desiredType
     ? [
       `Is the geographic centre of ${countryNameEn} in the Northern Hemisphere?`,
-      country.lat >= 0 ? "True" : "False"
+      country.lat >= 0 ? "True" : "False",
+      country.lat >= 0
+        ? `${countryNameEn} is north of the equator.`
+        : `${countryNameEn} is south of the equator.`
     ]
     : [
       `At approximately what latitude is the centre of ${countryNameEn}?`,
-      `${latitude}° ${hemisphere}`
+      `${latitude}° ${hemisphere}`,
+      "Latitude measures how far a place lies north or south of the equator."
     ];
+  const translatedQuestion = QUESTIONS_EN[countryId]?.[selected.category];
   return {
     category,
     question,
-    questionEn: generated ? fallbackQuestionEn[0] : translatedQuestion?.[0] ?? null,
+    questionEn: generated ? fallbackQuestionEn[0] : englishEdit?.question ?? translatedQuestion?.[0] ?? null,
     answer,
     answerEn: generated ? fallbackQuestionEn[1] : translatedQuestion?.[1] ?? null,
+    explanation,
+    explanationEn: generated ? fallbackQuestionEn[2] : englishEdit?.explanation ?? translatedQuestion?.[2] ?? null,
     trueFalse
   };
 }
@@ -211,6 +236,30 @@ export const waarLigtDatLand: GameModule<WorldState> = {
     maxPlayers: MAX_PLAYERS
   },
   perViewer: false,
+
+  async prepare(state, actor, message, env) {
+    if (message.type !== "start" || !actor.isHost || state.phase !== "lobby") return;
+    const { results } = await env.DB.prepare(`
+      SELECT "countryId", "language", "category", "question", "explanation"
+      FROM "plenetQuestionEdits"
+    `).all<{ countryId: string; language: "nl" | "en"; category: number; question: string; explanation: string }>();
+    const overrides: QuestionOverrides = {};
+    for (const row of results) {
+      if (
+        !QUESTIONS[row.countryId as keyof typeof QUESTIONS]
+        || (row.language !== "nl" && row.language !== "en")
+        || !Number.isInteger(row.category)
+        || row.category < 0
+        || row.category > 5
+      ) {
+        throw new Error("Stored Plenet question edit has an invalid country or category.");
+      }
+      const countryOverrides = (overrides[row.countryId] ??= {});
+      const languageOverrides = (countryOverrides[row.language] ??= {});
+      languageOverrides[row.category] = { question: row.question, explanation: row.explanation };
+    }
+    state.questionOverrides = overrides;
+  },
 
   create: () => ({
     phase: "lobby",
@@ -303,7 +352,7 @@ export const waarLigtDatLand: GameModule<WorldState> = {
         if (countryId === state.targetId) {
           current.score += 3 - state.wrongGuesses.length;
           current.countriesFound++;
-          state.trivia = makeQuestion(countryId);
+          state.trivia = makeQuestion(state, countryId);
           state.step = "trivia";
           state.turnMessage = `Correct! +${3 - state.wrongGuesses.length} points.`;
         } else {
@@ -465,6 +514,8 @@ export const waarLigtDatLand: GameModule<WorldState> = {
         trueFalse: state.trivia.trueFalse,
         answer: state.triviaAnswerRevealed ? state.trivia.answer : null,
         answerEn: state.triviaAnswerRevealed ? state.trivia.answerEn ?? null : null,
+        explanation: state.triviaAnswerRevealed ? state.trivia.explanation : null,
+        explanationEn: state.triviaAnswerRevealed ? state.trivia.explanationEn ?? null : null,
         response: state.triviaResponse ?? null,
         correct: state.triviaCorrect
       } : null,

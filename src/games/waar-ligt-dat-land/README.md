@@ -43,9 +43,12 @@ sibling frontend guide at
 
 Keep question data and answer keys server-side. The Dutch question bank is in
 `questions.ts`; `questions-en.ts` contains the English questions and answers
-for all 195 countries, keyed by the same six categories. Review both banks for
-accuracy before release. Country IDs must agree with the frontend's map
-dataset.
+for all 195 countries, keyed by the same six categories. Each entry contains
+the question, a simple answer, and an explanation. Snapshots must withhold both
+answer and explanation until the answer is revealed. Review both banks for
+accuracy before release. Admin edits are stored in D1 and loaded when a match
+starts; they change the question and explanation only, not the answer key.
+Country IDs must agree with the frontend's map dataset.
 
 ## Module, snapshots, and validation
 

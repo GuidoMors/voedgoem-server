@@ -2,6 +2,10 @@ import { parseAvatar, parseStoredAvatar } from "./avatar";
 import type { Env, SessionUser } from "./env";
 import { GAMES } from "./games/registry";
 import { STARTER_CLOCKS, normalizeClock, validClock } from "./games/pass-time/clocks";
+import { COUNTRIES } from "./games/waar-ligt-dat-land/countries";
+import { COUNTRY_NAMES_EN } from "./games/waar-ligt-dat-land/country-names-en";
+import { QUESTIONS_EN } from "./games/waar-ligt-dat-land/questions-en";
+import { QUESTIONS } from "./games/waar-ligt-dat-land/questions";
 import { GAME_STATS } from "./stats";
 import {
   authenticate, createSession, generateRecoveryKey, hashPassword, hashRecoveryKey, randomId, sha256Hex, verifyPassword
@@ -312,6 +316,74 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   if (path.startsWith("/api/admin/")) {
     if (!user.isAdmin) throw new HttpError(403, "Admins only.");
+    if (path === "/api/admin/plenet-questions" && method === "GET") {
+      const countryId = url.searchParams.get("countryId");
+      const language = url.searchParams.get("language");
+      if (countryId === null && language === null) {
+        return json({
+          countries: Object.entries(COUNTRIES)
+            .map(([id, country]) => ({ id, name: country.name, nameEn: COUNTRY_NAMES_EN[id] ?? country.name }))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        });
+      }
+      if (!countryId || (language !== "nl" && language !== "en")) throw new HttpError(400, "Select a country and language.");
+      const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS]?.q;
+      const englishQuestions = QUESTIONS_EN[countryId];
+      if (!dutchQuestions || !englishQuestions) throw new HttpError(404, "Plenet country not found.");
+      const base = language === "nl" ? dutchQuestions : englishQuestions;
+      const { results } = await env.DB.prepare(`
+        SELECT "category", "question", "explanation"
+        FROM "plenetQuestionEdits"
+        WHERE "countryId" = ?1 AND "language" = ?2
+      `).bind(countryId, language).all<{ category: number; question: string; explanation: string }>();
+      const edits = new Map(results.map(row => [row.category, row]));
+      return json({
+        questions: base.map(([question, answer, explanation], category) => ({
+          question: edits.get(category)?.question ?? question,
+          answer,
+          explanation: edits.get(category)?.explanation ?? explanation
+        }))
+      });
+    }
+    if (path === "/api/admin/plenet-questions" && method === "PUT") {
+      const body = await readBody(request);
+      const countryId = text(body.countryId);
+      const language = body.language;
+      if (language !== "nl" && language !== "en") throw new HttpError(400, "Language must be nl or en.");
+      const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS]?.q;
+      const englishQuestions = QUESTIONS_EN[countryId];
+      if (!dutchQuestions || !englishQuestions) throw new HttpError(400, "Select a valid Plenet country.");
+      if (!Array.isArray(body.questions) || body.questions.length !== 6) throw new HttpError(400, "Provide all six Plenet questions.");
+      const base = language === "nl" ? dutchQuestions : englishQuestions;
+      const statements = body.questions.map((entry, category) => {
+        if (typeof entry !== "object" || entry === null || Array.isArray(entry)) throw new HttpError(400, "Each question must include a question and explanation.");
+        const edit = entry as Record<string, unknown>;
+        const question = text(edit.question).trim();
+        const explanation = text(edit.explanation).trim();
+        if (!question || question.length > 400 || !explanation || explanation.length > 1000) {
+          throw new HttpError(400, "Questions must be 1-400 characters and explanations 1-1000 characters.");
+        }
+        const isTrueFalseAnswer = language === "nl"
+          ? /^(Waar|Niet waar)/.test(base[category]![1])
+          : /^(True|False)/.test(base[category]![1]);
+        const keepsQuestionType = language === "nl"
+          ? /^Klopt het\b/i.test(question)
+          : /^Is it true\b/i.test(question);
+        if (isTrueFalseAnswer !== keepsQuestionType) {
+          throw new HttpError(400, `Category ${category + 1} must keep its ${isTrueFalseAnswer ? "true/false" : "open-ended"} question format.`);
+        }
+        return env.DB.prepare(`
+          INSERT INTO "plenetQuestionEdits" ("countryId", "language", "category", "question", "explanation")
+          VALUES (?1, ?2, ?3, ?4, ?5)
+          ON CONFLICT ("countryId", "language", "category") DO UPDATE SET
+            "question" = excluded."question",
+            "explanation" = excluded."explanation",
+            "updatedAt" = CURRENT_TIMESTAMP
+        `).bind(countryId, language, category, question, explanation);
+      });
+      await env.DB.batch(statements);
+      return json({ saved: true });
+    }
     if (method === "GET" && path === "/api/admin/users") {
       const { results } = await env.DB.prepare(`
         SELECT "id", "username", "createdAt", "isAdmin" = 1 AS "isAdmin", "isHoster" = 1 AS "isHoster", "isDisplay" = 1 AS "isDisplay", "recoveryKeyHash" IS NOT NULL AS "hasRecoveryKey"

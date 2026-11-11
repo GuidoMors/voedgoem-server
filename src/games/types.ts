@@ -1,3 +1,5 @@
+import type { Env } from "../env";
+
 export type Outcome = "ignore" | "save" | "volatile" | { error: string };
 
 export interface Actor {
@@ -29,6 +31,8 @@ export interface GameModule<S> {
   create(): S;
   // Fills in fields missing from state saved by an older version of the game.
   migrate?(state: S): void;
+  // Loads authoritative game content before a match starts.
+  prepare?(state: S, actor: Actor, message: Record<string, unknown>, env: Env): Promise<void>;
   // Called when a user's authenticated connection is activated.
   connect?(state: S, userId: string): boolean;
   handle(state: S, actor: Actor, message: Record<string, unknown>, context: Context): Outcome;
