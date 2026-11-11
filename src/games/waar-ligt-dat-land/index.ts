@@ -144,38 +144,38 @@ function advanceTurn(state: WorldState) {
 }
 
 function makeQuestion(state: WorldState, countryId: string): Trivia {
-  const questions = QUESTIONS[countryId as keyof typeof QUESTIONS].q;
-  const isTrueFalse = ([question, answer]: readonly [string, string, string]) =>
+  const questions = QUESTIONS[countryId]!.questions;
+  const isTrueFalse = ({ question, answer }: { question: string; answer: string }) =>
     /^Klopt het/.test(question) && /^(Niet waar|Waar)/.test(answer);
   const desiredType = Math.random() < 0.5;
   const candidates = questions
-    .map((item, category) => ({ item, category }))
-    .filter(({ item }) => isTrueFalse(item) === desiredType);
+    .map((question, category) => ({ question, category }))
+    .filter(({ question }) => isTrueFalse(question) === desiredType);
   const generated = candidates.length === 0;
   const country = COUNTRIES[countryId as keyof typeof COUNTRIES];
   const countryNameEn = COUNTRY_NAMES_EN[countryId] ?? country.name;
   const latitude = Math.abs(country.lat).toFixed(1);
   const hemisphere = country.lat >= 0 ? "N" : "S";
-  const fallbackQuestion: readonly [string, string, string] = desiredType
-    ? [
-      `Klopt het dat het middelpunt van ${country.name} op het noordelijk halfrond ligt?`,
-      country.lat >= 0 ? "Waar" : "Niet waar",
-      country.lat >= 0
+  const fallbackQuestion = desiredType
+    ? {
+      question: `Klopt het dat het middelpunt van ${country.name} op het noordelijk halfrond ligt?`,
+      answer: country.lat >= 0 ? "Waar" : "Niet waar",
+      explanation: country.lat >= 0
         ? `${country.name} ligt ten noorden van de evenaar.`
         : `${country.name} ligt ten zuiden van de evenaar.`
-    ]
-    : [
-      `Op welke breedtegraad ligt het middelpunt van ${country.name} ongeveer?`,
-      `${latitude}° ${hemisphere}`,
-      "De breedtegraad geeft aan hoe ver een plek ten noorden of zuiden van de evenaar ligt."
-    ];
+    }
+    : {
+      question: `Op welke breedtegraad ligt het middelpunt van ${country.name} ongeveer?`,
+      answer: `${latitude}° ${hemisphere}`,
+      explanation: "De breedtegraad geeft aan hoe ver een plek ten noorden of zuiden van de evenaar ligt."
+    };
   const questionPool = candidates.length
     ? candidates
-    : [{ item: fallbackQuestion, category: 5 }];
+    : [{ question: fallbackQuestion, category: 5 }];
   const selected = questionPool[Math.floor(Math.random() * questionPool.length)];
   if (!selected) throw new Error(`No trivia questions available for ${countryId}.`);
-  const [baseQuestion, answer, baseExplanation] = selected.item;
-  const trueFalse = isTrueFalse(selected.item);
+  const { question: baseQuestion, answer, explanation: baseExplanation } = selected.question;
+  const trueFalse = isTrueFalse(selected.question);
   const category = selected.category;
   const dutchEdit = state.questionOverrides?.[countryId]?.nl?.[category];
   const englishEdit = state.questionOverrides?.[countryId]?.en?.[category];
@@ -246,7 +246,7 @@ export const waarLigtDatLand: GameModule<WorldState> = {
     const overrides: QuestionOverrides = {};
     for (const row of results) {
       if (
-        !QUESTIONS[row.countryId as keyof typeof QUESTIONS]
+        !QUESTIONS[row.countryId]
         || (row.language !== "nl" && row.language !== "en")
         || !Number.isInteger(row.category)
         || row.category < 0

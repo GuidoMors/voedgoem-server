@@ -327,22 +327,28 @@ async function route(request: Request, env: Env): Promise<Response> {
         });
       }
       if (!countryId || (language !== "nl" && language !== "en")) throw new HttpError(400, "Select a country and language.");
-      const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS]?.q;
+      const dutchQuestions = QUESTIONS[countryId]?.questions;
       const englishQuestions = QUESTIONS_EN[countryId];
       if (!dutchQuestions || !englishQuestions) throw new HttpError(404, "Plenet country not found.");
-      const base = language === "nl" ? dutchQuestions : englishQuestions;
       const { results } = await env.DB.prepare(`
         SELECT "category", "question", "explanation"
         FROM "plenetQuestionEdits"
         WHERE "countryId" = ?1 AND "language" = ?2
       `).bind(countryId, language).all<{ category: number; question: string; explanation: string }>();
       const edits = new Map(results.map(row => [row.category, row]));
-      return json({
-        questions: base.map(([question, answer, explanation], category) => ({
+      const questions = language === "nl"
+        ? dutchQuestions.map(({ question, answer, explanation }, category) => ({
           question: edits.get(category)?.question ?? question,
           answer,
           explanation: edits.get(category)?.explanation ?? explanation
         }))
+        : englishQuestions.map(([question, answer, explanation], category) => ({
+          question: edits.get(category)?.question ?? question,
+          answer,
+          explanation: edits.get(category)?.explanation ?? explanation
+        }));
+      return json({
+        questions
       });
     }
     if (path === "/api/admin/plenet-questions" && method === "PUT") {
@@ -350,11 +356,10 @@ async function route(request: Request, env: Env): Promise<Response> {
       const countryId = text(body.countryId);
       const language = body.language;
       if (language !== "nl" && language !== "en") throw new HttpError(400, "Language must be nl or en.");
-      const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS]?.q;
+      const dutchQuestions = QUESTIONS[countryId]?.questions;
       const englishQuestions = QUESTIONS_EN[countryId];
       if (!dutchQuestions || !englishQuestions) throw new HttpError(400, "Select a valid Plenet country.");
       if (!Array.isArray(body.questions) || body.questions.length !== 6) throw new HttpError(400, "Provide all six Plenet questions.");
-      const base = language === "nl" ? dutchQuestions : englishQuestions;
       const statements = body.questions.map((entry, category) => {
         if (typeof entry !== "object" || entry === null || Array.isArray(entry)) throw new HttpError(400, "Each question must include a question and explanation.");
         const edit = entry as Record<string, unknown>;
@@ -364,8 +369,8 @@ async function route(request: Request, env: Env): Promise<Response> {
           throw new HttpError(400, "Questions must be 1-400 characters and explanations 1-1000 characters.");
         }
         const isTrueFalseAnswer = language === "nl"
-          ? /^(Waar|Niet waar)/.test(base[category]![1])
-          : /^(True|False)/.test(base[category]![1]);
+          ? /^(Waar|Niet waar)/.test(dutchQuestions[category]!.answer)
+          : /^(True|False)/.test(englishQuestions[category]![1]);
         const keepsQuestionType = language === "nl"
           ? /^Klopt het\b/i.test(question)
           : /^Is it true\b/i.test(question);

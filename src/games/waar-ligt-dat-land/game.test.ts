@@ -19,7 +19,7 @@ test("English country and trivia translations cover every country and preserve q
   assert.deepEqual(Object.keys(COUNTRIES).filter(countryId => !COUNTRY_NAMES_EN[countryId]), []);
   assert.deepEqual(Object.keys(QUESTIONS_EN).sort(), Object.keys(QUESTIONS).sort());
   for (const [countryId, translations] of Object.entries(QUESTIONS_EN)) {
-    const dutchQuestions = QUESTIONS[countryId as keyof typeof QUESTIONS].q;
+    const dutchQuestions = QUESTIONS[countryId]!.questions;
     assert.equal(translations.length, dutchQuestions.length);
     translations.forEach(([question, answer, explanation], category) => {
       assert.ok(question.length > 0);
@@ -27,7 +27,7 @@ test("English country and trivia translations cover every country and preserve q
       assert.ok(explanation.length > 0, `${countryId} category ${category + 1} has no explanation`);
       assert.ok(!answer.includes("("), `${countryId} category ${category + 1} answer is not simple`);
       const englishTrueFalse = /^Is it true\b/.test(question) && /^(True|False)/.test(answer);
-      const [dutchQuestion, dutchAnswer, dutchExplanation] = dutchQuestions[category]!;
+      const { question: dutchQuestion, answer: dutchAnswer, explanation: dutchExplanation } = dutchQuestions[category]!;
       assert.ok(dutchExplanation.length > 0, `${countryId} category ${category + 1} has no Dutch explanation`);
       assert.ok(!dutchAnswer.includes("("), `${countryId} category ${category + 1} Dutch answer is not simple`);
       const dutchTrueFalse = /^Klopt het\b/.test(dutchQuestion) && /^(Waar|Niet waar)/.test(dutchAnswer);
@@ -160,12 +160,12 @@ test("saved Dutch and English question edits are used for new Plenet matches", (
 
 test("countries missing one trivia type receive a translated geography fallback", () => {
   const noTrueFalse = Object.keys(QUESTIONS).find(countryId =>
-    !QUESTIONS[countryId as keyof typeof QUESTIONS].q.some(([question, answer]) =>
+    !QUESTIONS[countryId]!.questions.some(({ question, answer }) =>
       question.startsWith("Klopt het") && /^(Waar|Niet waar)/.test(answer)
     )
   );
   const noOpenQuestion = Object.keys(QUESTIONS).find(countryId =>
-    QUESTIONS[countryId as keyof typeof QUESTIONS].q.every(([question, answer]) =>
+    QUESTIONS[countryId]!.questions.every(({ question, answer }) =>
       question.startsWith("Klopt het") && /^(Waar|Niet waar)/.test(answer)
     )
   );
