@@ -28,12 +28,14 @@ sibling frontend guide at
   remain available for the game.
 - Check true/false answers immediately on the server and award 1 point only
   for the correct choice; these answers do not need another player's review.
-  For open-ended questions, reveal the answer after the active player has
-  answered aloud, then let the next connected player in turn order approve or
+  For open-ended questions, a correct country guess immediately shows the
+  question to the active player and the answer to the next connected reviewer
+  in turn order. The active player answers aloud; the reviewer may approve or
   reject it. Only that reviewer may grade, and award 1 point to the active
-  player only when approved. If no other player is connected, the active player
-  reviews their own answer. Do not allow grading before answer reveal or
-  changing the result after grading.
+  player only when approved. After grading, reveal the answer to all viewers,
+  including display spectators. If no other player is connected, the active
+  player reviews their own answer.
+  Do not allow grading before review or changing the result after grading.
 - After feedback, advance to the next participant/turn. After the final turn,
   finish the game. Highest score wins; all players tied for highest score are
   winners.
@@ -45,7 +47,8 @@ Keep question data and answer keys server-side. The Dutch question bank is in
 `questions.ts`; `questions-en.ts` contains the English questions and answers
 for all 195 countries, keyed by the same six categories. Each entry contains
 the question, a simple answer, and an explanation. Snapshots must withhold both
-answer and explanation until the answer is revealed. Review both banks for
+answer and explanation from non-reviewers until an open question is graded.
+Review both banks for
 accuracy before release. Admin edits are stored in D1 and loaded when a match
 starts; they change the question and explanation only, not the answer key.
 Country IDs must agree with the frontend's map dataset.
@@ -63,19 +66,20 @@ Country IDs must agree with the frontend's map dataset.
   feedback, and finished. Use an explicit phase and turn index; reject actions
   that are invalid for the phase or actor.
 - Define typed, bounded actions for joining/leaving a seat, host options/start,
-  drawing a country, guessing a country, answering true/false, revealing an
-  open-ended answer, reviewer approval/rejection, and advancing after feedback.
+  drawing a country, guessing a country, answering true/false, reviewer
+  approval/rejection, and advancing after feedback.
   The host may set rounds only in the waiting phase.
 - The clue country name is public, but keep the target map ID/geometry and
   true/false answer out of snapshots until their respective reveal/resolution.
-  The host and spectators receive public state, not privileged hidden data.
-  Set `perViewer` if any snapshot field depends on viewer identity, and test
-  spectator, active participant, other participant, display viewer, and bot
-  views.
+  For open-ended questions, only the reviewer receives the answer before
+  grading; after judgment, all viewers may see it. Set `perViewer` for this
+  viewer-specific snapshot and test spectator, active participant, reviewer,
+  other participant, display viewer, and bot views.
 - Include only presentation data needed by clients in snapshots: public
   country name/clue, selected map IDs, guesses remaining, distance feedback,
-  category/question, revealed answer when allowed, scores, turn owner, phase,
-  rounds, and readiness. Never trust client-supplied scores, answer keys,
+  category/question, answer only to the reviewer before grading and to all
+  viewers after grading, scores, turn owner, phase, rounds, and readiness.
+  Never trust client-supplied scores, answer keys,
   distances, turn indices, or question content.
 - Treat country IDs as allowlisted data, not arbitrary map labels. Bound and
   validate action strings and numbers, check unique guesses, and make repeated
@@ -119,12 +123,13 @@ Add focused tests for:
 - Spectators versus seated participants, disconnect/reconnect, and turn order.
 - Draw/deck exhaustion and reshuffle, valid/invalid country IDs, duplicate
   guesses, 3/2/1 location scoring, and a miss after three attempts.
-- Balanced true/false/open-question selection, answer reveal, next-player
-  review authorization, exactly-once trivia scoring, and attempts to grade or
-  reveal in the wrong phase.
+- Balanced true/false/open-question selection, immediate reviewer answer
+  visibility, next-player review authorization, exactly-once trivia scoring,
+  and attempts to grade in the wrong phase.
 - Turn/round completion, ties, final results, and bot-result exclusion.
 - Snapshot privacy before and after country/answer reveal for players,
-  spectators, display viewers, and bots.
+  spectators, display viewers, and bots. Before an open-question judgment, only
+  its reviewer receives the answer; after judgment, all viewers receive it.
 - Bot seating, manual actions, removal/disconnect, and turn-control flows.
   Verify that Autopilot remains unsupported and does not change game state.
 

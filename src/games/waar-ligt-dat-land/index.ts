@@ -235,7 +235,13 @@ export const waarLigtDatLand: GameModule<WorldState> = {
     description: "Vind landen op de wereldkaart en beantwoord weetjesvragen.",
     maxPlayers: MAX_PLAYERS
   },
-  perViewer: false,
+  perViewer: true,
+
+  migrate(state) {
+    if (state.phase === "playing" && state.step === "trivia" && state.trivia && !state.trivia.trueFalse) {
+      state.step = "answer";
+    }
+  },
 
   async prepare(state, actor, message, env) {
     if (message.type !== "start" || !actor.isHost || state.phase !== "lobby") return;
@@ -353,7 +359,7 @@ export const waarLigtDatLand: GameModule<WorldState> = {
           current.score += 3 - state.wrongGuesses.length;
           current.countriesFound++;
           state.trivia = makeQuestion(state, countryId);
-          state.step = "trivia";
+          state.step = state.trivia.trueFalse ? "trivia" : "answer";
           state.turnMessage = `Correct! +${3 - state.wrongGuesses.length} points.`;
         } else {
           state.wrongGuesses.push(countryId);
@@ -387,11 +393,6 @@ export const waarLigtDatLand: GameModule<WorldState> = {
         state.turnMessage = correct ? "Correct! +1 point." : `Not quite. ${state.trivia.answer}.`;
         return "save";
       }
-      case "revealAnswer":
-        if (state.phase !== "playing" || state.step !== "trivia" || activePlayer(state)?.id !== actor.userId || !state.trivia || state.trivia.trueFalse) return "ignore";
-        state.triviaAnswerRevealed = true;
-        state.step = "answer";
-        return "save";
       case "grade": {
         const reviewer = reviewerPlayer(state);
         if (state.phase !== "playing" || state.step !== "answer" || reviewer?.id !== actor.userId || !state.trivia) return "ignore";
@@ -403,6 +404,7 @@ export const waarLigtDatLand: GameModule<WorldState> = {
           current.correctTrivia++;
         }
         state.triviaCorrect = message.correct;
+        state.triviaAnswerRevealed = true;
         state.step = "turnComplete";
         state.turnMessage = message.correct ? "Approved! +1 point." : "The answer was not approved.";
         return "save";
@@ -479,13 +481,22 @@ export const waarLigtDatLand: GameModule<WorldState> = {
     };
   },
 
-  snapshot(state, _viewerId, connected) {
+  snapshot(state, viewerId, connected) {
     const players = orderedPlayers(state).map(player => ({
       ...player,
       connected: connected.has(player.id)
     }));
     const currentPlayer = players.length ? players[state.turnIndex % players.length] : null;
     const targetRevealed = state.step === "trivia" || state.step === "answer" || state.step === "turnComplete";
+    const reviewerId = state.step === "answer" && state.trivia && !state.trivia.trueFalse
+      ? reviewerPlayer(state)?.id ?? null
+      : null;
+    const answerVisible = state.step === "turnComplete"
+      ? state.triviaAnswerRevealed
+      : state.step === "answer" && (
+        (state.trivia?.trueFalse === true && state.triviaAnswerRevealed)
+        || reviewerId === viewerId
+      );
     return {
       phase: state.phase,
       step: state.step,
@@ -493,9 +504,7 @@ export const waarLigtDatLand: GameModule<WorldState> = {
       round: state.phase === "playing" && players.length ? Math.floor(state.turnIndex / players.length) + 1 : 0,
       turn: state.turnIndex,
       activePlayerId: state.phase === "playing" ? currentPlayer?.id ?? null : null,
-      reviewerId: state.step === "answer" && state.trivia && !state.trivia.trueFalse
-        ? reviewerPlayer(state)?.id ?? null
-        : null,
+      reviewerId,
       players,
       countries: Object.entries(COUNTRIES).map(([id, country]) => ({
         id,
@@ -512,10 +521,10 @@ export const waarLigtDatLand: GameModule<WorldState> = {
         question: state.trivia.question,
         questionEn: state.trivia.questionEn ?? null,
         trueFalse: state.trivia.trueFalse,
-        answer: state.triviaAnswerRevealed ? state.trivia.answer : null,
-        answerEn: state.triviaAnswerRevealed ? state.trivia.answerEn ?? null : null,
-        explanation: state.triviaAnswerRevealed ? state.trivia.explanation : null,
-        explanationEn: state.triviaAnswerRevealed ? state.trivia.explanationEn ?? null : null,
+        answer: answerVisible ? state.trivia.answer : null,
+        answerEn: answerVisible ? state.trivia.answerEn ?? null : null,
+        explanation: answerVisible ? state.trivia.explanation : null,
+        explanationEn: answerVisible ? state.trivia.explanationEn ?? null : null,
         response: state.triviaResponse ?? null,
         correct: state.triviaCorrect
       } : null,
